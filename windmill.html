@@ -1,0 +1,1209 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Windmill — 1-bit</title>
+<style>
+  :root{ --bg:#0a0a0c; --ink:#e8e6df; --dim:#6f6d66; --line:#22232a; --acc:#c8b98a; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;
+    font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim)}
+  body{display:flex}
+
+  #stage{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;position:relative}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  #hud{position:absolute;left:10px;bottom:8px;opacity:.4;pointer-events:none;white-space:pre}
+
+  #panel{width:280px;flex:none;height:100vh;overflow-y:auto;
+    background:#0d0d10;border-left:1px solid var(--line);padding:16px 16px 40px}
+  #panel h1{font-size:11px;letter-spacing:.22em;color:var(--ink);margin:0 0 2px;font-weight:600}
+  #panel .sub{font-size:10px;color:#4b4a45;margin:0 0 18px}
+  fieldset{border:0;border-top:1px solid var(--line);margin:0 0 4px;padding:14px 0 12px}
+  legend{font-size:9.5px;letter-spacing:.2em;color:#5d5c56;padding:0 6px 0 0}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0}
+  .row label{color:var(--dim);flex:none}
+  .val{color:var(--acc);font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:2px;
+    background:#2a2b33;outline:0;margin:6px 0 2px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;
+    border-radius:50%;background:var(--acc);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;
+    background:var(--acc);cursor:pointer}
+  input[type=color]{-webkit-appearance:none;appearance:none;border:1px solid var(--line);
+    width:46px;height:22px;padding:0;background:none;cursor:pointer;border-radius:2px}
+  input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+  input[type=color]::-webkit-color-swatch{border:0;border-radius:1px}
+  input[type=number]{background:#141519;border:1px solid var(--line);color:var(--ink);
+    width:74px;padding:3px 6px;font:inherit;border-radius:2px}
+  .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+  .chip{border:1px solid var(--line);background:#141519;color:var(--dim);
+    padding:4px 7px;cursor:pointer;border-radius:2px;font:inherit;white-space:nowrap}
+  .chip:hover{border-color:#3a3b44;color:var(--ink)}
+  .chip[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:#15140f}
+  .btn{width:100%;border:1px solid var(--line);background:#141519;color:var(--ink);
+    padding:8px;cursor:pointer;border-radius:2px;font:inherit;letter-spacing:.1em;margin-top:8px}
+  .btn:hover{border-color:var(--acc);color:var(--acc)}
+  .btn.primary{background:var(--acc);border-color:var(--acc);color:#15140f}
+  .btn.primary:hover{filter:brightness(1.1);color:#15140f}
+  .note{font-size:9.5px;color:#4b4a45;margin-top:7px}
+  #toast{position:fixed;right:296px;bottom:18px;background:#141519;border:1px solid var(--acc);
+    color:var(--acc);padding:7px 11px;border-radius:2px;opacity:0;transition:opacity .2s;
+    pointer-events:none}
+  #toast.on{opacity:1}
+  #dump{position:fixed;inset:8%;background:#0d0d10;border:1px solid var(--acc);color:var(--ink);
+    padding:14px;display:none;z-index:9}
+  #dump textarea{width:100%;height:calc(100% - 34px);background:#141519;color:var(--ink);
+    border:1px solid var(--line);font:inherit;padding:8px;resize:none}
+  #load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:var(--bg);letter-spacing:.2em;z-index:20;color:var(--dim)}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c"></canvas><div id="hud"></div></div>
+
+<aside id="panel">
+  <h1>WINDMILL</h1>
+  <p class="sub">procedural 1-bit · no assets</p>
+
+  <fieldset><legend>CANVAS</legend>
+    <div class="row"><label>grid</label><span class="val" id="vGrid">—</span></div>
+    <div class="chips" id="gridChips"></div>
+    <p class="note">Only 9:16 grids (9k × 16k) tile into whole internal pixels.</p>
+    <div class="row" style="margin-top:14px"><label>fit</label><span class="val" id="vCells">—</span></div>
+    <div class="chips" id="fitChips"></div>
+    <p class="note">Fill grows the postcard to the space left, keeping 9:16.
+       Crisp letterboxes to an integer zoom so every cell is identical.</p>
+    <div class="row" style="margin-top:12px"><label>postcard</label><span class="val" id="vPost">—</span></div>
+    <div class="row"><label>cell</label><span class="val" id="vZoom">—</span></div>
+    <div class="row"><label>darkest</label><input type="color" id="cInk"></div>
+    <div class="row"><label>brightest</label><input type="color" id="cPap"></div>
+    <button class="btn" id="bSwap">SWAP TONES</button>
+  </fieldset>
+
+  <fieldset><legend>SCENE</legend>
+    <div class="row"><label>horizon</label><span class="val" id="vLift"></span></div>
+    <input type="range" id="rLift" min="-10" max="70" step="1">
+  </fieldset>
+
+  <fieldset><legend>SKY</legend>
+    <div class="row"><label>top tone</label><span class="val" id="vSkyT"></span></div>
+    <input type="range" id="rSkyT" min="0" max="0.6" step="0.01">
+    <div class="row"><label>horizon tone</label><span class="val" id="vSkyH"></span></div>
+    <input type="range" id="rSkyH" min="0.3" max="1" step="0.01">
+    <div class="row"><label>curve</label><span class="val" id="vSkyC"></span></div>
+    <input type="range" id="rSkyC" min="0.35" max="2.2" step="0.05">
+    <p class="note">Curve &lt; 1 pushes the bright band up toward the horizon.</p>
+    <div class="row" style="margin-top:12px"><label>sun x</label><span class="val" id="vSunX"></span></div>
+    <input type="range" id="rSunX" min="0" max="234" step="1">
+    <div class="row"><label>sun y</label><span class="val" id="vSunY"></span></div>
+    <input type="range" id="rSunY" min="60" max="380" step="1">
+    <div class="row"><label>star every</label><span class="val" id="vStar"></span></div>
+    <input type="range" id="rStar" min="3" max="45" step="1">
+    <button class="btn" id="bStarNow">TRIGGER STAR</button>
+  </fieldset>
+
+  <fieldset><legend>MILL</legend>
+    <div class="row"><label>vertical</label><span class="val" id="vMillY"></span></div>
+    <input type="range" id="rMillY" min="-90" max="90" step="1">
+    <div class="row"><label>spin</label><span class="val" id="vSpin"></span></div>
+    <input type="range" id="rSpin" min="-0.6" max="0.6" step="0.005">
+    <p class="note">Signed turns per second. 0 stops the rotor.</p>
+    <div class="row" style="margin-top:12px"><label>yaw</label><span class="val" id="vYaw"></span></div>
+    <input type="range" id="rYaw" min="0" max="55" step="0.5">
+  </fieldset>
+
+  <fieldset><legend>WIND</legend>
+    <div class="row"><label>strength</label><span class="val" id="vWind"></span></div>
+    <input type="range" id="rWind" min="-2.5" max="2.5" step="0.05">
+    <p class="note">Negative reverses every layer, the deck, the birds and the
+       star. The deck's seam is off-screen on both sides, so it just runs the
+       other way.</p>
+    <div class="row" style="margin-top:12px"><label>slowest (back)</label><span class="val" id="vSpMin"></span></div>
+    <input type="range" id="rSpMin" min="0.5" max="40" step="0.5">
+    <div class="row"><label>fastest (front)</label><span class="val" id="vSpMax"></span></div>
+    <input type="range" id="rSpMax" min="5" max="140" step="1">
+    <p class="note" id="nLadder"></p>
+  </fieldset>
+
+  <fieldset><legend>LAYER HEIGHT</legend>
+    <div class="row"><label>L4 back</label><span class="val" id="vY0"></span></div>
+    <input type="range" id="rY0" min="-90" max="90" step="1">
+    <div class="row"><label>L3 mid</label><span class="val" id="vY1"></span></div>
+    <input type="range" id="rY1" min="-90" max="90" step="1">
+    <div class="row"><label>L2 particles</label><span class="val" id="vY2"></span></div>
+    <input type="range" id="rY2" min="-90" max="90" step="1">
+    <div class="row"><label>L1 front</label><span class="val" id="vY3"></span></div>
+    <input type="range" id="rY3" min="-90" max="90" step="1">
+  </fieldset>
+
+  <fieldset><legend>CLOUD DECK</legend>
+    <div class="row"><label>density</label><span class="val" id="vDens"></span></div>
+    <input type="range" id="rDens" min="0.5" max="3" step="0.05">
+    <p class="note">Low = lumpier (sky shows between clumps). High = solid mass.</p>
+    <div class="row" style="margin-top:12px"><label>grit</label><span class="val" id="vGrit"></span></div>
+    <div class="chips" id="gritChips"></div>
+    <div class="row" style="margin-top:12px"><label>seed</label>
+      <input type="number" id="nSeed" step="1"></div>
+    <button class="btn" id="bReroll">RE-ROLL SHAPES</button>
+  </fieldset>
+
+  <fieldset><legend>OUTPUT</legend>
+    <button class="btn primary" id="bCopy">COPY CONFIG TO CLIPBOARD</button>
+    <button class="btn" id="bPng">SAVE PNG</button>
+    <button class="btn" id="bReset">RESET ALL</button>
+    <p class="note">Config paste replaces the <code>CFG</code> block at the top of the file.
+       Space pauses · H toggles readout.</p>
+  </fieldset>
+</aside>
+
+<div id="toast"></div>
+<div id="dump"><textarea spellcheck="false"></textarea>
+  <button class="btn" onclick="document.getElementById('dump').style.display='none'">CLOSE</button></div>
+<div id="load">SETTLING THE AIR…</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ========================================================================
+   BLINKING ROBOT — procedural 1-bit windmill
+   No assets, no sprites, no images. Everything below is generated.
+
+   RENDER PIPELINE
+     1. compose the scene as CONTINUOUS luminance in a Float32 buffer
+     2. threshold the whole composite through an ordered Bayer 8x8 matrix
+   One dither pass over the finished composite, so every layer is quantized on
+   the same lattice and the frame reads as a single screen-print rather than a
+   stack of pre-dithered sprites. Each pixel also carries a lattice x-offset so
+   a scrolling layer drags its dither texture along with it instead of letting
+   the image "swim" underneath a screen-locked grid.
+
+   Luminance is the authoring space; the palette is only applied at the very
+   end. Anything >= 1.0 is immune to the dither (the Bayer threshold tops out
+   just under 1), which is how the sun disc and the star's head stay solid
+   while everything around them stipples. Anything <= 0 is always ink.
+
+   DEPTH — four cloud layers, all running downwind, speed set by distance:
+     L4 far bank -> L3 mid bank -> L2 PARTICLE DECK -> L1 near bank
+   L1 is nearly solid and crosses the bottom IN FRONT of the mill and sails.
+
+   GEOMETRY IS RESOLUTION-INDEPENDENT. Everything in CFG is authored against a
+   BASE 234x416 grid and multiplied by S = W/234 at build time. Lengths and
+   positions scale by S; velocities and accelerations by S; rate constants
+   (1/s) and spring constants (1/s^2) are scale-invariant and must NOT be
+   touched; spatial frequencies divide by S; particle count scales by S^2.
+   ===================================================================== */
+
+/* ======================================================================
+   CFG — every tunable, in BASE units. This is the whole editing surface.
+   ==================================================================== */
+const DEFAULT_CFG = {
+  gridK   : 26,            // grid is 9k x 16k cells
+  fit     : 'fill',        // 'fill' = grow to the space left | 'crisp' = integer zoom
+  ink     : '#101014',
+  paper   : '#efece2',
+
+  lift    : 22,            // whole composition slides with this
+  wind    : 1.0,           // master multiplier; NEGATIVE reverses every layer
+
+  /* Depth speed ladder. The four layers (L4 back, L3, L2 deck, L1 front) are
+     spaced GEOMETRICALLY between these two, which is how parallax actually
+     falls off with distance — and it reproduces the hand-tuned 9/17/30/54
+     almost exactly from just the endpoints. */
+  speedMin: 9,             // back-most layer
+  speedMax: 54,            // front-most layer
+
+  sky     : { top:0.08, horizon:0.88, curve:0.95 },
+  sun     : { x:166, y:238, r:21, g1:0.26, d1:34, g2:0.12, d2:105 },
+
+  rotor   : { len:114, wide:15, inner:26, slitPitch:11, slit:1.15,
+              spin:0.2381, yawDeg:35.5, focal:330, phase:0.55 },
+              // spin = turns per second, SIGNED. 0 stops the rotor.
+
+  mill    : { offY:0, towerX:105, capTop:208, capCy:230, capRx:13, capRy:22,
+              bodyBot:352, halfAtCy:11.5, taper:0.105,
+              galleryY:270, galleryH:3, galleryOut:3,
+              hillTop:338, hillHalf:12, hillSlope:0.40,
+              finialTop:201,
+              windows:[ {y0:250,y1:254,hw:1}, {y0:284,y1:287,hw:2} ] },
+
+  /* Speeds are derived from the ladder, not stored here. `offY` is the layer's
+     vertical nudge; `floorUp` is how far the sea's floor sits above its
+     baseline, so moving y carries the floor with it. */
+  banks   : [
+    { id:'L4', kind:'puff', seed:7,  tile:234, y:300, offY:0, tone:0.56,
+      clusters:3, per:4, rx:[14,34], ry:[6,15] },
+    { id:'L3', kind:'sea',  seed:41, tile:351, y:316, offY:0, tone:0.34,
+      soft:4.0, lobes:5, rx:[34,74], ry:[16,38], floorUp:4 },
+    { id:'L1', kind:'sea',  seed:63, tile:468, y:392, offY:0, tone:0.0,
+      soft:5.0, lobes:4, rx:[58,108], ry:[28,56], floorUp:6 }
+  ],
+
+  deck    : { seed:2024, surfSeed:1337, grit:1.0, pn:62000, offY:0,
+              wrap:280, marg:23, top:296, pTop:118,
+              // deck bottom is DERIVED from L1's floor (see buildDeck), never
+              // a literal: its only job is "stop where the near bank hides you"
+              surfBase:322, surfFloor:326, surfLobes:5,
+              surfRx:[30,66], surfRy:[14,32],
+              blobs:55, blobR:[9,35], blobFrac:0.80, blobCore:0.35,
+              thin:0.21, core:0.035, span:3.6, gain:1.55,
+              wind:30, windAloft:20, altH:38, leash:0.85,
+              kx:0.30, cx:1.15, ky:2.20, cy:3.40, rxMax:420,
+              hideAt:8, showAt:5,   // unload/reload thresholds at the seam
+              grab:13.0, push:62.0, radPad:5.0,
+              turbAx:4.2, turbAy:2.6, turbFx:0.055, turbFy:0.041 },
+
+  birds   : { seed:91, span:300, flocks:[
+              {n:13,y:206,speed:19,size:2},
+              {n:9, y:250,speed:37,size:3},
+              {n:7, y:288,speed:23,size:2} ] },
+
+  star    : { seed:5150, every:9, vary:15, y:[8,46], vx:[85,155], vy:[46,90],
+              dur:[0.55,0.95], tail:38 }
+};
+let CFG = JSON.parse(JSON.stringify(DEFAULT_CFG));
+
+const BASE_W = 234, BASE_H = 416;      // 9:16 authoring grid (26 x 9x16)
+const GRID_CHOICES = [11,13,16,20,26,32,40,48];
+const FIT_CHOICES  = ['fill','crisp'];
+const GRIT_CHOICES = [0.5,0.75,1,1.5];
+const DT = 1/60;
+
+/* ---------- helpers --------------------------------------------------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;
+  var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;
+  return((t^t>>>14)>>>0)/4294967296}}
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+
+const SN=2048, SMASK=SN-1, STAB=new Float32Array(SN);
+for(let i=0;i<SN;i++) STAB[i]=Math.sin(i*2*Math.PI/SN);
+const K_S=SN/(2*Math.PI);
+function fsin(x){ return STAB[(x*K_S|0)&SMASK]; }
+
+const BAYER = new Uint8Array([
+   0,32, 8,40, 2,34,10,42,  48,16,56,24,50,18,58,26,
+  12,44, 4,36,14,46, 6,38,  60,28,52,20,62,30,54,22,
+   3,35,11,43, 1,33, 9,41,  51,19,59,27,49,17,57,25,
+  15,47, 7,39,13,45, 5,37,  63,31,55,23,61,29,53,21]);
+
+function packColor(hex){
+  const n=parseInt(hex.slice(1),16);
+  const r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  return ((255<<24)|(b<<16)|(g<<8)|r)>>>0;   // little-endian AABBGGRR
+}
+
+/* ======================================================================
+   DERIVED STATE — everything below is rebuilt by build()
+   ==================================================================== */
+let W,H,S;
+let bg,lum,dof,dens,bankA,pCol,iSCol;
+let CINK,CPAP,img,buf32;
+let SUN,HUB,TOWER_X,MILL;
+let LA,LW,HW,INNER,CU,SLIT,FOC,YAW,CY_,SY_,OMEGA,ANG0;
+let BANKS,FLOCKS;
+let nearTop,WRAP,MARG,DECK_BOT,DECK_TOP,P_TOP;
+let PN,rx,ry,vx,vy,hx,hy,fl;
+let VW,VW_ALOFT,ALT_H,RX_MAX,B_PUSH,B_RAD,R_MAX2;
+let TURB_AX,TURB_AY,TURB_FX,TURB_FY;
+let SS,SS_RND;
+let lapA,hid,HIDE_AT,SHOW_AT;
+
+/* Depth index of each layer, back(0) -> front(3). The particle deck is 2. */
+const BANK_DEPTH=[0,1,3], DECK_DEPTH=2;
+function layerSpeed(i){
+  const a=Math.max(0.2,CFG.speedMin), b=Math.max(a,CFG.speedMax);
+  return a*Math.pow(b/a, i/3);
+}
+function windSign(){ return CFG.wind<0?-1:1; }
+
+const cv=document.getElementById('c');
+const ctx=cv.getContext('2d',{alpha:false});
+
+/* ======================================================================
+   BUILD
+   ==================================================================== */
+function build(){
+  const K=CFG.gridK;
+  W=9*K; H=16*K; S=W/BASE_W;
+  const gy = v => (v-CFG.lift)*S;          // base y -> grid y, lift applied
+  const gl = v => v*S;                     // base length -> grid length
+
+  cv.width=W; cv.height=H;
+  img=ctx.createImageData(W,H);
+  buf32=new Uint32Array(img.data.buffer);
+  bg=new Float32Array(W*H); lum=new Float32Array(W*H);
+  dof=new Int16Array(W*H); dens=new Float32Array(W*H); bankA=new Float32Array(W*H);
+  pCol=new Float32Array(W); iSCol=new Float32Array(W);
+
+  CINK=packColor(CFG.ink); CPAP=packColor(CFG.paper);
+
+  SUN={x:gl(CFG.sun.x), y:gy(CFG.sun.y), r:gl(CFG.sun.r)};
+
+  const m=CFG.mill;
+  const my = v => gy(v+m.offY);          // mill y, carries the rotor with it
+  TOWER_X=gl(m.towerX);
+  HUB={x:TOWER_X+gl(5), y:my(232)};
+
+  const R=CFG.rotor;
+  LA=gl(R.len); LW=gl(R.wide); HW=LW/2; INNER=gl(R.inner);
+  CU=gl(R.slitPitch); SLIT=Math.max(1,gl(R.slit)); FOC=gl(R.focal);
+  YAW=R.yawDeg*Math.PI/180; CY_=Math.cos(YAW); SY_=Math.sin(YAW);
+  OMEGA=-2*Math.PI*R.spin; ANG0=R.phase;      // signed: negative spin reverses
+
+  MILL={ capTop:my(m.capTop), capCy:my(m.capCy), capRx:gl(m.capRx), capRy:gl(m.capRy),
+         bodyBot:my(m.bodyBot), halfAtCy:gl(m.halfAtCy), taper:m.taper,
+         galY:my(m.galleryY), galH:gl(m.galleryH), galOut:gl(m.galleryOut),
+         hillTop:my(m.hillTop), hillHalf:gl(m.hillHalf), hillSlope:m.hillSlope,
+         finialTop:my(m.finialTop),
+         windows:m.windows.map(w=>({y0:my(w.y0),y1:my(w.y1),hw:gl(w.hw)})) };
+
+  BANKS=CFG.banks.map((b,i)=>{
+    const y0=gy(b.y+b.offY);
+    const common={id:b.id, Wp:gl(b.tile), val:b.tone,
+                  speed:gl(layerSpeed(BANK_DEPTH[i]))*CFG.wind};
+    return b.kind==='puff'
+      ? makePuff(common, b.seed, y0, b.clusters, b.per, b.rx.map(gl), b.ry.map(gl))
+      : makeSea (common, b.seed, y0, gl(b.soft), b.lobes,
+                 b.rx.map(gl), b.ry.map(gl),
+                 b.floorUp!=null?gy(b.y+b.offY-b.floorUp):0);
+  });
+
+  buildFlocks(gy,gl);
+  buildDeck(gy,gl);
+  buildStar();
+  buildBG();
+}
+
+/* ---------- sky + sun (static) ---------------------------------------- */
+function buildBG(){
+  const sk=CFG.sky, su=CFG.sun;
+  const d1=su.d1*S, d2=su.d2*S;
+  const span=sk.horizon-sk.top;
+  for(let y=0;y<H;y++){
+    // the ramp is evaluated in BASE space so it rides lift and rescales cleanly
+    const base = sk.top + span*Math.pow((y/S+CFG.lift)/BASE_H, sk.curve);
+    for(let x=0;x<W;x++){
+      const dx=x-SUN.x, dy=y-SUN.y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      let v = base + Math.exp(-d/d1)*su.g1 + Math.exp(-d/d2)*su.g2;
+      if(d<=SUN.r) v = 1.30;
+      bg[y*W+x]=v;
+    }
+  }
+}
+
+/* ======================================================================
+   CLOUD BANKS  (density fields, not particles)
+     PUFF — clusters of soft ellipses max-composited into a cumulus
+            silhouette, rounded on every side, for open sky.
+     SEA  — a lobed upper surface filling to the bottom of the frame.
+   `floor` keeps a sea continuous at that height while its lobes billow above.
+   Without it you must pack lobes tightly to avoid gaps, and tightly packed
+   lobes make the min() nearly constant — which is how a cloud sea ends up
+   looking like a ruled line. Few big lobes + a floor gives real swell.
+   ==================================================================== */
+function makePuff(c, seed, y0, nClust, per, rxR, ryR){
+  const rnd=mulberry32(seed), lobes=[];
+  let mnY=1e9, mxY=-1e9;
+  for(let k=0;k<nClust;k++){
+    const ccx=(k+0.15+rnd()*0.7)*(c.Wp/nClust);
+    const n=per+((rnd()*2)|0);
+    for(let i=0;i<n;i++){
+      const r0=rxR[0]+rnd()*(rxR[1]-rxR[0]), r1=ryR[0]+rnd()*(ryR[1]-ryR[0]);
+      const cx=ccx+(rnd()-0.5)*rxR[1]*2.1;
+      const cy=y0-r1*(0.30+rnd()*0.5);        // bottoms align, tops billow
+      lobes.push({cx,cy,rx:r0,ry:r1});
+      if(cy-r1<mnY)mnY=cy-r1; if(cy+r1>mxY)mxY=cy+r1;
+    }
+  }
+  return Object.assign(c,{kind:'puff',lobes,
+    yA:Math.max(0,Math.floor(mnY)-1), yB:Math.min(H,Math.ceil(mxY)+2)});
+}
+
+function makeSea(c, seed, y0, soft, n, rxR, ryR, floor){
+  const rnd=mulberry32(seed), lobes=[];
+  for(let i=0;i<n;i++) lobes.push({
+    cx:(i+rnd()*0.9)*(c.Wp/n),
+    rx:rxR[0]+rnd()*(rxR[1]-rxR[0]),
+    ry:ryR[0]+rnd()*(ryR[1]-ryR[0]),
+    dy:(rnd()-0.5)*7*S});
+  return Object.assign(c,{kind:'sea',y0,soft,lobes,floor:floor||0,
+    top:new Float32Array(W)});
+}
+
+const PUFF_EDGE=0.34;
+
+function drawPuff(L,t){
+  const off=(L.speed*t)%L.Wp;
+  const yA=L.yA, yB=L.yB;
+  bankA.fill(0, yA*W, yB*W);
+  for(let n=0;n<L.lobes.length;n++){
+    const lo=L.lobes[n];
+    for(let k=-1;k<=1;k++){
+      const cx=lo.cx+off+k*L.Wp;              // scrolls right, with the deck
+      if(cx+lo.rx<0||cx-lo.rx>=W) continue;
+      const x0=Math.max(0,Math.floor(cx-lo.rx)), x1=Math.min(W-1,Math.ceil(cx+lo.rx));
+      const y0=Math.max(yA,Math.floor(lo.cy-lo.ry)), y1=Math.min(yB-1,Math.ceil(lo.cy+lo.ry));
+      const irx=1/lo.rx, iry=1/lo.ry;
+      for(let y=y0;y<=y1;y++){
+        const dy=(y-lo.cy)*iry, dy2=dy*dy, row=y*W;
+        if(dy2>=1) continue;
+        for(let x=x0;x<=x1;x++){
+          const dx=(x-cx)*irx, q=dx*dx+dy2;
+          if(q>=1) continue;
+          let v=(1-q)/PUFF_EDGE; if(v>1)v=1;
+          const i=row+x;
+          if(v>bankA[i]) bankA[i]=v;
+        }
+      }
+    }
+  }
+  const dv=Math.round(-off)|0, val=L.val;
+  for(let i=yA*W, n=yB*W; i<n; i++){
+    const a=bankA[i];
+    if(a<=0) continue;
+    lum[i]=lum[i]*(1-a)+val*a;
+    if(a>0.5) dof[i]=dv;
+  }
+}
+
+function drawSea(L,t){
+  const off=(L.speed*t)%L.Wp;
+  const lb=L.lobes, nl=lb.length, top=L.top;
+  for(let x=0;x<W;x++){
+    let wx=(x-off)%L.Wp; if(wx<0)wx+=L.Wp;    // sample upwind => scrolls right
+    let m=H+8;
+    for(let i=0;i<nl;i++){
+      const lo=lb[i];
+      for(let k=-1;k<=1;k++){
+        const dx=wx-(lo.cx+k*L.Wp);
+        if(dx>-lo.rx&&dx<lo.rx){
+          const q=dx/lo.rx;
+          const yc=L.y0+lo.dy-lo.ry*Math.sqrt(1-q*q);
+          if(yc<m)m=yc;
+        }
+      }
+    }
+    top[x]=L.floor&&m>L.floor?L.floor:m;
+  }
+  const dv=Math.round(-off)|0, val=L.val, soft=L.soft;
+  for(let x=0;x<W;x++){
+    const tp=top[x];
+    let ys=tp<0?0:Math.floor(tp);
+    for(let y=ys;y<H;y++){
+      let a=(y-tp)/soft; if(a<=0)continue; if(a>1)a=1;
+      const i=y*W+x;
+      lum[i]=lum[i]*(1-a)+val*a;
+      if(a>0.5) dof[i]=dv;
+    }
+  }
+}
+
+function drawBank(L,t){ if(L.kind==='puff') drawPuff(L,t); else drawSea(L,t); }
+
+/* ======================================================================
+   BIRDS
+   ==================================================================== */
+function buildFlocks(gy,gl){
+  const rnd=mulberry32(CFG.birds.seed);
+  FLOCKS=CFG.birds.flocks.map(d=>{
+    const birds=[];
+    for(let i=0;i<d.n;i++) birds.push({
+      ox:(rnd()-0.5)*58*S, oy:(rnd()-0.5)*22*S,
+      ph:rnd()*Math.PI*2, lag:rnd()*0.6});
+    return {x0:rnd()*gl(CFG.birds.span), y0:gy(d.y), span:gl(CFG.birds.span),
+            speed:gl(d.speed)*CFG.wind, amp:(5+rnd()*5)*S,
+            sz:Math.max(1,Math.round(d.size*S)), birds, ph:rnd()*Math.PI*2};
+  });
+}
+
+function px(x,y,v){ if(x<0||x>=W||y<0||y>=H) return; lum[y*W+x]=v; }
+
+function drawBird(x,y,d,sz){
+  // A 1px silhouette cannot win against an 8px dither lattice, so each bird
+  // clears itself a small patch of open sky first.
+  for(let j=-1;j<=2;j++) for(let i=-sz-1;i<=sz+1;i++){
+    if((i<-sz||i>sz)&&j>1) continue;
+    const xx=x+i, yy=y+j;
+    if(xx<0||xx>=W||yy<0||yy>=H) continue;
+    const k=yy*W+xx;
+    if(lum[k]<0.96) lum[k]=0.96;
+    dof[k]=0;
+  }
+  px(x,y,0); px(x,y+1,0);
+  for(let w=1;w<=sz;w++){
+    const dy=Math.round(d*(w/sz));
+    px(x-w,y-dy,0); px(x+w,y-dy,0);
+    if(w===1){ px(x-w,y-dy+1,0); px(x+w,y-dy+1,0); }
+  }
+}
+
+function drawBirds(t){
+  for(const f of FLOCKS){
+    const ax=(f.x0+f.speed*t)%f.span - 33*S;
+    const ay=f.y0+f.amp*fsin(0.31*t+f.ph);
+    for(const b of f.birds){
+      const x=Math.round(ax+b.ox);
+      const y=Math.round(ay+b.oy+3*S*fsin(0.27*t+b.ph));
+      const d=Math.round(fsin(12.6*(t-b.lag*0.08)+b.ph)*1.8*S);
+      drawBird(x,y,d,f.sz);
+    }
+  }
+}
+
+/* ======================================================================
+   SHOOTING STAR
+   One at a time, rare, confined to the upper third where the sky is darkest
+   and a bright streak actually reads.
+   ==================================================================== */
+function buildStar(){
+  SS_RND=mulberry32(CFG.star.seed);
+  SS={t0:-99,dur:0,x:0,y:0,vx:0,vy:0,next:4+SS_RND()*7};
+}
+
+function updateStar(t){
+  if(t < SS.next) return;
+  const c=CFG.star;
+  const dir = (SS_RND()<0.72 ? 1 : -1)*windSign();   // usually with the wind
+  SS.dur = c.dur[0]+SS_RND()*(c.dur[1]-c.dur[0]);
+  SS.x   = dir>0 ? -14*S+SS_RND()*70*S : W+14*S-SS_RND()*70*S;
+  SS.y   = (c.y[0]+SS_RND()*(c.y[1]-c.y[0]))*S;  // high, where sky is darkest
+  SS.vx  = dir*(c.vx[0]+SS_RND()*(c.vx[1]-c.vx[0]))*S;
+  SS.vy  = (c.vy[0]+SS_RND()*(c.vy[1]-c.vy[0]))*S;
+  SS.t0  = t;
+  SS.next= t+c.every+SS_RND()*c.vary;
+}
+
+function drawStar(t){
+  const tau=t-SS.t0;
+  if(tau<0||tau>SS.dur) return;
+  const p=tau/SS.dur;
+  // Plateau at full brightness. A fade that decays from p=0 leaves the head
+  // hovering right at the dither threshold for most of the flight, which reads
+  // as a faint scratch rather than a star.
+  const fade = p<0.10 ? p/0.10 : (p>0.72 ? (1-p)/0.28 : 1);
+  const hxp=SS.x+SS.vx*tau, hyp=SS.y+SS.vy*tau;
+  const sp=Math.hypot(SS.vx,SS.vy);
+  const ux=-SS.vx/sp, uy=-SS.vy/sp;              // back along the path
+  const n=Math.round(CFG.star.tail*S*(0.35+0.65*Math.sin(Math.PI*p)));
+  for(let i=n;i>=0;i--){
+    const q=i/(n||1);
+    // (1-q)^1.5 not squared: at 1 bit a steep falloff spends most of the tail
+    // below the dither threshold, which reads as a smudge instead of a streak.
+    const b=fade*Math.pow(1-q,1.5);
+    if(b<=0.04) continue;
+    const x=Math.round(hxp+ux*i), y=Math.round(hyp+uy*i);
+    if(x<0||x>=W||y<0||y>=H) continue;
+    const k=y*W+x;
+    const v = i<=2 ? 1.40 : 0.35+1.15*b;         // head is always a hard point
+    if(v>lum[k]){ lum[k]=v; dof[k]=0; }
+    if(i===0){                                   // give the head a little body
+      if(y>0){ const a=k-W; if(1.2>lum[a]){lum[a]=1.2; dof[a]=0;} }
+      if(y<H-1){ const a=k+W; if(1.2>lum[a]){lum[a]=1.2; dof[a]=0;} }
+    }
+  }
+}
+
+/* ======================================================================
+   THE MILL
+   ==================================================================== */
+function bodyHalf(y){
+  if(y<MILL.capTop) return -1;
+  if(y<MILL.capCy){
+    const q=(MILL.capCy-y)/MILL.capRy;
+    if(q>1) return -1;
+    return MILL.capRx*Math.sqrt(1-q*q);
+  }
+  return MILL.halfAtCy+(y-MILL.capCy)*MILL.taper;
+}
+
+function drawMill(){
+  for(let y=Math.round(MILL.hillTop);y<H;y++){        // narrow spire of hill
+    const half=MILL.hillHalf+(y-MILL.hillTop)*MILL.hillSlope;
+    for(let x=Math.round(TOWER_X-half);x<=Math.round(TOWER_X+half);x++) px(x,y,0.0);
+  }
+  for(let y=Math.round(MILL.capTop);y<=MILL.bodyBot;y++){
+    let half=bodyHalf(y);
+    if(half<0) continue;
+    // the cap leans toward the hub, which sells the same yaw as the rotor
+    const cx = y<MILL.capCy ? TOWER_X+3*S : TOWER_X;
+    if(y>=MILL.galY&&y<MILL.galY+MILL.galH) half+=MILL.galOut;
+    for(let x=Math.round(cx-half);x<=Math.round(cx+half);x++) px(x,y,0.0);
+  }
+  const fx=Math.round(TOWER_X+3*S);
+  for(let y=Math.round(MILL.finialTop);y<MILL.capTop;y++) px(fx,y,0.0);
+  px(fx-1,Math.round(MILL.finialTop)+1,0.0); px(fx+1,Math.round(MILL.finialTop)+1,0.0);
+  for(const w of MILL.windows)
+    for(let y=Math.round(w.y0);y<=w.y1;y++)
+      for(let x=Math.round(TOWER_X-w.hw);x<=Math.round(TOWER_X+w.hw);x++) px(x,y,1.0);
+}
+
+/* --- rotor 3/4 view --------------------------------------------------
+   The rotor plane is yawed about the vertical axis and projected with a real
+   perspective divide, so the near arm reads longer and heavier than the far
+   one — a plain horizontal squash only ever looks like a squashed cross.
+     Forward:  z = p*sinY, s = F/(F+z), X = p*cosY*s, Y = q*s
+     Inverse:  p = dx*F/(cosY*F - dx*sinY), then q = dy/s
+   p depends only on the screen column, so p and 1/s are cached per column
+   once a frame and the per-pixel cost is a single multiply.
+   The rotor is NOT depth-split around the tower: on a real mill the sails hang
+   off a shaft ahead of the cap, and splitting them pops hard anyway since an
+   arm points straight down exactly where it overlaps tower and deck.        */
+function updateRotorCols(){
+  for(let x=0;x<W;x++){
+    const dx=x-HUB.x;
+    const p=dx*FOC/(CY_*FOC - dx*SY_);
+    pCol[x]=p;
+    iSCol[x]=(FOC+p*SY_)/FOC;          // = 1/s
+  }
+}
+function fwd(p,q){
+  const s=FOC/(FOC+p*SY_);
+  return [HUB.x+p*CY_*s, HUB.y+q*s];
+}
+
+/* Solid ink, structured only by narrow light slits between the panels, so the
+   arms read black as a mass. Widen CFG.rotor.slit to open them back up. */
+function sailInk(u,v){
+  const av=v<0?-v:v;
+  if(u<-7*S||u>LA||av>HW) return 0;
+  if(u<INNER) return av<=2.0*S ? 1 : 0;          // bare spine near the hub
+  let half=HW;
+  if(u>LA-12*S) half=HW*(0.45+0.55*(LA-u)/(12*S));  // tapered tip
+  if(av>half) return 0;
+  if(av<=1.5*S||av>half-1.2*S) return 1;         // spine and outer rails
+  return ((u-INNER)%CU)<SLIT ? 2 : 1;            // slit : panel
+}
+
+function drawSails(t){
+  const ang=ANG0+OMEGA*t;
+  for(let k=0;k<4;k++){
+    const a=ang+k*Math.PI/2, ca=Math.cos(a), sa=Math.sin(a);
+    let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9;
+    for(const uu of [-7*S,LA]) for(const vv of [-HW,HW]){
+      const P=fwd(uu*ca-vv*sa, uu*sa+vv*ca);
+      if(P[0]<mnx)mnx=P[0]; if(P[0]>mxx)mxx=P[0];
+      if(P[1]<mny)mny=P[1]; if(P[1]>mxy)mxy=P[1];
+    }
+    const x0=Math.max(0,Math.floor(mnx)), x1=Math.min(W-1,Math.ceil(mxx));
+    const y0=Math.max(0,Math.floor(mny)), y1=Math.min(H-1,Math.ceil(mxy));
+    for(let y=y0;y<=y1;y++){
+      const dy=y-HUB.y, row=y*W;
+      for(let x=x0;x<=x1;x++){
+        const p=pCol[x], q=dy*iSCol[x];
+        const s=sailInk(p*ca+q*sa, -p*sa+q*ca);
+        if(s){ const i=row+x; lum[i]=(s===1)?0.0:0.86; dof[i]=0; }
+      }
+    }
+  }
+}
+
+function drawHub(){
+  const r=5*S, r2=r*r;
+  for(let y=-Math.ceil(r);y<=r;y++) for(let x=-Math.ceil(r);x<=r;x++)
+    if(x*x*1.6+y*y<=r2) px(Math.round(HUB.x)+x,Math.round(HUB.y)+y,0.0);
+  px(Math.round(HUB.x),Math.round(HUB.y),0.9);
+  px(Math.round(HUB.x),Math.round(HUB.y)-1,0.9);
+}
+
+/* ======================================================================
+   L2 — THE PARTICLE DECK, one particle one pixel
+
+   Cloud, not water and not sand. Four things separate them:
+     - OVERDAMPED, not springy. At zeta ~0.6 anything struck sloshed back and
+       forth, which read as liquid. Both axes now sit past critical damping.
+     - THE HOME SPRING SLACKENS WITH ALTITUDE, so grit lifted clear of the deck
+       is not reeled back against the wind — it just rides.
+     - THE WIND IS STRONGER ALOFT, so lifted grit accelerates downwind,
+       overshoots its home, and drifts back over the next few seconds. That
+       overshoot is most of the difference between a cloud and a splash.
+     - SEEDED IN CLUMPS. A uniform sample is a Poisson field: locally
+       featureless at every scale, which is exactly what sand looks like.
+
+   State is displacement (r) from a home that drifts with the base wind, and v
+   is measured RELATIVE TO THE AIR, so v = 0 means "moving with the wind".
+
+   The deck is a cylinder of circumference WRAP, rendered modulo WRAP with a
+   MARG bleed off each edge. The wrap is applied to the RENDERED position
+   (home + displacement), not the home alone — wrapping the home lets a
+   particle carrying displacement rx reappear at screen x = rx, which put a
+   visible seam of particles materialising just inside the left edge.
+   ==================================================================== */
+function buildDeck(gy0,gl){
+  const d=CFG.deck;
+  const gy = v => gy0(v+d.offY);         // the whole deck rides its own offset
+  WRAP=Math.round(gl(d.wrap)); MARG=Math.round(gl(d.marg));
+  DECK_TOP=gy(d.top);
+  /* Stop the deck just under the near bank. L1 is solid ink from its floor
+     down, so grit seeded below that is spent on something nobody can see, and
+     starving the visible band is what makes the deck look thin. Deriving it
+     means it can never drift out of sync with lift or with L1's position.
+     Capped by depth too, so lifting the deck clear of L1 does not stretch the
+     same grit over a huge band and thin it out. */
+  const nb=BANKS[BANKS.length-1];
+  DECK_BOT=Math.min((nb.floor||nb.y0)+8*S, gy(d.surfFloor)+84*S);
+  P_TOP=Math.max(0,Math.round(gy(d.pTop)));
+  VW=gl(layerSpeed(DECK_DEPTH))*CFG.wind; VW_ALOFT=gl(d.windAloft)*CFG.wind;
+  HIDE_AT=gl(d.hideAt); SHOW_AT=gl(d.showAt);
+  ALT_H=gl(d.altH); RX_MAX=gl(d.rxMax); B_PUSH=gl(d.push);
+  B_RAD=HW+gl(d.radPad); R_MAX2=(LA+B_RAD+3*S)*(LA+B_RAD+3*S);
+  TURB_AX=d.turbAx*S; TURB_AY=d.turbAy*S;
+  TURB_FX=d.turbFx/S; TURB_FY=d.turbFy/S;
+
+  // surface: few big lobes, or the min() flattens into a ruled line
+  nearTop=new Float32Array(WRAP);
+  {
+    const rnd=mulberry32(d.surfSeed), lobes=[], n=d.surfLobes;
+    for(let i=0;i<n;i++) lobes.push({
+      cx:(i+rnd()*0.9)*(WRAP/n),
+      rx:gl(d.surfRx[0]+rnd()*(d.surfRx[1]-d.surfRx[0])),
+      ry:gl(d.surfRy[0]+rnd()*(d.surfRy[1]-d.surfRy[0])),
+      dy:(rnd()-0.5)*8*S});
+    const floor=gy(d.surfFloor), base=gy(d.surfBase);
+    for(let x=0;x<WRAP;x++){
+      let top=floor;
+      for(const lo of lobes) for(let k=-1;k<=1;k++){
+        const dx=x-(lo.cx+k*WRAP);
+        if(dx>-lo.rx&&dx<lo.rx){
+          const q=dx/lo.rx;
+          const yc=base+lo.dy-lo.ry*Math.sqrt(1-q*q);
+          if(yc<top)top=yc;
+        }
+      }
+      nearTop[x]=top;
+    }
+  }
+
+  PN=Math.max(1000,Math.round(d.pn*d.grit*S*S));
+  rx=new Float32Array(PN); ry=new Float32Array(PN);
+  vx=new Float32Array(PN); vy=new Float32Array(PN);
+  hx=new Float32Array(PN); hy=new Float32Array(PN); fl=new Float32Array(PN);
+  lapA=new Int32Array(PN); hid=new Uint8Array(PN);
+
+  /* Most particles are seeded inside overlapping blobs — varied in size,
+     biased toward the upper deck where cloud structure lives — with a uniform
+     minority keeping a continuous base under the lumps. Blob centres live in
+     wrap space and are sampled with wrap-around, so the cylinder has no seam.
+     The deck stops at DECK_BOT because L1 is solid ink below that: grit seeded
+     there is spent on something nobody can see, and starving the visible band
+     is what made the deck look thin. */
+  const rnd=mulberry32(d.seed), blobs=[], NB=d.blobs;
+  for(let b=0;b<NB;b++){
+    const cx=rnd()*WRAP, surf=nearTop[cx|0];
+    blobs.push({cx, cy:surf+Math.pow(rnd(),1.35)*(DECK_BOT-surf),
+                r:gl(d.blobR[0]+rnd()*rnd()*(d.blobR[1]-d.blobR[0]))});
+  }
+  let i=0, guard=0;
+  while(i<PN && guard<PN*60){
+    guard++;
+    let x,y;
+    if(rnd()<d.blobFrac){
+      const b=blobs[(rnd()*NB)|0];
+      const a=rnd()*6.2832, rr=b.r*Math.pow(rnd(),d.blobCore);
+      x=b.cx+Math.cos(a)*rr; y=b.cy+Math.sin(a)*rr;
+      x=((x%WRAP)+WRAP)%WRAP;
+    }else{
+      x=rnd()*WRAP; y=DECK_TOP+rnd()*(DECK_BOT-DECK_TOP);
+    }
+    if(y<DECK_TOP-14*S||y>=DECK_BOT) continue;
+    const p=clamp((y-(nearTop[x|0]-4*S))/(9*S),0,1);
+    if(rnd()>p*p) continue;
+    hx[i]=x; hy[i]=y; fl[i]=0.75+rnd()*0.55; i++;
+  }
+  while(i<PN){ hx[i]=hx[i%(i||1)]||0; hy[i]=DECK_BOT-1; fl[i]=1; i++; }
+}
+
+function stepParticles(t){
+  const d=CFG.deck;
+  const ang=ANG0+OMEGA*t;
+  const CA=[],SA=[];
+  for(let k=0;k<4;k++){const a=ang+k*Math.PI/2; CA.push(Math.cos(a)); SA.push(Math.sin(a));}
+  const drift=VW*t;
+  const s1=fsin(0.79*t), s2=fsin(1.18*t), s3=fsin(0.39*t);
+  const g1=0.6+0.4*s3, g2=0.6+0.4*s1;
+  const hubx=HUB.x, huby=HUB.y, iALT=1/ALT_H;
+  const KX=d.kx, CXd=d.cx, KY=d.ky, CYd=d.cy, LEASH=d.leash, GRAB=d.grab;
+
+  const IW=1/WRAP;
+  for(let i=0;i<PN;i++){
+    /* The deck is a cylinder narrower than the streaks the blades throw, so a
+       displaced particle can come back around while still airborne — which
+       reads as one edge teleporting grit to the other. Detect the seam
+       crossing (it sits MARG off-screen, so nothing is visible there) and
+       UNLOAD anything still displaced: it stops being drawn and quietly
+       rejoins the deck once it has settled back onto its home. */
+    const u=hx[i]+drift+rx[i];
+    const lap=Math.floor(u*IW);
+    if(lap!==lapA[i]){
+      lapA[i]=lap;
+      /* Only AIRBORNE grit needs unloading. Horizontal displacement is the
+         wrong test: the blades push the whole deck downwind, so a settled
+         particle sits ~40px from its home and would trip any small threshold —
+         that hid half the field. A particle at deck level re-enters buried in
+         the mass and nobody can tell; one that re-enters above the deck, still
+         flying, is the thing that reads as teleporting. */
+      if(ry[i]<-HIDE_AT) hid[i]=1;
+    }
+    if(hid[i] && ry[i]>-SHOW_AT) hid[i]=0;   // settled back down: rejoin
+
+    let X=u-lap*WRAP-MARG;
+    const Y=hy[i]+ry[i];
+    const f=fl[i];
+
+    // 0 while sitting in the deck, 1 once well clear of it
+    let alt=-ry[i]*iALT; if(alt<0)alt=0; else if(alt>1)alt=1;
+
+    let ax = -CXd*f*(vx[i]-VW_ALOFT*alt) - KX*(1-LEASH*alt)*rx[i];
+    let ay = -CYd*f*vy[i] - KY*(1-0.55*alt)*ry[i];
+
+    ax += TURB_AX*fsin(Y*TURB_FX+s1*2.1)*g1;      // ambient churn
+    ay += TURB_AY*fsin(X*TURB_FY+s2*1.7)*g2;
+
+    const dxh=X-hubx, dyh=Y-huby;
+    if(dxh*dxh+dyh*dyh<R_MAX2){
+      for(let k=0;k<4;k++){
+        const c=CA[k], s=SA[k];
+        const u=dxh*c+dyh*s, v=-dxh*s+dyh*c;
+        if(u>-6*S&&u<LA&&v>-B_RAD&&v<B_RAD){
+          const av=v<0?-v:v, w=1-av/B_RAD;
+          // velocity of the blade material at this point (omega x r)
+          const bvx=OMEGA*(-u*s-v*c), bvy=OMEGA*(u*c-v*s);
+          const g=GRAB*w;
+          ax += (bvx-(vx[i]+VW))*g;
+          ay += (bvy-vy[i])*g;
+          const sg=v>=0?1:-1, pw=B_PUSH*w;
+          ax += -s*sg*pw;
+          ay +=  c*sg*pw;
+          break;
+        }
+      }
+    }
+    vx[i]+=ax*DT; vy[i]+=ay*DT;
+    let nx=rx[i]+vx[i]*DT;
+    if(nx>RX_MAX)nx=RX_MAX; else if(nx<-RX_MAX)nx=-RX_MAX;
+    rx[i]=nx; ry[i]+=vy[i]*DT;
+  }
+}
+
+function drawParticles(t){
+  const d=CFG.deck;
+  dens.fill(0, P_TOP*W);
+  const drift=VW*t;
+  const dv=Math.round(-drift%WRAP)|0;
+  const lo=P_TOP, hi=H-1;
+  for(let i=0;i<PN;i++){
+    if(hid[i]) continue;                       // unloaded at the seam
+    let X=(hx[i]+drift+rx[i])%WRAP; if(X<0)X+=WRAP; X-=MARG;
+    const Y=hy[i]+ry[i];
+    if(X<0||X>=W-1||Y<lo||Y>=hi) continue;
+    const xi=X|0, yi=Y|0, fx=X-xi, fy=Y-yi, b=yi*W+xi;
+    const w0=1-fx, w1=1-fy;
+    dens[b]+=w0*w1; dens[b+1]+=fx*w1;
+    dens[b+W]+=w0*fy; dens[b+W+1]+=fx*fy;
+  }
+  /* GAIN is the real clumping dial. High values saturate coverage everywhere,
+     so every gap between blobs still paints solid and the field flattens into
+     one even screen — sand. Low enough that thin regions stay PARTIALLY
+     covered lets sky through between the lumps, which is what makes them read.
+     Density also maps to TONE across a wide range, so wispy edges sit much
+     lighter than dense cores. */
+  const GAIN=d.gain/(S*S), SPAN=1/(d.span*S*S), THIN=d.thin, CORE=d.core;
+  for(let i=P_TOP*W, n=W*H; i<n; i++){
+    const den=dens[i];
+    if(den<=0) continue;
+    let a=den*GAIN; if(a>1)a=1;
+    let q=den*SPAN; if(q>1)q=1;
+    lum[i]=lum[i]*(1-a)+(THIN-(THIN-CORE)*q)*a;
+    if(a>0.5) dof[i]=dv;
+  }
+}
+
+/* ======================================================================
+   DITHER + BLIT
+   ==================================================================== */
+function dither(){
+  for(let y=0;y<H;y++){
+    const row=(y&7)<<3, o=y*W;
+    for(let x=0;x<W;x++){
+      const i=o+x;
+      buf32[i] = lum[i]*64 > BAYER[row|((x+dof[i])&7)]+0.5 ? CPAP : CINK;
+    }
+  }
+  ctx.putImageData(img,0,0);
+}
+
+/* ======================================================================
+   FRAME — back to front
+   ==================================================================== */
+function renderFrame(t){
+  lum.set(bg);
+  dof.fill(0);
+  updateRotorCols();
+  updateStar(t);
+  drawStar(t);
+  drawBirds(t);
+  drawBank(BANKS[0],t);         // L4
+  drawBank(BANKS[1],t);         // L3
+  drawMill();                   // tower, so the deck can bury its base
+  drawParticles(t);             // L2
+  drawSails(t);                 // rotor rides ahead of the cap
+  drawHub();
+  drawBank(BANKS[2],t);         // L1 — in front of everything
+  dither();
+}
+
+/* ======================================================================
+   DRIVER
+   ==================================================================== */
+let t=0, acc=0, last=0, paused=false;
+const hud=document.getElementById('hud');
+const loadEl=document.getElementById('load');
+
+function warmup(n){ for(let i=0;i<(n||260);i++){ stepParticles(t); t+=DT; } }
+
+/* The postcard is always exactly 9:16 in whole CSS pixels. Snapping the height
+   to a multiple of 16 makes width = h*9/16 land on an integer too, so the
+   frame can never drift off-aspect by a stray pixel.
+
+   FILL grows it into whatever space is left. A fixed row count stretched over
+   an arbitrary height means cells cannot all be equal — at 416 rows in 900px
+   each cell is 2.16px, so rows alternate 2px/3px. That is usually invisible,
+   but it can beat against the 8x8 Bayer lattice as faint banding.
+   CRISP letterboxes to an integer zoom instead: every cell identical, at the
+   cost of leaving some space unused. */
+function fitCanvas(){
+  const st=document.getElementById('stage');
+  const availW=st.clientWidth, availH=st.clientHeight;
+  let w,h,cell;
+  if(CFG.fit==='crisp'){
+    cell=Math.max(1,Math.floor(Math.min(availW/W, availH/H)));
+    w=W*cell; h=H*cell;
+  }else{
+    h=Math.floor(Math.min(availH, availW*16/9));
+    h-=h%16; if(h<16) h=16;
+    w=h*9/16;
+    cell=h/H;
+  }
+  cv.style.width=w+'px'; cv.style.height=h+'px';
+  const z=document.getElementById('vZoom');
+  const p=document.getElementById('vPost');
+  const c=document.getElementById('vCells');
+  const even=Math.abs(cell-Math.round(cell))<1e-9;
+  if(z) z.textContent = even ? cell+'px' : cell.toFixed(2)+'px';
+  if(p) p.textContent = w+'×'+h;
+  if(c) c.textContent = even ? 'even cells' : 'cells ±1px';
+  return cell;
+}
+
+function rebuild(keepTime){
+  const t0=keepTime?t:0;
+  build(); t=t0; acc=0;
+  warmup();
+  fitCanvas();
+  renderFrame(t);
+}
+
+function tick(now){
+  const n=(now===undefined)?performance.now():now;
+  let dtr=(n-last)/1000; last=n;
+  if(dtr>0.25) dtr=0.25;
+  if(!paused){ acc+=dtr; while(acc>=DT){ stepParticles(t); t+=DT; acc-=DT; } }
+  renderFrame(t);
+  hud.textContent=t.toFixed(1)+'s  '+W+'x'+H+'  '+PN+'p';
+}
+
+let rafSeen=false;
+function rafLoop(now){ rafSeen=true; tick(now); requestAnimationFrame(rafLoop); }
+function startDriver(){
+  last=performance.now();
+  requestAnimationFrame(rafLoop);
+  setTimeout(()=>{ if(!rafSeen) setInterval(()=>tick(), 16); }, 400);
+}
+
+addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea') return;
+  if(e.code==='Space'){paused=!paused;e.preventDefault();}
+  if(e.key==='h'){hud.style.display=hud.style.display==='none'?'':'none';}
+});
+addEventListener('resize',fitCanvas);
+
+/* ======================================================================
+   CONTROL PANEL
+   ==================================================================== */
+const $=id=>document.getElementById(id);
+function toast(msg){
+  const el=$('toast'); el.textContent=msg; el.classList.add('on');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),1400);
+}
+
+function buildChips(host, values, get, set, label){
+  host.innerHTML='';
+  values.forEach(v=>{
+    const b=document.createElement('button');
+    b.className='chip'; b.type='button'; b.textContent=label(v);
+    b.setAttribute('aria-pressed', String(get()===v));
+    b.onclick=()=>{ set(v); [...host.children].forEach(c=>c.setAttribute('aria-pressed','false'));
+                    b.setAttribute('aria-pressed','true'); };
+    host.appendChild(b);
+  });
+}
+
+function syncLabels(){
+  const sp=CFG.rotor.spin;
+  $('vGrid').textContent = W+'x'+H;
+  $('vLift').textContent = CFG.lift;
+  $('vWind').textContent = CFG.wind.toFixed(2)+'x';
+  $('vSpin').textContent = Math.abs(sp)<0.004 ? 'stopped'
+                         : (1/Math.abs(sp)).toFixed(1)+'s '+(sp<0?'↺':'↻');
+  $('vYaw').textContent  = CFG.rotor.yawDeg.toFixed(1)+'°';
+  $('vDens').textContent = CFG.deck.gain.toFixed(2);
+  $('vGrit').textContent = PN.toLocaleString();
+  $('vStar').textContent = CFG.star.every+'-'+(CFG.star.every+CFG.star.vary)+'s';
+  $('vSkyT').textContent = CFG.sky.top.toFixed(2);
+  $('vSkyH').textContent = CFG.sky.horizon.toFixed(2);
+  $('vSkyC').textContent = CFG.sky.curve.toFixed(2);
+  $('vSunX').textContent = CFG.sun.x;
+  $('vSunY').textContent = CFG.sun.y;
+  $('vMillY').textContent= (CFG.mill.offY>0?'+':'')+CFG.mill.offY;
+  $('vSpMin').textContent= CFG.speedMin.toFixed(1);
+  $('vSpMax').textContent= CFG.speedMax.toFixed(0);
+  $('nLadder').textContent = 'ladder ' +
+    [0,1,2,3].map(i=>layerSpeed(i).toFixed(0)).join(' · ') + ' px/s';
+  [0,1,2,3].forEach(i=>{
+    const v = i===DECK_DEPTH ? CFG.deck.offY : CFG.banks[BANK_DEPTH.indexOf(i)].offY;
+    $('vY'+i).textContent = (v>0?'+':'')+v;
+  });
+}
+
+/* Speeds are derived, so every layer has to be re-derived whenever the wind or
+   the ladder changes — including the deck, the birds and the physics wind. */
+function applySpeeds(){
+  BANKS.forEach((b,i)=>b.speed=layerSpeed(BANK_DEPTH[i])*S*CFG.wind);
+  FLOCKS.forEach((f,i)=>f.speed=CFG.birds.flocks[i].speed*S*CFG.wind);
+  VW=layerSpeed(DECK_DEPTH)*S*CFG.wind;
+  VW_ALOFT=CFG.deck.windAloft*S*CFG.wind;
+}
+
+function wirePanel(){
+  buildChips($('gridChips'), GRID_CHOICES, ()=>CFG.gridK,
+    k=>{ CFG.gridK=k; rebuild(true); syncLabels(); },
+    k=>(9*k)+'×'+(16*k));
+  buildChips($('fitChips'), FIT_CHOICES, ()=>CFG.fit,
+    f=>{ CFG.fit=f; fitCanvas(); }, f=>f.toUpperCase());
+  buildChips($('gritChips'), GRIT_CHOICES, ()=>CFG.deck.grit,
+    g=>{ CFG.deck.grit=g; rebuild(true); syncLabels(); },
+    g=>g+'×');
+
+  $('cInk').value=CFG.ink; $('cPap').value=CFG.paper;
+  $('cInk').oninput=e=>{ CFG.ink=e.target.value; CINK=packColor(CFG.ink); };
+  $('cPap').oninput=e=>{ CFG.paper=e.target.value; CPAP=packColor(CFG.paper); };
+  $('bSwap').onclick=()=>{
+    const a=CFG.ink; CFG.ink=CFG.paper; CFG.paper=a;
+    $('cInk').value=CFG.ink; $('cPap').value=CFG.paper;
+    CINK=packColor(CFG.ink); CPAP=packColor(CFG.paper);
+  };
+
+  const live=(id,get,set,fmt)=>{
+    const r=$(id); r.value=get();
+    r.oninput=e=>{ set(parseFloat(e.target.value)); syncLabels(); };
+  };
+  live('rWind',  ()=>CFG.wind, v=>{ CFG.wind=v; applySpeeds(); });
+  live('rSpMin', ()=>CFG.speedMin, v=>{ CFG.speedMin=v; applySpeeds(); });
+  live('rSpMax', ()=>CFG.speedMax, v=>{ CFG.speedMax=v; applySpeeds(); });
+  live('rSpin',  ()=>CFG.rotor.spin, v=>{ CFG.rotor.spin=v; OMEGA=-2*Math.PI*v; });
+  live('rYaw',   ()=>CFG.rotor.yawDeg, v=>{ CFG.rotor.yawDeg=v;
+    YAW=v*Math.PI/180; CY_=Math.cos(YAW); SY_=Math.sin(YAW); });
+  live('rDens',  ()=>CFG.deck.gain, v=>{ CFG.deck.gain=v; });
+  live('rStar',  ()=>CFG.star.every, v=>{ CFG.star.every=v; });
+  // the sky field is baked once, so these repaint the static buffer
+  live('rSkyT',  ()=>CFG.sky.top, v=>{ CFG.sky.top=v; buildBG(); });
+  live('rSkyH',  ()=>CFG.sky.horizon, v=>{ CFG.sky.horizon=v; buildBG(); });
+  live('rSkyC',  ()=>CFG.sky.curve, v=>{ CFG.sky.curve=v; buildBG(); });
+  live('rSunX',  ()=>CFG.sun.x, v=>{ CFG.sun.x=v; SUN.x=v*S; buildBG(); });
+  live('rSunY',  ()=>CFG.sun.y, v=>{ CFG.sun.y=v; SUN.y=(v-CFG.lift)*S; buildBG(); });
+
+  // these reshape geometry and reseed homes, so they rebuild on release
+  const heavy=(id,get,set)=>{
+    const r=$(id); r.value=get();
+    r.oninput=e=>{ set(parseFloat(e.target.value)); syncLabels(); };
+    r.onchange=()=>{ rebuild(true); syncLabels(); };
+  };
+  heavy('rLift', ()=>CFG.lift, v=>{ CFG.lift=v; });
+  heavy('rMillY',()=>CFG.mill.offY, v=>{ CFG.mill.offY=v; });
+  [0,1,2,3].forEach(i=>heavy('rY'+i,
+    ()=> i===DECK_DEPTH ? CFG.deck.offY : CFG.banks[BANK_DEPTH.indexOf(i)].offY,
+    v=>{ if(i===DECK_DEPTH) CFG.deck.offY=v;
+         else CFG.banks[BANK_DEPTH.indexOf(i)].offY=v; }));
+
+  $('nSeed').value=CFG.deck.seed;
+  $('nSeed').onchange=e=>{ CFG.deck.seed=parseInt(e.target.value,10)||1; rebuild(true); };
+  $('bReroll').onclick=()=>{
+    const s=(Math.random()*1e6)|0;
+    CFG.deck.seed=s; CFG.deck.surfSeed=(s*7+13)|0;
+    CFG.banks.forEach((b,i)=>b.seed=(s*(i+3)+101)|0);
+    $('nSeed').value=s; rebuild(true); toast('reshaped');
+  };
+  $('bStarNow').onclick=()=>{ SS.next=t; };
+
+  $('bCopy').onclick=()=>{
+    const txt='const DEFAULT_CFG = '+JSON.stringify(CFG,null,2)+';';
+    navigator.clipboard.writeText(txt).then(()=>toast('config copied')).catch(()=>{
+      const d=$('dump'); d.style.display='block';
+      d.querySelector('textarea').value=txt;
+      d.querySelector('textarea').select();
+    });
+  };
+  $('bPng').onclick=()=>{
+    const a=document.createElement('a');
+    a.download='windmill-'+W+'x'+H+'.png'; a.href=cv.toDataURL('image/png'); a.click();
+  };
+  $('bReset').onclick=()=>{
+    CFG=JSON.parse(JSON.stringify(DEFAULT_CFG));
+    rebuild(false); wirePanel(); syncLabels(); toast('reset');
+  };
+  syncLabels();
+}
+
+/* ======================================================================
+   BOOT
+   ==================================================================== */
+window.__mill={
+  cfg:()=>CFG, at:()=>t, rebuild,
+  run(n){ for(let i=0;i<(n||1);i++){ stepParticles(t); t+=DT; } renderFrame(t); },
+  render(){ renderFrame(t); },
+  hud(v){ hud.style.display=v?'':'none'; },
+  size(){ return {W,H,S,PN}; },
+  speeds(){ return {L4:+BANKS[0].speed.toFixed(2), L3:+BANKS[1].speed.toFixed(2),
+                    L2deck:+VW.toFixed(2), L1:+BANKS[2].speed.toFixed(2),
+                    aloft:+VW_ALOFT.toFixed(2), omega:+OMEGA.toFixed(3),
+                    birds:FLOCKS.map(f=>+f.speed.toFixed(1))}; },
+  hidden(){ let n=0; for(let i=0;i<PN;i++) if(hid[i]) n++;
+            return {hidden:n, pct:+(100*n/PN).toFixed(2)}; },
+  star(){ return {t0:SS.t0,dur:SS.dur,next:SS.next,active:(t-SS.t0)>=0&&(t-SS.t0)<=SS.dur}; },
+  forceStar(){ SS.next=t; },
+  stats(){
+    let na=0,ns=0,ax=0,av=0,sx=0,hi=0;
+    for(let i=0;i<PN;i++){
+      if(ry[i]<-12*S){ na++; ax+=rx[i]; av+=vx[i]; if(-ry[i]>hi)hi=-ry[i]; }
+      else { ns++; sx+=rx[i]; }
+    }
+    return {aloft:na, aloft_rx:+(ax/na).toFixed(1), aloft_vx:+(av/na).toFixed(1),
+            settled:ns, settled_rx:+(sx/ns).toFixed(1), maxLift:+hi.toFixed(0)};
+  },
+  bench(){ const a=performance.now(); stepParticles(t); const b=performance.now();
+           renderFrame(t); const c=performance.now();
+           return {stepMs:+(b-a).toFixed(2), renderMs:+(c-b).toFixed(2)}; }
+};
+
+setTimeout(()=>{
+  build(); warmup(); fitCanvas(); renderFrame(t);
+  wirePanel();
+  loadEl.style.display='none';
+  startDriver();
+},30);
+
+})();
+</script>
+</body>
+</html>
