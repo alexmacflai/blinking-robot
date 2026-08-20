@@ -291,7 +291,7 @@ const DEFAULT_CFG = {
      is what makes cloud read as squeezed out sideways rather than floating —
      and because it runs every frame of contact, a grain can never sit inside
      a blade: it is actively excluded every tick it overlaps one. */
-  debris  : { max:22000, threshold:0.30, rate:2.2,
+  debris  : { max:22000, threshold:0.30, rate:16.0, contact:0.12,
               grab:15.0, push:70.0, radPad:4.0,
               drag:1.6, sink:34, life:[0.9,2.0],
               lift:0.13, wispFrac:0.10, wispLife:[1.8,3.2], amount:1.0 },
@@ -773,9 +773,8 @@ function drawHub(){
    would have been.
    ==================================================================== */
 let nearTop,WRAP,DECK_TONE,DECK_SOFT,DECK_SHADE;
-let carve,carveTmp,CY0,CROWS,TEAR,HEAL,SPREAD,TEAR_D,SHED_T;
-let dX,dY,dVX,dVY,dLife,dAge,dMax,dMass,dN=0,dEmitted=0;
-let shed;
+let carve,carveTmp,CY0,CROWS,TEAR,HEAL,SPREAD,TEAR_D;
+let dX,dY,dVX,dVY,dLife,dAge,dRel,dContact,dMax,dMass,dN=0,dEmitted=0;
 
 function buildDeck(gy0,gl){
   const d=CFG.deck;
@@ -786,7 +785,6 @@ function buildDeck(gy0,gl){
   DECK_SOFT=Math.max(1,gl(d.soft));
   DECK_SHADE=d.shade;
   TEAR=d.tear; HEAL=d.heal; SPREAD=d.spread; TEAR_D=gl(d.tearDepth);
-  SHED_T=CFG.debris.threshold;
 
   // surface: few big lobes, or the min() flattens into a ruled line
   nearTop=new Float32Array(WRAP);
@@ -826,9 +824,8 @@ function buildDeck(gy0,gl){
   dX=new Float32Array(dMax); dY=new Float32Array(dMax);
   dVX=new Float32Array(dMax); dVY=new Float32Array(dMax);
   dLife=new Float32Array(dMax); dMass=new Float32Array(dMax);
-  dAge=new Float32Array(dMax);
-  shed=new Uint8Array(WRAP*CROWS);   // one-shot latch: has this cell already spawned?
-  dN=0; accM.fill(0);
+  dAge=new Float32Array(dMax); dRel=new Uint8Array(dMax); dContact=new Float32Array(dMax);
+  dN=0;
 }
 
 const mod=(a,n)=>{ const r=a%n; return r<0?r+n:r; };
@@ -855,14 +852,19 @@ function surfaceAt(wx){
    punched-out cutout. Skimming the top instead scallops the silhouette, which
    is what "the arms catching the top of the cloud" actually looks like.
 
-   A cell that erodes past `threshold` sheds ONE debris grain, spawned exactly
-   at that pixel — inside the cloud, at the moment the blade is actually there
-   — with velocity already matched to the blade (see stepDebris). It is not a
+   A cell that crosses `threshold` sheds ONE debris grain, spawned exactly at
+   that pixel — inside the cloud, at the moment the blade is actually there —
+   with velocity already matched to the blade (see stepDebris). It is not a
    scripted "throw"; it is a particle that the loop below hands off to contact
-   physics, which is what carries, squeezes and eventually releases it. The
-   latch (`shed`) means a cell fires once per erosion episode, not every frame
-   it stays past threshold, and resets once healing pulls it back down — so a
-   spot that keeps getting swept keeps shedding, not machine-gunning grains. */
+   physics, which is what carries, squeezes and eventually releases it.
+
+   The roll happens exactly once, on the frame a cell first crosses the
+   threshold (`before<thresh && c>=thresh`), not on every frame it remains
+   above it — rolling every frame made the odds depend on how many frames the
+   blade happened to dwell over a given cell, which is itself resolution-
+   dependent, and broke scale invariance. One roll per crossing, with the
+   odds divided by S*S to cancel out a finer grid's proportionally smaller,
+   more numerous cells, keeps shred rate real-world-constant across grids. */
 function tearDeck(dt,t){
   if(TEAR<=0) return;
   const off=deckOff(t), ang=ANG0+OMEGA*t, w=Math.abs(OMEGA);
@@ -899,8 +901,18 @@ function tearDeck(dt,t){
         const c=before+amt;
         carve[i]=c>1?1:c;
 
-        if(c>=thresh){
-          if(!shed[i] && dN<dMax && Math.random()<amt*rate){
+        if(c>=thresh && before<thresh){
+          /* Roll exactly ONCE, at the frame a cell first crosses threshold —
+             not on every subsequent frame it stays above it. A finer grid has
+             S*S more, proportionally smaller cells covering the same physical
+             patch, so each one crossing threshold is a smaller, more frequent
+             event; dividing this single trial's odds by S*S is what cancels
+             that out. Retrying every frame while a cell sits above threshold
+             made the total odds depend on how many frames the blade happened
+             to dwell over a cell before moving on — itself resolution-
+             dependent — which is why the first version of this fix was only
+             partially scale-invariant. */
+          if(dN<dMax && Math.random()<amt*rate/(S*S)){
             // velocity-match the material at THIS point immediately, so the
             // grain does not pop into existence lagging the blade — it is
             // already moving with it the instant it appears.
@@ -911,12 +923,9 @@ function tearDeck(dt,t){
             dLife[dN]=wisp ? D.wispLife[0]+Math.random()*(D.wispLife[1]-D.wispLife[0])
                            : D.life[0]+Math.random()*(D.life[1]-D.life[0]);
             dMass[dN]=wisp?0:amt;
-            dAge[dN]=0;
+            dAge[dN]=0; dRel[dN]=0; dContact[dN]=0;
             dN++; dEmitted++;
-            shed[i]=1;
           }
-        } else if(before>=thresh){
-          shed[i]=0;                              // healed back below threshold: can shed again
         }
       }
     }
@@ -939,11 +948,6 @@ function healDeck(dt){
     }
   }
   const t=carve; carve=carveTmp; carveTmp=t;
-  /* Reset the shed latch wherever healing has pulled a cell back below
-     threshold. This has to sweep every cell, not just ones under a blade
-     right now — a cell that heals while the blade has moved elsewhere would
-     otherwise stay latched forever and never shed again after re-opening. */
-  for(let i=0;i<carve.length;i++) if(carve[i]<SHED_T) shed[i]=0;
 }
 
 /* --- thrown cloud: continuous contact physics -------------------------
@@ -969,14 +973,24 @@ function stepDebris(dt,t){
   for(let k=0;k<4;k++){ const a=ang+k*Math.PI/2; CA.push(Math.cos(a)); SA.push(Math.sin(a)); }
   const hubx=HUB.x, huby=HUB.y;
   const bRad=HW+gl_(D.radPad), rMax2=(LA+bRad+3*S)*(LA+bRad+3*S);
-  const grab=D.grab, push=D.push, drag=D.drag, sink=D.sink*S;
+  const grab=D.grab, push=D.push, drag=D.drag, sink=D.sink*S, CONTACT_MAX=D.contact;
 
   for(let i=0;i<dN;i++){
     dLife[i]-=dt; dAge[i]+=dt;
     let ax=0, ay=0;
     const dxh=dX[i]-hubx, dyh=dY[i]-huby;
     let caught=false;
-    if(dxh*dxh+dyh*dyh<rMax2){
+    /* Catch is a brief impulse, not a ride. The push force is weakest right
+       at the blade's own edge (it borrows its weighting from the old ambient
+       cloud field, where that made sense for a dense continuum) — for one
+       discrete grain that means it can hover at the boundary, still being
+       tugged back onto the blade's velocity by grab, for well over a second
+       without ever cleanly escaping. That produced sustained flinging with no
+       real free flight: gravity and wind never got the chance to act.
+       CONTACT_MAX bounds a single catch episode to a real graze, and dRel
+       then locks it out of ever being caught again — a torn piece gets hit
+       once and is gone, not batted between every later blade pass. */
+    if(!dRel[i] && dContact[i]<CONTACT_MAX && dxh*dxh+dyh*dyh<rMax2){
       for(let k=0;k<4;k++){
         const c=CA[k], s=SA[k];
         const u=dxh*c+dyh*s, v=-dxh*s+dyh*c;
@@ -993,7 +1007,11 @@ function stepDebris(dt,t){
         }
       }
     }
-    if(!caught){
+    if(caught){
+      dContact[i]+=dt;
+      if(dContact[i]>=CONTACT_MAX) dRel[i]=1;
+    }else{
+      if(dAge[i]>0.02) dRel[i]=1;    // brief spawn grace, then never catch again
       ax += -drag*(dVX[i]-VW);
       ay += -drag*dVY[i]+sink;
     }
@@ -1014,6 +1032,7 @@ function stepDebris(dt,t){
       dN--;                                  // swap-remove
       dX[i]=dX[dN]; dY[i]=dY[dN]; dVX[i]=dVX[dN]; dVY[i]=dVY[dN];
       dLife[i]=dLife[dN]; dMass[i]=dMass[dN]; dAge[i]=dAge[dN];
+      dRel[i]=dRel[dN]; dContact[i]=dContact[dN];
       i--;
     }
   }
@@ -1273,7 +1292,7 @@ function wirePanel(){
   live('rSpread',()=>CFG.deck.spread, v=>{ CFG.deck.spread=v; SPREAD=v; });
   live('rGrab',  ()=>CFG.debris.grab, v=>{ CFG.debris.grab=v; });
   live('rPush',  ()=>CFG.debris.push, v=>{ CFG.debris.push=v; });
-  live('rThresh',()=>CFG.debris.threshold, v=>{ CFG.debris.threshold=v; SHED_T=v; });
+  live('rThresh',()=>CFG.debris.threshold, v=>{ CFG.debris.threshold=v; });
   live('rStar',  ()=>CFG.star.every, v=>{ CFG.star.every=v; });
   // the sky field is baked once, so these repaint the static buffer
   live('rSkyT',  ()=>CFG.sky.top, v=>{ CFG.sky.top=v; buildBG(); });
@@ -1337,6 +1356,17 @@ window.__mill={
                     L2deck:+VW.toFixed(2), L1:+BANKS[2].speed.toFixed(2),
                     omega:+OMEGA.toFixed(3),
                     birds:FLOCKS.map(f=>+f.speed.toFixed(1))}; },
+  debrisSample(n){
+    n=Math.min(n||30, dN);
+    const out=[];
+    for(let i=0;i<n;i++){
+      const idx=(Math.random()*dN)|0;
+      out.push({x:+dX[idx].toFixed(1), y:+dY[idx].toFixed(1),
+                vx:+dVX[idx].toFixed(1), vy:+dVY[idx].toFixed(1),
+                life:+dLife[idx].toFixed(2), age:+dAge[idx].toFixed(2)});
+    }
+    return {dN, hub:{x:+HUB.x.toFixed(1),y:+HUB.y.toFixed(1)}, sample:out};
+  },
   deck(){ let sum=0,mx=0;
           for(let i=0;i<carve.length;i++){ sum+=carve[i]; if(carve[i]>mx)mx=carve[i]; }
           return {tone:+DECK_TONE.toFixed(3), cells:carve.length, rows:CROWS, top:CY0,
