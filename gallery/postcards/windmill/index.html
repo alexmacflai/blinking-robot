@@ -774,7 +774,7 @@ function drawHub(){
    ==================================================================== */
 let nearTop,WRAP,DECK_TONE,DECK_SOFT,DECK_SHADE;
 let carve,carveTmp,CY0,CROWS,TEAR,HEAL,SPREAD,TEAR_D;
-let dX,dY,dVX,dVY,dLife,dAge,dRel,dContact,dMax,dMass,dN=0,dEmitted=0;
+let dX,dY,dVX,dVY,dLife,dAge,dRel,dContact,dMax,dMass,dN=0,dEmitted=0,dOccluded=0;
 
 function buildDeck(gy0,gl){
   const d=CFG.deck;
@@ -1038,14 +1038,43 @@ function stepDebris(dt,t){
   }
 }
 
-function drawDebris(){
+function drawDebris(t){
   /* Airborne shreds are thinner than the mass they came from, so they sit a
      little lighter — dark against the sky above the deck, pale against the
      deck itself. Matching the deck tone exactly made every grain vanish. */
   const tone=DECK_TONE+CFG.debris.lift;
+
+  /* A RELEASED grain (dRel=1) has no further physical interaction with the
+     sails — that is deliberate: without it, anything drifting near the hub
+     gets re-caught and re-flung by every later blade pass (see stepDebris).
+     But zero interaction also meant zero occlusion: this function used to
+     draw every grain on top of the sails unconditionally, so a released
+     grain that later drifted back under a sweeping arm just sat drawn over
+     the top of it — reading as passing straight through solid ink.
+     A grain still mid-catch (dRel=0) is drawn on top on purpose, since that
+     is the "material being pulled off the blade" moment. Only released grains
+     get this occlusion test, and it costs four cheap checks only for grains
+     currently near the hub. */
+  const ang=ANG0+OMEGA*t;
+  const CA=[],SA=[];
+  for(let k=0;k<4;k++){ const a=ang+k*Math.PI/2; CA.push(Math.cos(a)); SA.push(Math.sin(a)); }
+  const hubx=HUB.x, huby=HUB.y, reach2=(LA+HW+4*S)*(LA+HW+4*S);
+
   for(let i=0;i<dN;i++){
     const x=Math.round(dX[i]), y=Math.round(dY[i]);
     if(x<0||x>=W||y<0||y>=H) continue;
+    if(dRel[i]){
+      const dxh=x-hubx, dyh=y-huby;
+      if(dxh*dxh+dyh*dyh<reach2){
+        const p=pCol[x], q=dyh*iSCol[x];
+        let behind=false;
+        for(let k=0;k<4;k++){
+          const c=CA[k], s=SA[k];
+          if(sailInk(p*c+q*s, -p*s+q*c)){ behind=true; break; }
+        }
+        if(behind){ dOccluded++; continue; }  // hidden behind the blade this frame
+      }
+    }
     let a=dLife[i]*1.6; if(a>1)a=1;          // fade out as it expires
     const j=y*W+x;
     lum[j]=lum[j]*(1-a)+tone*a;
@@ -1113,7 +1142,7 @@ function renderFrame(t){
   drawDeck(t);                  // L2
   drawSails(t);                 // rotor rides ahead of the cap
   drawHub();
-  drawDebris();                 // thrown cloud, over the arms
+  drawDebris(t);                // thrown cloud, occluded once caught & released
   drawBank(BANKS[2],t);         // L1 — in front of everything
   dither();
 }
@@ -1367,6 +1396,7 @@ window.__mill={
     }
     return {dN, hub:{x:+HUB.x.toFixed(1),y:+HUB.y.toFixed(1)}, sample:out};
   },
+  occluded(){ return dOccluded; },
   deck(){ let sum=0,mx=0;
           for(let i=0;i<carve.length;i++){ sum+=carve[i]; if(carve[i]>mx)mx=carve[i]; }
           return {tone:+DECK_TONE.toFixed(3), cells:carve.length, rows:CROWS, top:CY0,
