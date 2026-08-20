@@ -11,11 +11,16 @@ The first Blinking Robot postcard: a static windmill scene with internal motion.
 
 ## Context
 
-`[postcard]` `[windmill]` `[procedural-rendering]` `[1-bit]` `[dither]` `[animation-controls]` — one still world with wind, depth, particles, and a turning mill.
+`[postcard]` `[windmill]` `[procedural-rendering]` `[1-bit]` `[dither]` `[animation-controls]` — one still world with wind, depth, torn cloud, and a turning mill.
 
 ## Handbook
 
 Open [`index.html`](index.html) directly. Space pauses, H toggles the readout, and the panel exposes scene and output controls.
+
+The cloud layer the sails pass through is a field with a carve mask, not a
+particle system; only cloud the blades actually tear off becomes particles.
+[`knowledge/decisions/0001-cloud-deck-as-field.md`](../../../knowledge/decisions/0001-cloud-deck-as-field.md)
+records why, and which parts of it are load-bearing.
 
 ## Local rules
 

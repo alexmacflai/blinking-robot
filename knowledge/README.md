@@ -21,6 +21,7 @@ should feel, how it is built, why choices were made, and shared vocabulary.
 
 - [`vocabulary.md`](vocabulary.md) — the controlled tag list used across this
   repository's documents.
+- [`decisions/`](decisions/) — durable choices and the reasoning behind them.
 
 The following areas do not exist yet. Create a directory and its README
 together with the first document that belongs there — see
@@ -30,7 +31,6 @@ together with the first document that belongs there — see
 - `design/` — visual principles and intent.
 - `engineering/` — technical conventions, invariants, and verification.
 - `specs/` — requirements and acceptance criteria.
-- `decisions/` — durable choices and their rationale.
 
 ## Local rules
 

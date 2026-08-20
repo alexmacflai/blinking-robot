@@ -137,11 +137,28 @@
   </fieldset>
 
   <fieldset><legend>CLOUD DECK</legend>
-    <div class="row"><label>density</label><span class="val" id="vDens"></span></div>
-    <input type="range" id="rDens" min="0.5" max="3" step="0.05">
-    <p class="note">Low = lumpier (sky shows between clumps). High = solid mass.</p>
-    <div class="row" style="margin-top:12px"><label>grit</label><span class="val" id="vGrit"></span></div>
-    <div class="chips" id="gritChips"></div>
+    <div class="row"><label>tone</label><span class="val" id="vTone"></span></div>
+    <input type="range" id="rTone" min="-0.14" max="0.14" step="0.005">
+    <div class="row"><label>shading</label><span class="val" id="vShade"></span></div>
+    <input type="range" id="rShade" min="0" max="0.14" step="0.005">
+    <div class="row"><label>edge</label><span class="val" id="vSoft"></span></div>
+    <input type="range" id="rSoft" min="1" max="12" step="0.5">
+    <p class="note">Flat fill like the other banks. Shading darkens with depth
+       below the surface — form, not grain.</p>
+    <div class="row" style="margin-top:12px"><label>tear</label><span class="val" id="vTear"></span></div>
+    <input type="range" id="rTear" min="0" max="2.5" step="0.02">
+    <div class="row"><label>heal</label><span class="val" id="vHeal"></span></div>
+    <input type="range" id="rHeal" min="0.4" max="20" step="0.2">
+    <div class="row"><label>soften</label><span class="val" id="vSpread"></span></div>
+    <input type="range" id="rSpread" min="0" max="0.4" step="0.01">
+    <p class="note">Scars ride downwind with the cloud. Heal is how long one
+       takes to fade; soften stops it staying a punched-out hole.</p>
+    <div class="row" style="margin-top:14px"><label>throw</label><span class="val" id="vThrow"></span></div>
+    <input type="range" id="rThrow" min="0" max="1.4" step="0.02">
+    <div class="row"><label>shred size</label><span class="val" id="vBite"></span></div>
+    <input type="range" id="rBite" min="4" max="90" step="1">
+    <p class="note">Shred size is how much cloud has to gather before a piece
+       lets go. Small = a constant drizzle; large = rarer, heavier chunks.</p>
     <div class="row" style="margin-top:12px"><label>seed</label>
       <input type="number" id="nSeed" step="1"></div>
     <button class="btn" id="bReroll">RE-ROLL SHAPES</button>
@@ -213,6 +230,12 @@ const DEFAULT_CFG = {
   speedMin: 9,             // back-most layer
   speedMax: 54,            // front-most layer
 
+  /* Tone ladder, same idea: the four layers ramp linearly between these, so
+     they always read in depth order. Per-layer `toneBias` nudges one without
+     breaking the order. */
+  toneBack : 0.56,
+  toneFront: 0.0,
+
   sky     : { top:0.08, horizon:0.88, curve:0.95 },
   sun     : { x:166, y:238, r:21, g1:0.26, d1:34, g2:0.12, d2:105 },
 
@@ -231,27 +254,35 @@ const DEFAULT_CFG = {
      vertical nudge; `floorUp` is how far the sea's floor sits above its
      baseline, so moving y carries the floor with it. */
   banks   : [
-    { id:'L4', kind:'puff', seed:7,  tile:234, y:300, offY:0, tone:0.56,
+    { id:'L4', kind:'puff', seed:7,  tile:234, y:300, offY:0, toneBias:0,
       clusters:3, per:4, rx:[14,34], ry:[6,15] },
-    { id:'L3', kind:'sea',  seed:41, tile:351, y:316, offY:0, tone:0.34,
+    { id:'L3', kind:'sea',  seed:41, tile:351, y:316, offY:0, toneBias:-0.03,
       soft:4.0, lobes:5, rx:[34,74], ry:[16,38], floorUp:4 },
-    { id:'L1', kind:'sea',  seed:63, tile:468, y:392, offY:0, tone:0.0,
+    { id:'L1', kind:'sea',  seed:63, tile:468, y:392, offY:0, toneBias:0,
       soft:5.0, lobes:4, rx:[58,108], ry:[28,56], floorUp:6 }
   ],
 
-  deck    : { seed:2024, surfSeed:1337, grit:1.0, pn:62000, offY:0,
-              wrap:280, marg:23, top:296, pTop:118,
-              // deck bottom is DERIVED from L1's floor (see buildDeck), never
-              // a literal: its only job is "stop where the near bank hides you"
+  /* The deck is a field now, not a particle system. `toneBias` nudges it off
+     the ladder (it is the largest single area in the frame, so it reads a
+     little heavier than its tone suggests). `tear` is how hard the sails bite,
+     `heal` how many seconds a scar takes to fade, `spread` how fast it softens
+     while it fades — without spread a hole stays a punched-out cutout. */
+  deck    : { surfSeed:1337, offY:0, wrap:280,
               surfBase:322, surfFloor:326, surfLobes:5,
               surfRx:[30,66], surfRy:[14,32],
-              blobs:55, blobR:[9,35], blobFrac:0.80, blobCore:0.35,
-              thin:0.21, core:0.035, span:3.6, gain:1.55,
-              wind:30, windAloft:20, altH:38, leash:0.85,
-              kx:0.30, cx:1.15, ky:2.20, cy:3.40, rxMax:420,
-              hideAt:8, showAt:5,   // unload/reload thresholds at the seam
-              grab:13.0, push:62.0, radPad:5.0,
-              turbAx:4.2, turbAy:2.6, turbFx:0.055, turbFy:0.041 },
+              toneBias:-0.04, soft:3.0, shade:0.04,
+              tear:1.25, tearDepth:26, heal:5.0, spread:0.16 },
+
+  /* Torn cloud does not drizzle off the blade — it accumulates until there is
+     a shred's worth and then leaves in one piece. That quantising is what
+     makes it read as tearing rather than sanding, and the interval between
+     shreds varies on its own with how thick the cloud is where the blade is
+     cutting. Most of it settles back into the deck; a minority blows away as
+     fine wisps and never lands. */
+  debris  : { max:22000, bite:9, chunk:[150,300], throw:0.55, jitter:3,
+              clumps:[3,6], clumpR:[4,10], drag:2.2, sink:82, life:[0.9,2.0],
+              lift:0.13, fling:34,
+              wispFrac:0.10, wispLife:[1.8,3.2], amount:1.0 },
 
   birds   : { seed:91, span:300, flocks:[
               {n:13,y:206,speed:19,size:2},
@@ -266,7 +297,6 @@ let CFG = JSON.parse(JSON.stringify(DEFAULT_CFG));
 const BASE_W = 234, BASE_H = 416;      // 9:16 authoring grid (26 x 9x16)
 const GRID_CHOICES = [11,13,16,20,26,32,40,48];
 const FIT_CHOICES  = ['fill','crisp'];
-const GRIT_CHOICES = [0.5,0.75,1,1.5];
 const DT = 1/60;
 
 /* ---------- helpers --------------------------------------------------- */
@@ -301,20 +331,20 @@ let CINK,CPAP,img,buf32;
 let SUN,HUB,TOWER_X,MILL;
 let LA,LW,HW,INNER,CU,SLIT,FOC,YAW,CY_,SY_,OMEGA,ANG0;
 let BANKS,FLOCKS;
-let nearTop,WRAP,MARG,DECK_BOT,DECK_TOP,P_TOP;
-let PN,rx,ry,vx,vy,hx,hy,fl;
-let VW,VW_ALOFT,ALT_H,RX_MAX,B_PUSH,B_RAD,R_MAX2;
-let TURB_AX,TURB_AY,TURB_FX,TURB_FY;
+let VW;
 let SS,SS_RND;
-let lapA,hid,HIDE_AT,SHOW_AT;
 
-/* Depth index of each layer, back(0) -> front(3). The particle deck is 2. */
+/* Depth index of each layer, back(0) -> front(3). The cloud deck is 2. */
 const BANK_DEPTH=[0,1,3], DECK_DEPTH=2;
 function layerSpeed(i){
   const a=Math.max(0.2,CFG.speedMin), b=Math.max(a,CFG.speedMax);
   return a*Math.pow(b/a, i/3);
 }
 function windSign(){ return CFG.wind<0?-1:1; }
+/* Tone follows the same depth ladder as speed. Aerial perspective is roughly
+   linear mixing toward the sky, so a straight ramp from the back tone to the
+   front one keeps the four layers reading in depth order by construction. */
+function layerTone(i){ return CFG.toneBack+(CFG.toneFront-CFG.toneBack)*(i/3); }
 
 const cv=document.getElementById('c');
 const ctx=cv.getContext('2d',{alpha:false});
@@ -359,7 +389,8 @@ function build(){
 
   BANKS=CFG.banks.map((b,i)=>{
     const y0=gy(b.y+b.offY);
-    const common={id:b.id, Wp:gl(b.tile), val:b.tone,
+    const common={id:b.id, Wp:gl(b.tile),
+                  val:layerTone(BANK_DEPTH[i])+(b.toneBias||0),
                   speed:gl(layerSpeed(BANK_DEPTH[i]))*CFG.wind};
     return b.kind==='puff'
       ? makePuff(common, b.seed, y0, b.clusters, b.per, b.rx.map(gl), b.ry.map(gl))
@@ -707,51 +738,46 @@ function drawHub(){
 }
 
 /* ======================================================================
-   L2 — THE PARTICLE DECK, one particle one pixel
+   L2 — THE CLOUD DECK: a field, plus scars
 
-   Cloud, not water and not sand. Four things separate them:
-     - OVERDAMPED, not springy. At zeta ~0.6 anything struck sloshed back and
-       forth, which read as liquid. Both axes now sit past critical damping.
-     - THE HOME SPRING SLACKENS WITH ALTITUDE, so grit lifted clear of the deck
-       is not reeled back against the wind — it just rides.
-     - THE WIND IS STRONGER ALOFT, so lifted grit accelerates downwind,
-       overshoots its home, and drifts back over the next few seconds. That
-       overshoot is most of the difference between a cloud and a splash.
-     - SEEDED IN CLUMPS. A uniform sample is a Poisson field: locally
-       featureless at every scale, which is exactly what sand looks like.
+   This layer used to be 62k simulated particles. It is now the same kind of
+   object as the other three banks — a lobed surface filled with one flat tone
+   at full opacity — with a CARVE FIELD on top of it recording where the sails
+   have torn cloud away.
 
-   State is displacement (r) from a home that drifts with the base wind, and v
-   is measured RELATIVE TO THE AIR, so v = 0 means "moving with the wind".
+   Why the change: modulating alpha AND tone by local particle density was the
+   only thing making this layer semi-transparent and blotchy while the other
+   three read as solid cloud. Grain in the BULK reads as sand; grain at the
+   SILHOUETTE reads as cloud. So the bulk is flat now, and all the structure
+   lives in the surface shape and in what the blades tear out of it.
 
-   The deck is a cylinder of circumference WRAP, rendered modulo WRAP with a
-   MARG bleed off each edge. The wrap is applied to the RENDERED position
-   (home + displacement), not the home alone — wrapping the home lets a
-   particle carrying displacement rx reappear at screen x = rx, which put a
-   visible seam of particles materialising just inside the left edge.
+   The carve field is stored in MATERIAL coordinates (the deck's own scrolling
+   frame), not screen coordinates. Two things fall out of that for free:
+     - scrolling is an offset, never a resample, so scars never smear;
+     - a scar travels downwind with the cloud that owns it, so the mill leaves
+       a wake of torn cloud drifting away from it.
+   Carving reuses the sails' own projected rasteriser, so the hole always lands
+   exactly where the blade is drawn rather than where an unprojected rotor
+   would have been.
    ==================================================================== */
+let nearTop,WRAP,DECK_TONE,DECK_SOFT,DECK_SHADE;
+let carve,carveTmp,CY0,CROWS,TEAR,HEAL,SPREAD,TEAR_D;
+let dX,dY,dVX,dVY,dLife,dAge,dMax,dMass,dN=0,dEmitted=0;
+const accM=new Float64Array(4);
+
 function buildDeck(gy0,gl){
   const d=CFG.deck;
   const gy = v => gy0(v+d.offY);         // the whole deck rides its own offset
-  WRAP=Math.round(gl(d.wrap)); MARG=Math.round(gl(d.marg));
-  DECK_TOP=gy(d.top);
-  /* Stop the deck just under the near bank. L1 is solid ink from its floor
-     down, so grit seeded below that is spent on something nobody can see, and
-     starving the visible band is what makes the deck look thin. Deriving it
-     means it can never drift out of sync with lift or with L1's position.
-     Capped by depth too, so lifting the deck clear of L1 does not stretch the
-     same grit over a huge band and thin it out. */
-  const nb=BANKS[BANKS.length-1];
-  DECK_BOT=Math.min((nb.floor||nb.y0)+8*S, gy(d.surfFloor)+84*S);
-  P_TOP=Math.max(0,Math.round(gy(d.pTop)));
-  VW=gl(layerSpeed(DECK_DEPTH))*CFG.wind; VW_ALOFT=gl(d.windAloft)*CFG.wind;
-  HIDE_AT=gl(d.hideAt); SHOW_AT=gl(d.showAt);
-  ALT_H=gl(d.altH); RX_MAX=gl(d.rxMax); B_PUSH=gl(d.push);
-  B_RAD=HW+gl(d.radPad); R_MAX2=(LA+B_RAD+3*S)*(LA+B_RAD+3*S);
-  TURB_AX=d.turbAx*S; TURB_AY=d.turbAy*S;
-  TURB_FX=d.turbFx/S; TURB_FY=d.turbFy/S;
+  WRAP=Math.round(gl(d.wrap));
+  VW=gl(layerSpeed(DECK_DEPTH))*CFG.wind;
+  DECK_TONE=layerTone(DECK_DEPTH)+d.toneBias;
+  DECK_SOFT=Math.max(1,gl(d.soft));
+  DECK_SHADE=d.shade;
+  TEAR=d.tear; HEAL=d.heal; SPREAD=d.spread; TEAR_D=gl(d.tearDepth);
 
   // surface: few big lobes, or the min() flattens into a ruled line
   nearTop=new Float32Array(WRAP);
+  let mn=1e9;
   {
     const rnd=mulberry32(d.surfSeed), lobes=[], n=d.surfLobes;
     for(let i=0;i<n;i++) lobes.push({
@@ -771,150 +797,265 @@ function buildDeck(gy0,gl){
         }
       }
       nearTop[x]=top;
+      if(top<mn)mn=top;
     }
   }
 
-  PN=Math.max(1000,Math.round(d.pn*d.grit*S*S));
-  rx=new Float32Array(PN); ry=new Float32Array(PN);
-  vx=new Float32Array(PN); vy=new Float32Array(PN);
-  hx=new Float32Array(PN); hy=new Float32Array(PN); fl=new Float32Array(PN);
-  lapA=new Int32Array(PN); hid=new Uint8Array(PN);
+  // carve band: from the highest point of the surface to the deepest a blade
+  // can reach. Anything outside it can never be torn, so it is not stored.
+  CY0=Math.max(0,Math.floor(mn)-2);
+  const bot=Math.min(H,Math.ceil(HUB.y+LA+8*S));
+  CROWS=Math.max(1,bot-CY0);
+  carve=new Float32Array(WRAP*CROWS);
+  carveTmp=new Float32Array(WRAP*CROWS);
 
-  /* Most particles are seeded inside overlapping blobs — varied in size,
-     biased toward the upper deck where cloud structure lives — with a uniform
-     minority keeping a continuous base under the lumps. Blob centres live in
-     wrap space and are sampled with wrap-around, so the cylinder has no seam.
-     The deck stops at DECK_BOT because L1 is solid ink below that: grit seeded
-     there is spent on something nobody can see, and starving the visible band
-     is what made the deck look thin. */
-  const rnd=mulberry32(d.seed), blobs=[], NB=d.blobs;
-  for(let b=0;b<NB;b++){
-    const cx=rnd()*WRAP, surf=nearTop[cx|0];
-    blobs.push({cx, cy:surf+Math.pow(rnd(),1.35)*(DECK_BOT-surf),
-                r:gl(d.blobR[0]+rnd()*rnd()*(d.blobR[1]-d.blobR[0]))});
-  }
-  let i=0, guard=0;
-  while(i<PN && guard<PN*60){
-    guard++;
-    let x,y;
-    if(rnd()<d.blobFrac){
-      const b=blobs[(rnd()*NB)|0];
-      const a=rnd()*6.2832, rr=b.r*Math.pow(rnd(),d.blobCore);
-      x=b.cx+Math.cos(a)*rr; y=b.cy+Math.sin(a)*rr;
-      x=((x%WRAP)+WRAP)%WRAP;
-    }else{
-      x=rnd()*WRAP; y=DECK_TOP+rnd()*(DECK_BOT-DECK_TOP);
-    }
-    if(y<DECK_TOP-14*S||y>=DECK_BOT) continue;
-    const p=clamp((y-(nearTop[x|0]-4*S))/(9*S),0,1);
-    if(rnd()>p*p) continue;
-    hx[i]=x; hy[i]=y; fl[i]=0.75+rnd()*0.55; i++;
-  }
-  while(i<PN){ hx[i]=hx[i%(i||1)]||0; hy[i]=DECK_BOT-1; fl[i]=1; i++; }
+  dMax=Math.max(200,Math.round(CFG.debris.max*CFG.debris.amount*S*S));
+  dX=new Float32Array(dMax); dY=new Float32Array(dMax);
+  dVX=new Float32Array(dMax); dVY=new Float32Array(dMax);
+  dLife=new Float32Array(dMax); dMass=new Float32Array(dMax);
+  dAge=new Float32Array(dMax);
+  dN=0; accM.fill(0);
 }
 
-function stepParticles(t){
-  const d=CFG.deck;
-  const ang=ANG0+OMEGA*t;
-  const CA=[],SA=[];
-  for(let k=0;k<4;k++){const a=ang+k*Math.PI/2; CA.push(Math.cos(a)); SA.push(Math.sin(a));}
-  const drift=VW*t;
-  const s1=fsin(0.79*t), s2=fsin(1.18*t), s3=fsin(0.39*t);
-  const g1=0.6+0.4*s3, g2=0.6+0.4*s1;
-  const hubx=HUB.x, huby=HUB.y, iALT=1/ALT_H;
-  const KX=d.kx, CXd=d.cx, KY=d.ky, CYd=d.cy, LEASH=d.leash, GRAB=d.grab;
+const mod=(a,n)=>{ const r=a%n; return r<0?r+n:r; };
+const gl_=v=>v*S;
+function deckOff(t){ return mod(VW*t, WRAP); }
 
-  const IW=1/WRAP;
-  for(let i=0;i<PN;i++){
-    /* The deck is a cylinder narrower than the streaks the blades throw, so a
-       displaced particle can come back around while still airborne — which
-       reads as one edge teleporting grit to the other. Detect the seam
-       crossing (it sits MARG off-screen, so nothing is visible there) and
-       UNLOAD anything still displaced: it stops being drawn and quietly
-       rejoins the deck once it has settled back onto its home. */
-    const u=hx[i]+drift+rx[i];
-    const lap=Math.floor(u*IW);
-    if(lap!==lapA[i]){
-      lapA[i]=lap;
-      /* Only AIRBORNE grit needs unloading. Horizontal displacement is the
-         wrong test: the blades push the whole deck downwind, so a settled
-         particle sits ~40px from its home and would trip any small threshold —
-         that hid half the field. A particle at deck level re-enters buried in
-         the mass and nobody can tell; one that re-enters above the deck, still
-         flying, is the thing that reads as teleporting. */
-      if(ry[i]<-HIDE_AT) hid[i]=1;
+/* Surface height at a material column, linearly interpolated so the silhouette
+   does not stair-step as the deck scrolls. */
+function surfaceAt(wx){
+  const i0=Math.floor(wx), f=wx-i0;
+  const a=nearTop[mod(i0,WRAP)], b=nearTop[mod(i0+1,WRAP)];
+  return a+(b-a)*f;
+}
+
+/* --- tearing ---------------------------------------------------------
+   Erosion is proportional to how fast the blade is moving at that radius and
+   to how long it dwells, so the tip — which sweeps furthest and fastest —
+   does most of the work. Cloud is only removed where cloud actually is, so a
+   blade passing through clear air or an existing hole takes nothing: that is
+   what makes the tearing gusty instead of a constant even spray.
+
+   Tearing also falls off with depth below the surface. Without that the sails
+   hollow out the inside of the deck and the sweep becomes one bald disc — a
+   punched-out cutout. Skimming the top instead scallops the silhouette, which
+   is what "the arms catching the top of the cloud" actually looks like. */
+let tNow=0;
+function tearDeck(dt,t){
+  tNow=t;
+  if(TEAR<=0) return;
+  const off=deckOff(t), ang=ANG0+OMEGA*t, w=Math.abs(OMEGA);
+  const invLA=1/LA;
+  for(let k=0;k<4;k++){
+    const a=ang+k*Math.PI/2, ca=Math.cos(a), sa=Math.sin(a);
+    let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9;
+    for(const uu of [-7*S,LA]) for(const vv of [-HW,HW]){
+      const P=fwd(uu*ca-vv*sa, uu*sa+vv*ca);
+      if(P[0]<mnx)mnx=P[0]; if(P[0]>mxx)mxx=P[0];
+      if(P[1]<mny)mny=P[1]; if(P[1]>mxy)mxy=P[1];
     }
-    if(hid[i] && ry[i]>-SHOW_AT) hid[i]=0;   // settled back down: rejoin
-
-    let X=u-lap*WRAP-MARG;
-    const Y=hy[i]+ry[i];
-    const f=fl[i];
-
-    // 0 while sitting in the deck, 1 once well clear of it
-    let alt=-ry[i]*iALT; if(alt<0)alt=0; else if(alt>1)alt=1;
-
-    let ax = -CXd*f*(vx[i]-VW_ALOFT*alt) - KX*(1-LEASH*alt)*rx[i];
-    let ay = -CYd*f*vy[i] - KY*(1-0.55*alt)*ry[i];
-
-    ax += TURB_AX*fsin(Y*TURB_FX+s1*2.1)*g1;      // ambient churn
-    ay += TURB_AY*fsin(X*TURB_FY+s2*1.7)*g2;
-
-    const dxh=X-hubx, dyh=Y-huby;
-    if(dxh*dxh+dyh*dyh<R_MAX2){
-      for(let k=0;k<4;k++){
-        const c=CA[k], s=SA[k];
-        const u=dxh*c+dyh*s, v=-dxh*s+dyh*c;
-        if(u>-6*S&&u<LA&&v>-B_RAD&&v<B_RAD){
-          const av=v<0?-v:v, w=1-av/B_RAD;
-          // velocity of the blade material at this point (omega x r)
-          const bvx=OMEGA*(-u*s-v*c), bvy=OMEGA*(u*c-v*s);
-          const g=GRAB*w;
-          ax += (bvx-(vx[i]+VW))*g;
-          ay += (bvy-vy[i])*g;
-          const sg=v>=0?1:-1, pw=B_PUSH*w;
-          ax += -s*sg*pw;
-          ay +=  c*sg*pw;
-          break;
-        }
+    const x0=Math.max(0,Math.floor(mnx)), x1=Math.min(W-1,Math.ceil(mxx));
+    const y0=Math.max(CY0,Math.floor(mny)), y1=Math.min(CY0+CROWS-1,Math.ceil(mxy));
+    for(let y=y0;y<=y1;y++){
+      const dy=y-HUB.y, row=(y-CY0)*WRAP;
+      for(let x=x0;x<=x1;x++){
+        const p=pCol[x], q=dy*iSCol[x];
+        const u=p*ca+q*sa, v=-p*sa+q*ca;
+        if(!sailInk(u,v)) continue;
+        const wx=Math.round(mod(x-off,WRAP))%WRAP;
+        const top=surfaceAt(wx);
+        if(y<top) continue;                       // no cloud here to take
+        let dep=1-(y-top)/TEAR_D;                 // surface-biased
+        if(dep<=0) continue;
+        if(dep>1) dep=1;
+        const i=row+wx;
+        // speed at this radius; the +0.25 keeps the hub end from being inert
+        const amt=TEAR*dt*(0.25+0.75*Math.abs(u)*invLA)*w*dep;
+        const c=carve[i]+amt, got=(c>1?1:c)-carve[i];
+        carve[i]=c>1?1:c;
+        accM[k]+=got;
       }
     }
-    vx[i]+=ax*DT; vy[i]+=ay*DT;
-    let nx=rx[i]+vx[i]*DT;
-    if(nx>RX_MAX)nx=RX_MAX; else if(nx<-RX_MAX)nx=-RX_MAX;
-    rx[i]=nx; ry[i]+=vy[i]*DT;
+    if(accM[k]>=CFG.debris.bite*S*S) emitChunk(k,a,ca,sa);
   }
 }
 
-function drawParticles(t){
-  const d=CFG.deck;
-  dens.fill(0, P_TOP*W);
-  const drift=VW*t;
-  const dv=Math.round(-drift%WRAP)|0;
-  const lo=P_TOP, hi=H-1;
-  for(let i=0;i<PN;i++){
-    if(hid[i]) continue;                       // unloaded at the seam
-    let X=(hx[i]+drift+rx[i])%WRAP; if(X<0)X+=WRAP; X-=MARG;
-    const Y=hy[i]+ry[i];
-    if(X<0||X>=W-1||Y<lo||Y>=hi) continue;
-    const xi=X|0, yi=Y|0, fx=X-xi, fy=Y-yi, b=yi*W+xi;
-    const w0=1-fx, w1=1-fy;
-    dens[b]+=w0*w1; dens[b+1]+=fx*w1;
-    dens[b+W]+=w0*fy; dens[b+W+1]+=fx*fy;
+/* --- thrown cloud ----------------------------------------------------
+   A chunk leaves with the blade's own screen-space velocity at the point it
+   was torn from, measured by projecting the same point one small step of
+   rotation later. Taking it from the projection rather than from omega x r
+   keeps the throw consistent with the 3/4 view — grit off the near arm moves
+   faster across the frame than grit off the far one, which is what sells the
+   two arms as being at different distances. */
+function bladeVel(u,v,a){
+  const da=OMEGA*0.01;
+  const c0=Math.cos(a), s0=Math.sin(a), c1=Math.cos(a+da), s1=Math.sin(a+da);
+  const p0=fwd(u*c0-v*s0, u*s0+v*c0), p1=fwd(u*c1-v*s1, u*s1+v*c1);
+  return [(p1[0]-p0[0])*100, (p1[1]-p0[1])*100];
+}
+
+function emitChunk(k,a,ca,sa){
+  const D=CFG.debris, m=accM[k];
+  accM[k]=0;
+  const off=deckOff(tNow);
+
+  /* Find the stretch of THIS arm that is actually buried in cloud, by walking
+     its spine and asking the surface. Cloud comes off along that whole span,
+     biased toward the tip — averaging the torn cells into one point made every
+     shred leave from the middle of the arm regardless of where it was cutting. */
+  let uMin=1e30, uMax=-1e30;
+  const N=26;
+  for(let i=0;i<=N;i++){
+    const u=INNER+(LA-INNER)*(i/N);
+    const P=fwd(u*ca, u*sa);
+    if(P[1]>=surfaceAt(mod(P[0]-off,WRAP))){ if(u<uMin)uMin=u; if(u>uMax)uMax=u; }
   }
-  /* GAIN is the real clumping dial. High values saturate coverage everywhere,
-     so every gap between blobs still paints solid and the field flattens into
-     one even screen — sand. Low enough that thin regions stay PARTIALLY
-     covered lets sky through between the lumps, which is what makes them read.
-     Density also maps to TONE across a wide range, so wispy edges sit much
-     lighter than dense cores. */
-  const GAIN=d.gain/(S*S), SPAN=1/(d.span*S*S), THIN=d.thin, CORE=d.core;
-  for(let i=P_TOP*W, n=W*H; i<n; i++){
-    const den=dens[i];
-    if(den<=0) continue;
-    let a=den*GAIN; if(a>1)a=1;
-    let q=den*SPAN; if(q>1)q=1;
-    lum[i]=lum[i]*(1-a)+(THIN-(THIN-CORE)*q)*a;
-    if(a>0.5) dof[i]=dv;
+  if(uMax<uMin) return;                      // this arm is in clear air
+
+  /* Only the UPSWING throws. On the way down a blade presses cloud into the
+     deck — that is a carve, not a shred, and emitting there just spawned grit
+     that fell straight back in and vanished. Gating on it roughly doubles what
+     you actually see for the same amount of tearing. */
+  const mid=(uMin+uMax)*0.5;
+  if(bladeVel(mid,0,a)[1] > -2*S) return;
+
+  const q=S*S;
+  let n=Math.round((D.chunk[0]+Math.random()*(D.chunk[1]-D.chunk[0]))*q);
+  if(dN+n>dMax) n=dMax-dN;
+  if(n<=0) return;
+
+  /* Release it as a few COMPACT clumps at distinct points along the immersed
+     span, not as one cloud of independent grains. Grains in a clump share one
+     velocity, so the piece travels together and reads as torn cloud; giving
+     each grain the blade speed at its own radius made every release fan out
+     into a spray instead. */
+  const K=Math.max(1, D.clumps[0]+((Math.random()*(D.clumps[1]-D.clumps[0]+1))|0));
+  const per=m/n, jit=gl_(D.jitter);
+  const each=Math.max(1,Math.floor(n/K));
+  for(let c=0;c<K && dN<dMax;c++){
+    // ^0.55 crowds the sites toward the outer end, where the blade is fastest
+    const u=uMin+(uMax-uMin)*Math.pow(Math.random(),0.55);
+    const P=fwd(u*ca, u*sa);
+    const wx=mod(P[0]-off,WRAP);
+    // lift it out at the surface: that is the cloud the blade is skimming
+    const cy=Math.min(P[1], surfaceAt(wx))-Math.random()*2*S;
+    const bv=bladeVel(u,0,a);
+    /* An explicit upward kick on top of the blade's own velocity. Where a
+       blade leaves the cloud its motion is nearly horizontal, so the shreds
+       just skimmed along the surface and never read as being thrown. This is
+       a deliberate exaggeration, not physics — it is what makes the gesture
+       legible, and gravity still brings everything back down. */
+    const vx0=bv[0]*D.throw, vy0=bv[1]*D.throw-gl_(D.fling)*(0.6+Math.random()*0.8);
+    const rad=gl_(D.clumpR[0]+Math.random()*(D.clumpR[1]-D.clumpR[0]));
+    const wisp=Math.random()<D.wispFrac;
+    for(let i=0;i<each && dN<dMax;i++){
+      const ang=Math.random()*6.2832, rr=rad*Math.sqrt(Math.random());
+      dX[dN]=P[0]+Math.cos(ang)*rr;
+      dY[dN]=cy+Math.sin(ang)*rr*0.7;
+      dVX[dN]=vx0+(Math.random()-0.5)*jit;
+      dVY[dN]=vy0+(Math.random()-0.5)*jit;
+      dLife[dN]=wisp ? D.wispLife[0]+Math.random()*(D.wispLife[1]-D.wispLife[0])
+                     : D.life[0]+Math.random()*(D.life[1]-D.life[0]);
+      dMass[dN]=wisp?0:per;        // wisps blow away; the rest comes back
+      dAge[dN]=0;
+      dN++;
+    }
+  }
+  dEmitted++;
+}
+
+/* Debris rides the wind, sinks gently, and is put BACK into the deck where it
+   lands. Depositing rather than fading is what keeps the system self-balancing:
+   otherwise tearing and healing are two independent rates that have to be
+   hand-matched, and any mismatch quietly bloats or evaporates the cloud. */
+function stepDebris(dt,t){
+  const D=CFG.debris, off=deckOff(t);
+  const drag=D.drag, sink=D.sink*S;
+  for(let i=0;i<dN;i++){
+    dLife[i]-=dt; dAge[i]+=dt;
+    dVX[i]+=(-drag*(dVX[i]-VW))*dt;
+    dVY[i]+=(-drag*dVY[i]+sink)*dt;
+    dX[i]+=dVX[i]*dt; dY[i]+=dVY[i]*dt;
+    const wx=mod(dX[i]-off,WRAP);
+    const landed=dAge[i]>0.26 && dY[i]>=surfaceAt(wx);
+    if(landed||dLife[i]<=0||dX[i]<-40*S||dX[i]>W+40*S){
+      if(dMass[i]>0){                       // give the cloud its material back
+        const yy=Math.round(dY[i]);
+        if(yy>=CY0&&yy<CY0+CROWS){
+          const ci=Math.round(wx)%WRAP, ix=(yy-CY0)*WRAP+ci;
+          const c=carve[ix]-dMass[i];   // exactly what this grain took away
+          carve[ix]=c<0?0:c;
+        }
+      }
+      dN--;                                  // swap-remove
+      dX[i]=dX[dN]; dY[i]=dY[dN]; dVX[i]=dVX[dN]; dVY[i]=dVY[dN];
+      dLife[i]=dLife[dN]; dMass[i]=dMass[dN]; dAge[i]=dAge[dN];
+      i--;
+    }
+  }
+}
+
+function drawDebris(){
+  /* Airborne shreds are thinner than the mass they came from, so they sit a
+     little lighter. That is also what makes them legible in both places at
+     once: dark against the sky above the deck, pale against the deck itself.
+     Matching the deck tone exactly made every grain that fell back vanish. */
+  const tone=DECK_TONE+CFG.debris.lift;
+  for(let i=0;i<dN;i++){
+    const x=Math.round(dX[i]), y=Math.round(dY[i]);
+    if(x<0||x>=W||y<0||y>=H) continue;
+    let a=dLife[i]*1.6; if(a>1)a=1;          // fade out as it expires
+    const j=y*W+x;
+    lum[j]=lum[j]*(1-a)+tone*a;
+    if(a>0.5) dof[j]=0;
+  }
+}
+
+/* --- healing ---------------------------------------------------------
+   A scar fades and softens at the same time. The blur is what stops a hole
+   from staying a crisp punched-out cutout as it drifts downwind; without it
+   the edge reads as paper, not cloud. */
+function healDeck(dt){
+  const keep=Math.exp(-dt/Math.max(0.05,HEAL));
+  const s=SPREAD, c0=1-s, cn=s*0.25;
+  for(let y=0;y<CROWS;y++){
+    const row=y*WRAP, up=(y>0?row-WRAP:row), dn=(y<CROWS-1?row+WRAP:row);
+    for(let x=0;x<WRAP;x++){
+      const l=row+(x===0?WRAP-1:x-1), r=row+(x===WRAP-1?0:x+1);
+      const v=carve[row+x]*c0 + (carve[l]+carve[r]+carve[up+x]+carve[dn+x])*cn;
+      carveTmp[row+x]=v*keep;
+    }
+  }
+  const t=carve; carve=carveTmp; carveTmp=t;
+}
+
+function stepDeck(dt,t){ tearDeck(dt,t); healDeck(dt); stepDebris(dt,t); }
+
+/* --- drawing ---------------------------------------------------------
+   Flat tone at full opacity, exactly like the other three banks, minus
+   whatever the carve field has taken out. The only tonal variation is a
+   gentle darkening with depth below the surface — form shading at the scale
+   of the lobes, not per-pixel noise. */
+function drawDeck(t){
+  const off=deckOff(t), dv=Math.round(-off)|0;
+  const shade=DECK_SHADE, invD=1/(30*S), soft=DECK_SOFT;
+  for(let x=0;x<W;x++){
+    const wx=mod(x-off,WRAP);
+    const top=surfaceAt(wx);
+    const ci=Math.round(wx)%WRAP;
+    let ys=top<0?0:Math.floor(top);
+    for(let y=ys;y<H;y++){
+      let a=(y-top)/soft; if(a<=0)continue; if(a>1)a=1;
+      if(y>=CY0&&y<CY0+CROWS){
+        const c=carve[(y-CY0)*WRAP+ci];
+        if(c>0){ a*=1-c; if(a<=0.002) continue; }
+      }
+      let dep=(y-top)*invD; if(dep>1)dep=1;
+      const tone=DECK_TONE-shade*dep;
+      const i=y*W+x;
+      lum[i]=lum[i]*(1-a)+tone*a;
+      if(a>0.5) dof[i]=dv;
+    }
   }
 }
 
@@ -945,9 +1086,10 @@ function renderFrame(t){
   drawBank(BANKS[0],t);         // L4
   drawBank(BANKS[1],t);         // L3
   drawMill();                   // tower, so the deck can bury its base
-  drawParticles(t);             // L2
+  drawDeck(t);                  // L2
   drawSails(t);                 // rotor rides ahead of the cap
   drawHub();
+  drawDebris();                 // thrown cloud, over the arms
   drawBank(BANKS[2],t);         // L1 — in front of everything
   dither();
 }
@@ -959,7 +1101,7 @@ let t=0, acc=0, last=0, paused=false;
 const hud=document.getElementById('hud');
 const loadEl=document.getElementById('load');
 
-function warmup(n){ for(let i=0;i<(n||260);i++){ stepParticles(t); t+=DT; } }
+function warmup(n){ for(let i=0;i<(n||260);i++){ stepDeck(DT,t); t+=DT; } }
 
 /* The postcard is always exactly 9:16 in whole CSS pixels. Snapping the height
    to a multiple of 16 makes width = h*9/16 land on an integer too, so the
@@ -1007,9 +1149,9 @@ function tick(now){
   const n=(now===undefined)?performance.now():now;
   let dtr=(n-last)/1000; last=n;
   if(dtr>0.25) dtr=0.25;
-  if(!paused){ acc+=dtr; while(acc>=DT){ stepParticles(t); t+=DT; acc-=DT; } }
+  if(!paused){ acc+=dtr; while(acc>=DT){ stepDeck(DT,t); t+=DT; acc-=DT; } }
   renderFrame(t);
-  hud.textContent=t.toFixed(1)+'s  '+W+'x'+H+'  '+PN+'p';
+  hud.textContent=t.toFixed(1)+'s  '+W+'x'+H;
 }
 
 let rafSeen=false;
@@ -1057,8 +1199,14 @@ function syncLabels(){
   $('vSpin').textContent = Math.abs(sp)<0.004 ? 'stopped'
                          : (1/Math.abs(sp)).toFixed(1)+'s '+(sp<0?'↺':'↻');
   $('vYaw').textContent  = CFG.rotor.yawDeg.toFixed(1)+'°';
-  $('vDens').textContent = CFG.deck.gain.toFixed(2);
-  $('vGrit').textContent = PN.toLocaleString();
+  $('vTone').textContent = (CFG.deck.toneBias>0?'+':'')+CFG.deck.toneBias.toFixed(3);
+  $('vShade').textContent= CFG.deck.shade.toFixed(3);
+  $('vSoft').textContent = CFG.deck.soft.toFixed(1);
+  $('vTear').textContent = CFG.deck.tear.toFixed(2);
+  $('vHeal').textContent = CFG.deck.heal.toFixed(1)+'s';
+  $('vSpread').textContent = CFG.deck.spread.toFixed(2);
+  $('vThrow').textContent = CFG.debris.throw.toFixed(2);
+  $('vBite').textContent  = CFG.debris.bite.toFixed(0);
   $('vStar').textContent = CFG.star.every+'-'+(CFG.star.every+CFG.star.vary)+'s';
   $('vSkyT').textContent = CFG.sky.top.toFixed(2);
   $('vSkyH').textContent = CFG.sky.horizon.toFixed(2);
@@ -1082,7 +1230,6 @@ function applySpeeds(){
   BANKS.forEach((b,i)=>b.speed=layerSpeed(BANK_DEPTH[i])*S*CFG.wind);
   FLOCKS.forEach((f,i)=>f.speed=CFG.birds.flocks[i].speed*S*CFG.wind);
   VW=layerSpeed(DECK_DEPTH)*S*CFG.wind;
-  VW_ALOFT=CFG.deck.windAloft*S*CFG.wind;
 }
 
 function wirePanel(){
@@ -1091,9 +1238,6 @@ function wirePanel(){
     k=>(9*k)+'×'+(16*k));
   buildChips($('fitChips'), FIT_CHOICES, ()=>CFG.fit,
     f=>{ CFG.fit=f; fitCanvas(); }, f=>f.toUpperCase());
-  buildChips($('gritChips'), GRIT_CHOICES, ()=>CFG.deck.grit,
-    g=>{ CFG.deck.grit=g; rebuild(true); syncLabels(); },
-    g=>g+'×');
 
   $('cInk').value=CFG.ink; $('cPap').value=CFG.paper;
   $('cInk').oninput=e=>{ CFG.ink=e.target.value; CINK=packColor(CFG.ink); };
@@ -1114,7 +1258,15 @@ function wirePanel(){
   live('rSpin',  ()=>CFG.rotor.spin, v=>{ CFG.rotor.spin=v; OMEGA=-2*Math.PI*v; });
   live('rYaw',   ()=>CFG.rotor.yawDeg, v=>{ CFG.rotor.yawDeg=v;
     YAW=v*Math.PI/180; CY_=Math.cos(YAW); SY_=Math.sin(YAW); });
-  live('rDens',  ()=>CFG.deck.gain, v=>{ CFG.deck.gain=v; });
+  live('rTone',  ()=>CFG.deck.toneBias, v=>{ CFG.deck.toneBias=v;
+    DECK_TONE=layerTone(DECK_DEPTH)+v; });
+  live('rShade', ()=>CFG.deck.shade, v=>{ CFG.deck.shade=v; DECK_SHADE=v; });
+  live('rSoft',  ()=>CFG.deck.soft, v=>{ CFG.deck.soft=v; DECK_SOFT=Math.max(1,v*S); });
+  live('rTear',  ()=>CFG.deck.tear, v=>{ CFG.deck.tear=v; TEAR=v; });
+  live('rHeal',  ()=>CFG.deck.heal, v=>{ CFG.deck.heal=v; HEAL=v; });
+  live('rSpread',()=>CFG.deck.spread, v=>{ CFG.deck.spread=v; SPREAD=v; });
+  live('rThrow', ()=>CFG.debris.throw, v=>{ CFG.debris.throw=v; });
+  live('rBite',  ()=>CFG.debris.bite, v=>{ CFG.debris.bite=v; });
   live('rStar',  ()=>CFG.star.every, v=>{ CFG.star.every=v; });
   // the sky field is baked once, so these repaint the static buffer
   live('rSkyT',  ()=>CFG.sky.top, v=>{ CFG.sky.top=v; buildBG(); });
@@ -1136,11 +1288,11 @@ function wirePanel(){
     v=>{ if(i===DECK_DEPTH) CFG.deck.offY=v;
          else CFG.banks[BANK_DEPTH.indexOf(i)].offY=v; }));
 
-  $('nSeed').value=CFG.deck.seed;
-  $('nSeed').onchange=e=>{ CFG.deck.seed=parseInt(e.target.value,10)||1; rebuild(true); };
+  $('nSeed').value=CFG.deck.surfSeed;
+  $('nSeed').onchange=e=>{ CFG.deck.surfSeed=parseInt(e.target.value,10)||1; rebuild(true); };
   $('bReroll').onclick=()=>{
     const s=(Math.random()*1e6)|0;
-    CFG.deck.seed=s; CFG.deck.surfSeed=(s*7+13)|0;
+    CFG.deck.surfSeed=s;
     CFG.banks.forEach((b,i)=>b.seed=(s*(i+3)+101)|0);
     $('nSeed').value=s; rebuild(true); toast('reshaped');
   };
@@ -1170,28 +1322,20 @@ function wirePanel(){
    ==================================================================== */
 window.__mill={
   cfg:()=>CFG, at:()=>t, rebuild,
-  run(n){ for(let i=0;i<(n||1);i++){ stepParticles(t); t+=DT; } renderFrame(t); },
+  run(n){ for(let i=0;i<(n||1);i++){ stepDeck(DT,t); t+=DT; } renderFrame(t); },
   render(){ renderFrame(t); },
   hud(v){ hud.style.display=v?'':'none'; },
-  size(){ return {W,H,S,PN}; },
+  size(){ return {W,H,S}; },
   speeds(){ return {L4:+BANKS[0].speed.toFixed(2), L3:+BANKS[1].speed.toFixed(2),
                     L2deck:+VW.toFixed(2), L1:+BANKS[2].speed.toFixed(2),
-                    aloft:+VW_ALOFT.toFixed(2), omega:+OMEGA.toFixed(3),
+                    omega:+OMEGA.toFixed(3),
                     birds:FLOCKS.map(f=>+f.speed.toFixed(1))}; },
-  hidden(){ let n=0; for(let i=0;i<PN;i++) if(hid[i]) n++;
-            return {hidden:n, pct:+(100*n/PN).toFixed(2)}; },
-  star(){ return {t0:SS.t0,dur:SS.dur,next:SS.next,active:(t-SS.t0)>=0&&(t-SS.t0)<=SS.dur}; },
-  forceStar(){ SS.next=t; },
-  stats(){
-    let na=0,ns=0,ax=0,av=0,sx=0,hi=0;
-    for(let i=0;i<PN;i++){
-      if(ry[i]<-12*S){ na++; ax+=rx[i]; av+=vx[i]; if(-ry[i]>hi)hi=-ry[i]; }
-      else { ns++; sx+=rx[i]; }
-    }
-    return {aloft:na, aloft_rx:+(ax/na).toFixed(1), aloft_vx:+(av/na).toFixed(1),
-            settled:ns, settled_rx:+(sx/ns).toFixed(1), maxLift:+hi.toFixed(0)};
-  },
-  bench(){ const a=performance.now(); stepParticles(t); const b=performance.now();
+  deck(){ let sum=0,mx=0;
+          for(let i=0;i<carve.length;i++){ sum+=carve[i]; if(carve[i]>mx)mx=carve[i]; }
+          return {tone:+DECK_TONE.toFixed(3), cells:carve.length, rows:CROWS, top:CY0,
+                  carvedMean:+(sum/carve.length).toFixed(4), carvedMax:+mx.toFixed(3),
+                  debris:dN, debrisMax:dMax, chunks:dEmitted}; },
+  bench(){ const a=performance.now(); stepDeck(DT,t); const b=performance.now();
            renderFrame(t); const c=performance.now();
            return {stepMs:+(b-a).toFixed(2), renderMs:+(c-b).toFixed(2)}; }
 };
