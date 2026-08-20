@@ -22,13 +22,14 @@ should feel, how it is built, why choices were made, and shared vocabulary.
 - [`vocabulary.md`](vocabulary.md) — the controlled tag list used across this
   repository's documents.
 - [`decisions/`](decisions/) — durable choices and the reasoning behind them.
+- [`design/`](design/) — durable visual direction, motion, rendering, and the
+  reusable postcard-brief template.
 
 The following areas do not exist yet. Create a directory and its README
 together with the first document that belongs there — see
 [`../AGENTS.md`](../AGENTS.md) for the full "where things go" table.
 
 - `product/` — mission, premise, and lexicon.
-- `design/` — visual principles and intent.
 - `engineering/` — technical conventions, invariants, and verification.
 - `specs/` — requirements and acceptance criteria.
 

@@ -2,8 +2,8 @@
 
 A small gallery of coded animation postcards. It grows from the real
 *Blinking Robot* series: pixelated, dithered pieces that combine drawing,
-animation, writing, voice, music, and editing into sarcastic, introspective,
-humorous, mundane, whimsical, absurd, or contemplative vignettes.
+animation, writing, voice, music, and editing into dry, introspective,
+humorous, mundane, absurd, or contemplative vignettes.
 
 This version reimagines that world as small, self-contained, procedurally
 generated animations — no video, no image assets, just code drawing a still
@@ -25,7 +25,8 @@ install.
 - [`gallery/`](gallery/) — the postcards themselves, and the page that lists
   them.
 - [`knowledge/`](knowledge/) — durable project knowledge as it accumulates:
-  conventions, decisions, the tag vocabulary used across the docs.
+  visual direction, conventions, decisions, and the tag vocabulary used across
+  the docs.
 
 ## Working on this
 

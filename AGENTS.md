@@ -1,8 +1,9 @@
 # Agent entry point
 
 Everything an agent needs for repository-wide work is on this page. Read this,
-then the README of the directory you are changing. Do not chain through
-intermediate READMEs to get there.
+then the durable knowledge relevant to the change, then the README of the
+directory you are changing. Follow direct links from this page or the nearest
+README; do not chain through intermediate READMEs to get there.
 
 `[agent]` `[conventions]` `[index]`
 
@@ -14,13 +15,14 @@ near-term product is browse-and-watch. Do not assume accounts, data, complex
 interaction, or a framework.
 
 Human-facing context lives in [`README.md`](README.md). It is not part of the
-agent read path.
+default agent read path, but update it whenever a change makes its public
+overview, entry points, or usage instructions incomplete or inaccurate.
 
 ## Map
 
 ```
 gallery/     runnable postcards and the landing page
-knowledge/   durable project knowledge: engineering, decisions, vocabulary
+knowledge/   durable project knowledge: design, engineering, decisions, vocabulary
 ```
 
 ## Where things go
@@ -33,7 +35,7 @@ knowledge/   durable project knowledge: engineering, decisions, vocabulary
 | Technical conventions, invariants, contracts | `knowledge/engineering/` | create on first use |
 | Decision records | `knowledge/decisions/` | create on first use |
 | Product premise, lexicon | `knowledge/product/` | create on first use |
-| Visual principles, moods, composition | `knowledge/design/` | create on first use |
+| Visual principles, moods, composition | `knowledge/design/` | live |
 | Requirements and acceptance criteria | `knowledge/specs/` | create on first use |
 | Reusable agent skills | `workflows/skills/` | create on first use |
 | Prompts orchestrating several skills | `workflows/prompts/` | create on first use |
@@ -59,6 +61,13 @@ would go in it is overhead with no payoff until something actually needs it.
 6. Tag documents using [`knowledge/vocabulary.md`](knowledge/vocabulary.md).
    Do not invent a tag without adding it there.
 7. Update the nearest README when you add a concept or an entry point.
+8. Before changing a postcard, consult the relevant durable knowledge in
+   [`knowledge/`](knowledge/)—especially [`knowledge/design/`](knowledge/design/)
+   for visual direction, motion, or rendering. Use it as project-level guidance;
+   the nearest README supplies local context and rules.
+9. Update the root [`README.md`](README.md) when a change affects the
+   human-facing description of the project, its public entry points, or how a
+   visitor runs or browses it. Do not change it for internal-only maintenance.
 
 ## README shapes
 

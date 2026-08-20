@@ -34,12 +34,12 @@ using it is not doing that job — prefer an existing tag before adding one.
 
 `[coded-animation]` `[procedural-rendering]` `[1-bit]` `[dither]`
 `[static-site]` `[browser]` `[performance]` `[scene]` `[vignette]`
-`[animation-controls]`
+`[animation-controls]` `[art-direction]` `[motion]` `[rendering]`
 
 ## Process — how work gets done here
 
 `[agent]` `[conventions]` `[verification]` `[workflow]` `[repeatability]`
-`[routing]` `[runnable]`
+`[routing]` `[runnable]` `[brief]`
 
 ## Retired
 
