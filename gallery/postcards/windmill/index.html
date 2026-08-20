@@ -153,12 +153,17 @@
     <input type="range" id="rSpread" min="0" max="0.4" step="0.01">
     <p class="note">Scars ride downwind with the cloud. Heal is how long one
        takes to fade; soften stops it staying a punched-out hole.</p>
-    <div class="row" style="margin-top:14px"><label>throw</label><span class="val" id="vThrow"></span></div>
-    <input type="range" id="rThrow" min="0" max="1.4" step="0.02">
-    <div class="row"><label>shred size</label><span class="val" id="vBite"></span></div>
-    <input type="range" id="rBite" min="4" max="90" step="1">
-    <p class="note">Shred size is how much cloud has to gather before a piece
-       lets go. Small = a constant drizzle; large = rarer, heavier chunks.</p>
+    <div class="row" style="margin-top:14px"><label>grab</label><span class="val" id="vGrab"></span></div>
+    <input type="range" id="rGrab" min="2" max="35" step="0.5">
+    <div class="row"><label>squeeze</label><span class="val" id="vPush"></span></div>
+    <input type="range" id="rPush" min="0" max="160" step="2">
+    <p class="note">Grab is how hard a grain matches the blade's own motion;
+       squeeze is the outward shove that pushes it clear of the blade — the
+       force that makes it look thrown, not carried.</p>
+    <div class="row" style="margin-top:12px"><label>gap size</label><span class="val" id="vThresh"></span></div>
+    <input type="range" id="rThresh" min="0.1" max="0.7" step="0.02">
+    <p class="note">How deep a hole has to open before it starts shedding.
+       Small = grains come off almost as soon as the sail touches the cloud.</p>
     <div class="row" style="margin-top:12px"><label>seed</label>
       <input type="number" id="nSeed" step="1"></div>
     <button class="btn" id="bReroll">RE-ROLL SHAPES</button>
@@ -279,10 +284,17 @@ const DEFAULT_CFG = {
      shreds varies on its own with how thick the cloud is where the blade is
      cutting. Most of it settles back into the deck; a minority blows away as
      fine wisps and never lands. */
-  debris  : { max:22000, bite:9, chunk:[150,300], throw:0.55, jitter:3,
-              clumps:[3,6], clumpR:[4,10], drag:2.2, sink:82, life:[0.9,2.0],
-              lift:0.13, fling:34,
-              wispFrac:0.10, wispLife:[1.8,3.2], amount:1.0 },
+  /* Debris is caught by the SAME contact physics as the old particle deck:
+     while a grain overlaps a blade, it is pushed to match the blade's local
+     material velocity (grab) and shoved outward along the blade's normal
+     (push), harder near the edge than the centerline. That perpendicular push
+     is what makes cloud read as squeezed out sideways rather than floating —
+     and because it runs every frame of contact, a grain can never sit inside
+     a blade: it is actively excluded every tick it overlaps one. */
+  debris  : { max:22000, threshold:0.30, rate:2.2,
+              grab:15.0, push:70.0, radPad:4.0,
+              drag:1.6, sink:34, life:[0.9,2.0],
+              lift:0.13, wispFrac:0.10, wispLife:[1.8,3.2], amount:1.0 },
 
   birds   : { seed:91, span:300, flocks:[
               {n:13,y:206,speed:19,size:2},
@@ -761,9 +773,9 @@ function drawHub(){
    would have been.
    ==================================================================== */
 let nearTop,WRAP,DECK_TONE,DECK_SOFT,DECK_SHADE;
-let carve,carveTmp,CY0,CROWS,TEAR,HEAL,SPREAD,TEAR_D;
+let carve,carveTmp,CY0,CROWS,TEAR,HEAL,SPREAD,TEAR_D,SHED_T;
 let dX,dY,dVX,dVY,dLife,dAge,dMax,dMass,dN=0,dEmitted=0;
-const accM=new Float64Array(4);
+let shed;
 
 function buildDeck(gy0,gl){
   const d=CFG.deck;
@@ -774,6 +786,7 @@ function buildDeck(gy0,gl){
   DECK_SOFT=Math.max(1,gl(d.soft));
   DECK_SHADE=d.shade;
   TEAR=d.tear; HEAL=d.heal; SPREAD=d.spread; TEAR_D=gl(d.tearDepth);
+  SHED_T=CFG.debris.threshold;
 
   // surface: few big lobes, or the min() flattens into a ruled line
   nearTop=new Float32Array(WRAP);
@@ -814,6 +827,7 @@ function buildDeck(gy0,gl){
   dVX=new Float32Array(dMax); dVY=new Float32Array(dMax);
   dLife=new Float32Array(dMax); dMass=new Float32Array(dMax);
   dAge=new Float32Array(dMax);
+  shed=new Uint8Array(WRAP*CROWS);   // one-shot latch: has this cell already spawned?
   dN=0; accM.fill(0);
 }
 
@@ -829,7 +843,7 @@ function surfaceAt(wx){
   return a+(b-a)*f;
 }
 
-/* --- tearing ---------------------------------------------------------
+/* --- tearing ----------------------------------------------------------
    Erosion is proportional to how fast the blade is moving at that radius and
    to how long it dwells, so the tip — which sweeps furthest and fastest —
    does most of the work. Cloud is only removed where cloud actually is, so a
@@ -839,15 +853,25 @@ function surfaceAt(wx){
    Tearing also falls off with depth below the surface. Without that the sails
    hollow out the inside of the deck and the sweep becomes one bald disc — a
    punched-out cutout. Skimming the top instead scallops the silhouette, which
-   is what "the arms catching the top of the cloud" actually looks like. */
-let tNow=0;
+   is what "the arms catching the top of the cloud" actually looks like.
+
+   A cell that erodes past `threshold` sheds ONE debris grain, spawned exactly
+   at that pixel — inside the cloud, at the moment the blade is actually there
+   — with velocity already matched to the blade (see stepDebris). It is not a
+   scripted "throw"; it is a particle that the loop below hands off to contact
+   physics, which is what carries, squeezes and eventually releases it. The
+   latch (`shed`) means a cell fires once per erosion episode, not every frame
+   it stays past threshold, and resets once healing pulls it back down — so a
+   spot that keeps getting swept keeps shedding, not machine-gunning grains. */
 function tearDeck(dt,t){
-  tNow=t;
   if(TEAR<=0) return;
   const off=deckOff(t), ang=ANG0+OMEGA*t, w=Math.abs(OMEGA);
-  const invLA=1/LA;
+  const invLA=1/LA, D=CFG.debris, thresh=D.threshold, rate=D.rate;
+  const CA=[],SA=[];
+  for(let k=0;k<4;k++){ const a=ang+k*Math.PI/2; CA.push(Math.cos(a)); SA.push(Math.sin(a)); }
+
   for(let k=0;k<4;k++){
-    const a=ang+k*Math.PI/2, ca=Math.cos(a), sa=Math.sin(a);
+    const ca=CA[k], sa=SA[k];
     let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9;
     for(const uu of [-7*S,LA]) for(const vv of [-HW,HW]){
       const P=fwd(uu*ca-vv*sa, uu*sa+vv*ca);
@@ -871,143 +895,31 @@ function tearDeck(dt,t){
         const i=row+wx;
         // speed at this radius; the +0.25 keeps the hub end from being inert
         const amt=TEAR*dt*(0.25+0.75*Math.abs(u)*invLA)*w*dep;
-        const c=carve[i]+amt, got=(c>1?1:c)-carve[i];
+        const before=carve[i];
+        const c=before+amt;
         carve[i]=c>1?1:c;
-        accM[k]+=got;
-      }
-    }
-    if(accM[k]>=CFG.debris.bite*S*S) emitChunk(k,a,ca,sa);
-  }
-}
 
-/* --- thrown cloud ----------------------------------------------------
-   A chunk leaves with the blade's own screen-space velocity at the point it
-   was torn from, measured by projecting the same point one small step of
-   rotation later. Taking it from the projection rather than from omega x r
-   keeps the throw consistent with the 3/4 view — grit off the near arm moves
-   faster across the frame than grit off the far one, which is what sells the
-   two arms as being at different distances. */
-function bladeVel(u,v,a){
-  const da=OMEGA*0.01;
-  const c0=Math.cos(a), s0=Math.sin(a), c1=Math.cos(a+da), s1=Math.sin(a+da);
-  const p0=fwd(u*c0-v*s0, u*s0+v*c0), p1=fwd(u*c1-v*s1, u*s1+v*c1);
-  return [(p1[0]-p0[0])*100, (p1[1]-p0[1])*100];
-}
-
-function emitChunk(k,a,ca,sa){
-  const D=CFG.debris, m=accM[k];
-  accM[k]=0;
-  const off=deckOff(tNow);
-
-  /* Find the stretch of THIS arm that is actually buried in cloud, by walking
-     its spine and asking the surface. Cloud comes off along that whole span,
-     biased toward the tip — averaging the torn cells into one point made every
-     shred leave from the middle of the arm regardless of where it was cutting. */
-  let uMin=1e30, uMax=-1e30;
-  const N=26;
-  for(let i=0;i<=N;i++){
-    const u=INNER+(LA-INNER)*(i/N);
-    const P=fwd(u*ca, u*sa);
-    if(P[1]>=surfaceAt(mod(P[0]-off,WRAP))){ if(u<uMin)uMin=u; if(u>uMax)uMax=u; }
-  }
-  if(uMax<uMin) return;                      // this arm is in clear air
-
-  /* Only the UPSWING throws. On the way down a blade presses cloud into the
-     deck — that is a carve, not a shred, and emitting there just spawned grit
-     that fell straight back in and vanished. Gating on it roughly doubles what
-     you actually see for the same amount of tearing. */
-  const mid=(uMin+uMax)*0.5;
-  if(bladeVel(mid,0,a)[1] > -2*S) return;
-
-  const q=S*S;
-  let n=Math.round((D.chunk[0]+Math.random()*(D.chunk[1]-D.chunk[0]))*q);
-  if(dN+n>dMax) n=dMax-dN;
-  if(n<=0) return;
-
-  /* Release it as a few COMPACT clumps at distinct points along the immersed
-     span, not as one cloud of independent grains. Grains in a clump share one
-     velocity, so the piece travels together and reads as torn cloud; giving
-     each grain the blade speed at its own radius made every release fan out
-     into a spray instead. */
-  const K=Math.max(1, D.clumps[0]+((Math.random()*(D.clumps[1]-D.clumps[0]+1))|0));
-  const per=m/n, jit=gl_(D.jitter);
-  const each=Math.max(1,Math.floor(n/K));
-  for(let c=0;c<K && dN<dMax;c++){
-    // ^0.55 crowds the sites toward the outer end, where the blade is fastest
-    const u=uMin+(uMax-uMin)*Math.pow(Math.random(),0.55);
-    const P=fwd(u*ca, u*sa);
-    const wx=mod(P[0]-off,WRAP);
-    // lift it out at the surface: that is the cloud the blade is skimming
-    const cy=Math.min(P[1], surfaceAt(wx))-Math.random()*2*S;
-    const bv=bladeVel(u,0,a);
-    /* An explicit upward kick on top of the blade's own velocity. Where a
-       blade leaves the cloud its motion is nearly horizontal, so the shreds
-       just skimmed along the surface and never read as being thrown. This is
-       a deliberate exaggeration, not physics — it is what makes the gesture
-       legible, and gravity still brings everything back down. */
-    const vx0=bv[0]*D.throw, vy0=bv[1]*D.throw-gl_(D.fling)*(0.6+Math.random()*0.8);
-    const rad=gl_(D.clumpR[0]+Math.random()*(D.clumpR[1]-D.clumpR[0]));
-    const wisp=Math.random()<D.wispFrac;
-    for(let i=0;i<each && dN<dMax;i++){
-      const ang=Math.random()*6.2832, rr=rad*Math.sqrt(Math.random());
-      dX[dN]=P[0]+Math.cos(ang)*rr;
-      dY[dN]=cy+Math.sin(ang)*rr*0.7;
-      dVX[dN]=vx0+(Math.random()-0.5)*jit;
-      dVY[dN]=vy0+(Math.random()-0.5)*jit;
-      dLife[dN]=wisp ? D.wispLife[0]+Math.random()*(D.wispLife[1]-D.wispLife[0])
-                     : D.life[0]+Math.random()*(D.life[1]-D.life[0]);
-      dMass[dN]=wisp?0:per;        // wisps blow away; the rest comes back
-      dAge[dN]=0;
-      dN++;
-    }
-  }
-  dEmitted++;
-}
-
-/* Debris rides the wind, sinks gently, and is put BACK into the deck where it
-   lands. Depositing rather than fading is what keeps the system self-balancing:
-   otherwise tearing and healing are two independent rates that have to be
-   hand-matched, and any mismatch quietly bloats or evaporates the cloud. */
-function stepDebris(dt,t){
-  const D=CFG.debris, off=deckOff(t);
-  const drag=D.drag, sink=D.sink*S;
-  for(let i=0;i<dN;i++){
-    dLife[i]-=dt; dAge[i]+=dt;
-    dVX[i]+=(-drag*(dVX[i]-VW))*dt;
-    dVY[i]+=(-drag*dVY[i]+sink)*dt;
-    dX[i]+=dVX[i]*dt; dY[i]+=dVY[i]*dt;
-    const wx=mod(dX[i]-off,WRAP);
-    const landed=dAge[i]>0.26 && dY[i]>=surfaceAt(wx);
-    if(landed||dLife[i]<=0||dX[i]<-40*S||dX[i]>W+40*S){
-      if(dMass[i]>0){                       // give the cloud its material back
-        const yy=Math.round(dY[i]);
-        if(yy>=CY0&&yy<CY0+CROWS){
-          const ci=Math.round(wx)%WRAP, ix=(yy-CY0)*WRAP+ci;
-          const c=carve[ix]-dMass[i];   // exactly what this grain took away
-          carve[ix]=c<0?0:c;
+        if(c>=thresh){
+          if(!shed[i] && dN<dMax && Math.random()<amt*rate){
+            // velocity-match the material at THIS point immediately, so the
+            // grain does not pop into existence lagging the blade — it is
+            // already moving with it the instant it appears.
+            const bvx=OMEGA*(-u*sa-v*ca), bvy=OMEGA*(u*ca-v*sa);
+            const wisp=Math.random()<D.wispFrac;
+            dX[dN]=x; dY[dN]=y;
+            dVX[dN]=bvx; dVY[dN]=bvy;
+            dLife[dN]=wisp ? D.wispLife[0]+Math.random()*(D.wispLife[1]-D.wispLife[0])
+                           : D.life[0]+Math.random()*(D.life[1]-D.life[0]);
+            dMass[dN]=wisp?0:amt;
+            dAge[dN]=0;
+            dN++; dEmitted++;
+            shed[i]=1;
+          }
+        } else if(before>=thresh){
+          shed[i]=0;                              // healed back below threshold: can shed again
         }
       }
-      dN--;                                  // swap-remove
-      dX[i]=dX[dN]; dY[i]=dY[dN]; dVX[i]=dVX[dN]; dVY[i]=dVY[dN];
-      dLife[i]=dLife[dN]; dMass[i]=dMass[dN]; dAge[i]=dAge[dN];
-      i--;
     }
-  }
-}
-
-function drawDebris(){
-  /* Airborne shreds are thinner than the mass they came from, so they sit a
-     little lighter. That is also what makes them legible in both places at
-     once: dark against the sky above the deck, pale against the deck itself.
-     Matching the deck tone exactly made every grain that fell back vanish. */
-  const tone=DECK_TONE+CFG.debris.lift;
-  for(let i=0;i<dN;i++){
-    const x=Math.round(dX[i]), y=Math.round(dY[i]);
-    if(x<0||x>=W||y<0||y>=H) continue;
-    let a=dLife[i]*1.6; if(a>1)a=1;          // fade out as it expires
-    const j=y*W+x;
-    lum[j]=lum[j]*(1-a)+tone*a;
-    if(a>0.5) dof[j]=0;
   }
 }
 
@@ -1027,6 +939,99 @@ function healDeck(dt){
     }
   }
   const t=carve; carve=carveTmp; carveTmp=t;
+  /* Reset the shed latch wherever healing has pulled a cell back below
+     threshold. This has to sweep every cell, not just ones under a blade
+     right now — a cell that heals while the blade has moved elsewhere would
+     otherwise stay latched forever and never shed again after re-opening. */
+  for(let i=0;i<carve.length;i++) if(carve[i]<SHED_T) shed[i]=0;
+}
+
+/* --- thrown cloud: continuous contact physics -------------------------
+   A grain is born already moving with the blade (see tearDeck). From then on,
+   EVERY frame it is checked against all four blades again, exactly like the
+   old 62k-particle deck:
+     - inside a blade's footprint: GRAB pulls its velocity toward the blade's
+       local material velocity, and PUSH shoves it outward along the blade's
+       normal, stronger near the edge than the centerline. That perpendicular
+       push is the squeeze — cloud caught by a moving arm gets forced sideways
+       off it, not carried along in whatever direction it happened to launch.
+       Because this runs every tick of contact, a grain cannot sit inside a
+       blade or drift through one: it is actively excluded each frame it
+       overlaps.
+     - outside any blade: ordinary flight — drag toward the wind, gravity.
+   This is the same mechanism the original particle deck used, which never had
+   a passing-through or floating complaint; the debris pool is just small
+   enough (thousands, not tens of thousands) to run it live. */
+function stepDebris(dt,t){
+  const D=CFG.debris, off=deckOff(t);
+  const ang=ANG0+OMEGA*t;
+  const CA=[],SA=[];
+  for(let k=0;k<4;k++){ const a=ang+k*Math.PI/2; CA.push(Math.cos(a)); SA.push(Math.sin(a)); }
+  const hubx=HUB.x, huby=HUB.y;
+  const bRad=HW+gl_(D.radPad), rMax2=(LA+bRad+3*S)*(LA+bRad+3*S);
+  const grab=D.grab, push=D.push, drag=D.drag, sink=D.sink*S;
+
+  for(let i=0;i<dN;i++){
+    dLife[i]-=dt; dAge[i]+=dt;
+    let ax=0, ay=0;
+    const dxh=dX[i]-hubx, dyh=dY[i]-huby;
+    let caught=false;
+    if(dxh*dxh+dyh*dyh<rMax2){
+      for(let k=0;k<4;k++){
+        const c=CA[k], s=SA[k];
+        const u=dxh*c+dyh*s, v=-dxh*s+dyh*c;
+        if(u>-6*S&&u<LA&&v>-bRad&&v<bRad){
+          const av=v<0?-v:v, w=1-av/bRad;
+          const bvx=OMEGA*(-u*s-v*c), bvy=OMEGA*(u*c-v*s);
+          ax += (bvx-dVX[i])*grab*w;
+          ay += (bvy-dVY[i])*grab*w;
+          const sg=v>=0?1:-1, pw=push*w;
+          ax += -s*sg*pw;                 // shove along the blade's normal —
+          ay +=  c*sg*pw;                 // the squeeze
+          caught=true;
+          break;
+        }
+      }
+    }
+    if(!caught){
+      ax += -drag*(dVX[i]-VW);
+      ay += -drag*dVY[i]+sink;
+    }
+    dVX[i]+=ax*dt; dVY[i]+=ay*dt;
+    dX[i]+=dVX[i]*dt; dY[i]+=dVY[i]*dt;
+
+    const wx=mod(dX[i]-off,WRAP);
+    const landed=!caught && dAge[i]>0.16 && dY[i]>=surfaceAt(wx);
+    if(landed||dLife[i]<=0||dX[i]<-40*S||dX[i]>W+40*S){
+      if(dMass[i]>0){                       // give the cloud its material back
+        const yy=Math.round(dY[i]);
+        if(yy>=CY0&&yy<CY0+CROWS){
+          const ci=Math.round(wx)%WRAP, ix=(yy-CY0)*WRAP+ci;
+          const cc=carve[ix]-dMass[i];      // exactly what this grain took away
+          carve[ix]=cc<0?0:cc;
+        }
+      }
+      dN--;                                  // swap-remove
+      dX[i]=dX[dN]; dY[i]=dY[dN]; dVX[i]=dVX[dN]; dVY[i]=dVY[dN];
+      dLife[i]=dLife[dN]; dMass[i]=dMass[dN]; dAge[i]=dAge[dN];
+      i--;
+    }
+  }
+}
+
+function drawDebris(){
+  /* Airborne shreds are thinner than the mass they came from, so they sit a
+     little lighter — dark against the sky above the deck, pale against the
+     deck itself. Matching the deck tone exactly made every grain vanish. */
+  const tone=DECK_TONE+CFG.debris.lift;
+  for(let i=0;i<dN;i++){
+    const x=Math.round(dX[i]), y=Math.round(dY[i]);
+    if(x<0||x>=W||y<0||y>=H) continue;
+    let a=dLife[i]*1.6; if(a>1)a=1;          // fade out as it expires
+    const j=y*W+x;
+    lum[j]=lum[j]*(1-a)+tone*a;
+    if(a>0.5) dof[j]=0;
+  }
 }
 
 function stepDeck(dt,t){ tearDeck(dt,t); healDeck(dt); stepDebris(dt,t); }
@@ -1205,8 +1210,9 @@ function syncLabels(){
   $('vTear').textContent = CFG.deck.tear.toFixed(2);
   $('vHeal').textContent = CFG.deck.heal.toFixed(1)+'s';
   $('vSpread').textContent = CFG.deck.spread.toFixed(2);
-  $('vThrow').textContent = CFG.debris.throw.toFixed(2);
-  $('vBite').textContent  = CFG.debris.bite.toFixed(0);
+  $('vGrab').textContent  = CFG.debris.grab.toFixed(1);
+  $('vPush').textContent  = CFG.debris.push.toFixed(0);
+  $('vThresh').textContent= CFG.debris.threshold.toFixed(2);
   $('vStar').textContent = CFG.star.every+'-'+(CFG.star.every+CFG.star.vary)+'s';
   $('vSkyT').textContent = CFG.sky.top.toFixed(2);
   $('vSkyH').textContent = CFG.sky.horizon.toFixed(2);
@@ -1265,8 +1271,9 @@ function wirePanel(){
   live('rTear',  ()=>CFG.deck.tear, v=>{ CFG.deck.tear=v; TEAR=v; });
   live('rHeal',  ()=>CFG.deck.heal, v=>{ CFG.deck.heal=v; HEAL=v; });
   live('rSpread',()=>CFG.deck.spread, v=>{ CFG.deck.spread=v; SPREAD=v; });
-  live('rThrow', ()=>CFG.debris.throw, v=>{ CFG.debris.throw=v; });
-  live('rBite',  ()=>CFG.debris.bite, v=>{ CFG.debris.bite=v; });
+  live('rGrab',  ()=>CFG.debris.grab, v=>{ CFG.debris.grab=v; });
+  live('rPush',  ()=>CFG.debris.push, v=>{ CFG.debris.push=v; });
+  live('rThresh',()=>CFG.debris.threshold, v=>{ CFG.debris.threshold=v; SHED_T=v; });
   live('rStar',  ()=>CFG.star.every, v=>{ CFG.star.every=v; });
   // the sky field is baked once, so these repaint the static buffer
   live('rSkyT',  ()=>CFG.sky.top, v=>{ CFG.sky.top=v; buildBG(); });
