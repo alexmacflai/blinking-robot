@@ -34,7 +34,7 @@ knowledge/   durable project knowledge: design, engineering, decisions, vocabula
 | Tag vocabulary | `knowledge/vocabulary.md` | live |
 | Technical conventions, invariants, contracts | `knowledge/engineering/` | create on first use |
 | Decision records | `knowledge/decisions/` | create on first use |
-| Product premise, lexicon | `knowledge/product/` | create on first use |
+| Product premise, lexicon, high-level directions | `knowledge/product/` | live |
 | Visual principles, moods, composition | `knowledge/design/` | live |
 | Requirements and acceptance criteria | `knowledge/specs/` | create on first use |
 | Reusable agent skills | `workflows/skills/` | create on first use |
@@ -68,6 +68,14 @@ would go in it is overhead with no payoff until something actually needs it.
 9. Update the root [`README.md`](README.md) when a change affects the
    human-facing description of the project, its public entry points, or how a
    visitor runs or browses it. Do not change it for internal-only maintenance.
+10. Before creating or materially revising a postcard, search existing
+    postcards and [`knowledge/design/visual-language.md`](knowledge/design/visual-language.md)
+    for overlapping tags, objects, materials, or behaviours. Reuse an
+    established visual or motion pattern only when it supports the new brief;
+    do not copy it across incompatible perspective, composition, or mood.
+    When a postcard establishes a transferable pattern, record its effect,
+    conditions, and limits in the visual-language catalogue. Keep implementation
+    self-contained until a second postcard truly needs shared code.
 
 ## README shapes
 

@@ -14,6 +14,8 @@ that make an image belong here, separate from any one scene's brief or code.
 - [motion.md](motion.md) — how movement should behave and communicate.
 - [rendering.md](rendering.md) — palette, light, resolution, dither, and edge
   treatment.
+- [visual-language.md](visual-language.md) — reusable visual and motion
+  patterns, with their conditions and limits.
 - [postcard-brief.md](postcard-brief.md) — the short, scene-specific brief to
   add to a postcard README.
 
@@ -22,3 +24,7 @@ that make an image belong here, separate from any one scene's brief or code.
 Keep enduring principles here and scene-specific choices in the relevant
 postcard's README. Rendering supports the image; it does not compensate for
 weak composition or an unclear visual idea.
+
+Before making a new postcard, inspect the visual-language catalogue and
+postcards with overlapping tags. Reuse only what serves the new brief; record
+patterns that become transferable across scenes.

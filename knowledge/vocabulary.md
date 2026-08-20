@@ -29,6 +29,7 @@ using it is not doing that job — prefer an existing tag before adding one.
 ## Kind — what shape the document is
 
 `[readme]` `[index]` `[entry-point]` `[decision-record]` `[skill]` `[prompt]`
+`[idea]`
 
 ## Domain — technical or visual territory
 

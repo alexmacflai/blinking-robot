@@ -24,12 +24,13 @@ should feel, how it is built, why choices were made, and shared vocabulary.
 - [`decisions/`](decisions/) — durable choices and the reasoning behind them.
 - [`design/`](design/) — durable visual direction, motion, rendering, and the
   reusable postcard-brief template.
+- [`product/`](product/) — durable product context and uncommitted gallery,
+  authoring, and production directions.
 
 The following areas do not exist yet. Create a directory and its README
 together with the first document that belongs there — see
 [`../AGENTS.md`](../AGENTS.md) for the full "where things go" table.
 
-- `product/` — mission, premise, and lexicon.
 - `engineering/` — technical conventions, invariants, and verification.
 - `specs/` — requirements and acceptance criteria.
 
