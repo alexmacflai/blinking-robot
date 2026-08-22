@@ -18,10 +18,14 @@ go straight to one:
   hilltop, its arms turning through drifting cloud, under a low evening sun.
 - [Coffee](gallery/postcards/coffee/index.html) — an espresso machine filling a
   cup that is already full, over and over, and the spill running off the tray.
+- [Passing legs](gallery/postcards/passing-legs/index.html) — a camera lying on
+  the floor while people pass in trousers and shoes, at four depths and four
+  cadences, going nowhere in particular.
 
 To tune a postcard while making it, open its controls page —
-[`windmill/controls.html`](gallery/postcards/windmill/controls.html) or
-[`coffee/controls.html`](gallery/postcards/coffee/controls.html).
+[`windmill/controls.html`](gallery/postcards/windmill/controls.html),
+[`coffee/controls.html`](gallery/postcards/coffee/controls.html) or
+[`passing-legs/controls.html`](gallery/postcards/passing-legs/controls.html).
 
 Every postcard surface is directly runnable HTML. Open it in a browser;
 nothing else to install.

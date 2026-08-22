@@ -106,3 +106,55 @@ needed to hold the silhouette against a same-value background.
 
 **Do not reuse when:** the object's roundness is the point, or when nothing is
 drawn on it that the banding could be confused with.
+
+## A rim drawn only where two equal values touch
+
+**Source:** [Passing legs postcard](../../gallery/postcards/passing-legs/README.md)
+
+**Effect:** Overlapping shapes that share a value stay separate without being
+outlined. A silhouette lays a lighter tone behind its own edge, but the write is
+filtered to pixels **already at or below its own value** — so the rim appears
+against material of its own kind and is invisible against the background, the
+ground, or anything lighter. Nothing gains a contour it did not need.
+
+**Works when:** depth or category is encoded as flat value, so same-value
+overlap is both frequent and genuinely ambiguous, and the compositing buffer is
+continuous luminance drawn back to front. It costs no bookkeeping: the buffer
+already records what is underneath, so the filter is a comparison at write time
+rather than a list of what overlaps what. It also resolves a shape against
+*itself* — in the source postcard a walker's own two legs — which an outline
+pass over a finished silhouette cannot do.
+
+**May vary:** the width of the rim, how much lighter it is, and whether it is
+applied to whole figures, to selected parts, or only to the nearer of two
+overlapping forms.
+
+**Do not reuse when:** the merging of two shapes is the intended reading, or
+when a scene's values are already all distinct — the filter then never fires and
+the extra pass is dead weight. It is also wrong where an object must read
+against a *lighter* neighbour, which is the opposite problem and wants
+[value split by state](#value-split-by-state-not-by-light) instead.
+
+## A scene with no cycle to return to
+
+**Source:** [Passing legs postcard](../../gallery/postcards/passing-legs/README.md)
+
+**Effect:** The postcard never repeats. Subjects are spawned at a randomised
+cadence from a seeded stream, cross the frame, and are destroyed. There is no
+period, so there is no first frame to come back to and no accumulating state to
+drift — the guarantee the coffee postcard buys with a phase-driven cycle is had
+here by owning nothing that persists.
+
+**Works when:** the subject is traffic rather than an event — something whose
+whole character is that it does not resolve. It requires a warm-up run before
+the first visible frame, or the scene opens empty and fills, which reads as a
+beginning; and it requires a seeded generator, or a change to the motion cannot
+be judged because the population changed underneath it.
+
+**May vary:** the spawn cadence, how many independent streams run at once, and
+whether their rates are related at all.
+
+**Do not reuse when:** the image depends on a state being reliably reachable, or
+when the loop itself is the subject — see
+[a cycle that returns to its own first frame](#a-cycle-that-returns-to-its-own-first-frame),
+which is the opposite decision made for the opposite reason.

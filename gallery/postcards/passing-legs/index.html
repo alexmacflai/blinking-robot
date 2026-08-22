@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Passing legs</title>
+<style>
+  :root{color-scheme:dark;--bg:#0a0a0c}
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;background:var(--bg);overflow:hidden}
+  body{display:flex;align-items:center;justify-content:center}
+  #stage{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+  canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+  #load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:var(--bg);color:#6f6d66;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+    letter-spacing:.2em;z-index:20}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c"></canvas></div>
+<div id="load">WAITING ON THE FLOOR…</div>
+<script>
+(function(){
+"use strict";
+
+/* ========================================================================
+   BLINKING ROBOT — passing legs
+
+   The camera lies on the floor, looking along it. People walk past in formal
+   trousers and shoes, in four depth ranks, and never stop. Nobody arrives,
+   nobody is recognised, nothing happens.
+
+   RENDER PIPELINE — the house discipline: compose the whole scene as
+   CONTINUOUS luminance in a Float32 buffer, then threshold the finished
+   composite once through an ordered Bayer 8x8 matrix. One dither pass means
+   every surface is quantised on the same lattice and the frame reads as a
+   single screen-print rather than a stack of pre-dithered parts.
+
+   GEOMETRY is a real one-point perspective, but only just. The camera sits at
+   CAM.height above the floor with a horizontal axis, so the floor plane images
+   as a single horizontal line — the horizon — and every walker at depth d is
+   drawn at a uniform scale of focal/d pixels per metre. Within a rank there is
+   no perspective at all; between ranks there is nothing but scale. That is the
+   whole projection.
+
+   THE FRAME DOES THE CROPPING. The focal length is not chosen for a look — it
+   is solved, so that the silhouette of the FARTHEST rank still runs off the
+   top edge. Below that value the far figures acquire shoulders and heads and
+   the postcard becomes a picture of people. Above it, the near legs grow wider
+   than the frame. If you change `cam.focal` or the rank depths, check that
+   every rank's coat top is still negative.
+
+   NO CYCLE. Unlike the windmill and the coffee, this postcard does not loop.
+   Walkers are spawned at a randomised cadence, cross, and are destroyed. There
+   is no period to return to and nothing accumulates, so there is nothing to
+   drift. `warmup()` runs the traffic for half a minute before the first
+   visible frame, or the postcard would open on an empty floor.
+
+   RESOLUTION INDEPENDENCE — the only authored pixel quantities are `horizon`
+   and `focal`, both against a BASE 234x416 grid and multiplied by S at build
+   time. Everything else in CFG is in METRES and is converted by the projection,
+   so the scene cannot drift out of agreement with itself at another grid size.
+   ===================================================================== */
+
+const BASE_W=234, BASE_H=416;
+
+const CFG = {
+  gridK : 26,          // grid is 9k x 16k cells -> 234x416 at k=26
+  fit   : 'fill',      // 'fill' = grow into the space | 'crisp' = integer zoom
+  ink   : '#101418',
+  paper : '#e9e6dd',
+
+  /* Camera. `horizon` and `focal` are base-grid pixels; `height` is metres.
+     A low camera compresses every rank's shoe onto nearly the same line — the
+     contact points below span about six pixels — which is the point: the floor
+     is a line, not a plane, and depth has nowhere to go but scale, tone and
+     cadence.
+
+     `horizon` is the composition's one real lever, and it trades two things
+     against each other. The share of the frame ABOVE it that a figure spends
+     on coat rather than leg is 1 - 0.81*scale/horizon, and the number of
+     figures that fit across the far rank is about 474/horizon. Lower it and
+     the crowd gets denser and leggier; raise it and you get a few large
+     walkers under a curtain of coats. 150 is where the legs are the subject,
+     the far rank still fits five abreast, and the floor keeps the bottom of
+     the frame empty. */
+  cam   : { horizon:150, focal:407, height:0.09 },
+
+  /* Depth ranks, far to near at draw time. `tone` is the silhouette's
+     luminance against paper-white background: solid ink at the front, lifting
+     toward the background as it recedes. This is the postcard's depth cue and
+     it is applied without exception — a rank has exactly one value. */
+  ranks : [
+    { d:2.20, tone:0.00, gap:[3.2,7.5], right:0.85 },
+    { d:2.54, tone:0.22, gap:[2.6,6.0], right:0.15 },
+    { d:2.95, tone:0.42, gap:[1.8,4.2], right:0.80 },
+    { d:3.39, tone:0.60, gap:[1.4,3.2], right:0.25 }
+  ],
+
+  /* Adjacent ranks walk in opposing directions on purpose. Walkers going the
+     same way almost never cross, so without a counter-stream the overlap the
+     scene is about would simply not occur. */
+
+  /* The figure, in metres. `coat` is not a garment so much as the reason the
+     silhouette can leave the top of the frame without being cut at the hip:
+     an amputated waist reads as a mistake, a coat running off the edge reads
+     as a person who is simply taller than the picture.
+     `coatTop` is therefore a DRAWN EXTENT, not a body height. It is always
+     off the top of the frame, so nothing is gained by keeping it anatomical
+     and a great deal is lost: it sets the focal-length constraint above, and
+     holding it near a real 1.5m forces a scale at which one walker is a third
+     of the frame wide. Raising it is what lets the crowd be a crowd. */
+  fig   : { hip:0.90, thigh:0.43, shin:0.42, ankle:0.075,
+            rThigh:0.088, rKnee:0.066, rCuff:0.076,
+            shoeL:0.26, shoeH:0.055,
+            coatTop:3.20, coatW:0.20, coatDrop:0.12, sway:0.045,
+            vary:0.06 },
+
+  /* Gait. `step` is short and `duty` is long: this is a concourse shuffle,
+     not a walk. Speed and step together fix the cadence — one full cycle is
+     2*step/speed seconds — so the legs cannot skate. */
+  gait  : { speed:0.52, step:0.42, duty:0.58, lift:0.085, bob:0.035, vary:0.13 },
+
+  floor : { far:0.99, near:0.88, grain:0.016,
+            shadow:0.46, shadowLen:0.75 },
+
+  /* Separation. Two silhouettes of the SAME rank are the same value, so where
+     they overlap they merge into one unreadable mass — and a walker's own two
+     legs overlap on every stride. `sep` is the lighter value laid in behind a
+     silhouette's edge, and `sepW` its width in pixels. See drawSep(). */
+  sep   : 0.30, sepW : 1.15
+};
+
+/* ---------- helpers --------------------------------------------------- */
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const lerp=(a,b,t)=>a+(b-a)*t;
+function smooth(x){ const t=clamp(x,0,1); return t*t*(3-2*t); }
+
+/* Deterministic noise, added to TONE only — never to the palette or the
+   lattice. A smooth ramp thresholded through an ordered matrix produces long
+   straight bands, which on the floor read as scan lines rather than as a
+   surface. */
+function grain(x,y){
+  const n=Math.sin(x*12.9898+y*78.233)*43758.5453;
+  return (n-Math.floor(n))-0.5;
+}
+
+/* The traffic is random but not arbitrary: one seeded stream means a given
+   build always produces the same crowd, which is what makes a change to the
+   gait or the ranks observable rather than lost in the noise. */
+let rngState=0x9e3779b9;
+function rnd(){
+  rngState|=0; rngState=(rngState+0x6D2B79F5)|0;
+  let t=Math.imul(rngState^(rngState>>>15),1|rngState);
+  t=(t+Math.imul(t^(t>>>7),61|t))^t;
+  return ((t^(t>>>14))>>>0)/4294967296;
+}
+const rrange=(a,b)=>a+(b-a)*rnd();
+
+const BAYER = new Uint8Array([
+   0,32, 8,40, 2,34,10,42,  48,16,56,24,50,18,58,26,
+  12,44, 4,36,14,46, 6,38,  60,28,52,20,62,30,54,22,
+   3,35,11,43, 1,33, 9,41,  51,19,59,27,49,17,57,25,
+  15,47, 7,39,13,45, 5,37,  63,31,55,23,61,29,53,21]);
+
+function packColor(hex){
+  const n=parseInt(hex.slice(1),16);
+  const r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  return ((255<<24)|(b<<16)|(g<<8)|r)>>>0;   // little-endian AABBGGRR
+}
+
+/* ======================================================================
+   DERIVED STATE — rebuilt by build()
+   ==================================================================== */
+let W,H,S;
+let lum,img,buf32,CINK,CPAP;
+let HOR;                 // horizon, in grid pixels
+let SEPW;                // separation width, in grid pixels
+let ranks=[];            // { d, tone, sepTone, sc, halfW, gap, right, walkers, tNext }
+
+const cv=document.getElementById('c');
+const ctx=cv.getContext('2d',{alpha:false});
+
+function build(){
+  const K=CFG.gridK;
+  W=9*K; H=16*K; S=W/BASE_W;
+
+  cv.width=W; cv.height=H;
+  img=ctx.createImageData(W,H);
+  buf32=new Uint32Array(img.data.buffer);
+  lum=new Float32Array(W*H);
+  CINK=packColor(CFG.ink); CPAP=packColor(CFG.paper);
+
+  HOR=CFG.cam.horizon*S;
+  SEPW=CFG.sepW*S;
+
+  ranks=CFG.ranks.map(r=>{
+    const sc=CFG.cam.focal*S/r.d;      // pixels per metre at this depth
+    return { d:r.d, tone:r.tone,
+             sepTone:Math.min(0.92, r.tone+CFG.sep),
+             sc:sc, halfW:(W*0.5)/sc,
+             gap:r.gap, right:r.right,
+             walkers:[], tNext:rrange(0,r.gap[1]) };
+  });
+}
+
+/* World -> grid. x is lateral metres from the frame's centre line, z is height
+   above the floor. Both divide by depth exactly once, in `sc`. */
+function pxOf(sc,x){ return W*0.5+sc*x; }
+function pyOf(sc,z){ return HOR+sc*(CFG.cam.height-z); }
+
+/* ======================================================================
+   PRIMITIVES — everything writes coverage-weighted luminance
+   ==================================================================== */
+function span(y,xa,xb,tone,alpha){
+  if(y<0||y>=H||xb<=xa) return;
+  if(xa<0)xa=0; if(xb>W)xb=W; if(xb<=xa) return;
+  const o=y*W, i0=Math.floor(xa), i1=Math.ceil(xb)-1;
+  for(let x=i0;x<=i1;x++){
+    const cov=Math.min(x+1,xb)-Math.max(x,xa); if(cov<=0) continue;
+    const a=alpha*cov, i=o+x;
+    lum[i]+=(tone-lum[i])*a;
+  }
+}
+/* Shaded variant: fn(x,y) -> tone, sampled at the pixel centre. */
+function spanF(y,xa,xb,fn,alpha){
+  if(y<0||y>=H||xb<=xa) return;
+  if(xa<0)xa=0; if(xb>W)xb=W; if(xb<=xa) return;
+  const o=y*W, i0=Math.floor(xa), i1=Math.ceil(xb)-1, cy=y+0.5;
+  for(let x=i0;x<=i1;x++){
+    const cov=Math.min(x+1,xb)-Math.max(x,xa); if(cov<=0) continue;
+    const a=alpha*cov, i=o+x;
+    lum[i]+=(fn(x+0.5,cy)-lum[i])*a;
+  }
+}
+
+function ellipse(cx,cy,rx,ry,tone,alpha){
+  if(alpha===undefined) alpha=1;
+  if(rx<=0||ry<=0) return;
+  const y0=Math.max(0,Math.floor(cy-ry)), y1=Math.min(H-1,Math.ceil(cy+ry));
+  for(let y=y0;y<=y1;y++){
+    const u=(y+0.5-cy)/ry; if(u<=-1||u>=1) continue;
+    const dx=rx*Math.sqrt(1-u*u);
+    span(y,cx-dx,cx+dx,tone,alpha);
+  }
+}
+
+/* Tapered capsule — the only limb primitive there is. A trouser leg is a
+   capsule from hip to knee and another from knee to cuff; a dress shoe is a
+   capsule from heel to toe that thins toward the toe.
+
+   `only` is what makes same-rank separation work. When it is undefined the
+   capsule simply paints. When it is a rank's tone, the capsule writes ONLY
+   over pixels already at or below that tone — that is, over material of its
+   own rank or nearer, and never over the background, the floor, or a farther
+   rank. Painting a lighter value through that filter puts a rim exactly where
+   two silhouettes of one value would otherwise have merged, and nowhere else.
+   It costs no bookkeeping: the buffer already knows what is underneath. */
+function capT(ax,ay,bx,by,ra,rb,tone,only){
+  const rmax=Math.max(ra,rb)+1;
+  const x0=Math.max(0,Math.floor(Math.min(ax,bx)-rmax));
+  const x1=Math.min(W-1,Math.ceil(Math.max(ax,bx)+rmax));
+  const y0=Math.max(0,Math.floor(Math.min(ay,by)-rmax));
+  const y1=Math.min(H-1,Math.ceil(Math.max(ay,by)+rmax));
+  const dx=bx-ax, dy=by-ay, L2=dx*dx+dy*dy||1;
+  const gated=(only!==undefined), lim=gated?only+0.02:0;
+  for(let y=y0;y<=y1;y++){
+    const o=y*W, cy=y+0.5;
+    for(let x=x0;x<=x1;x++){
+      const cx=x+0.5;
+      let t=((cx-ax)*dx+(cy-ay)*dy)/L2; t=clamp(t,0,1);
+      const qx=cx-(ax+dx*t), qy=cy-(ay+dy*t);
+      const r=ra+(rb-ra)*t;
+      const cov=clamp(r+0.5-Math.sqrt(qx*qx+qy*qy),0,1); if(cov<=0) continue;
+      const i=o+x;
+      if(gated && lum[i]>lim) continue;
+      lum[i]+=(tone-lum[i])*cov;
+    }
+  }
+}
+
+/* Convex quad, used for the coat column. Same gate as capT. */
+function quad(pts,tone,only){
+  let ymin=1e9,ymax=-1e9;
+  for(const p of pts){ if(p[1]<ymin)ymin=p[1]; if(p[1]>ymax)ymax=p[1]; }
+  const y0=Math.max(0,Math.floor(ymin)), y1=Math.min(H-1,Math.ceil(ymax));
+  const gated=(only!==undefined), lim=gated?only+0.02:0;
+  const xs=[];
+  for(let y=y0;y<=y1;y++){
+    const cy=y+0.5; xs.length=0;
+    for(let i=0,n=pts.length;i<n;i++){
+      const a=pts[i], b=pts[(i+1)%n];
+      if((a[1]<=cy)===(b[1]<=cy)) continue;
+      xs.push(a[0]+(cy-a[1])*(b[0]-a[0])/(b[1]-a[1]));
+    }
+    if(xs.length<2) continue;
+    xs.sort((p,q)=>p-q);
+    for(let i=0;i+1<xs.length;i+=2){
+      if(!gated){ span(y,xs[i],xs[i+1],tone,1); continue; }
+      let xa=Math.max(0,xs[i]), xb=Math.min(W,xs[i+1]);
+      const o=y*W;
+      for(let x=Math.floor(xa);x<Math.ceil(xb);x++){
+        const cov=Math.min(x+1,xb)-Math.max(x,xa); if(cov<=0) continue;
+        const k=o+x; if(lum[k]>lim) continue;
+        lum[k]+=(tone-lum[k])*cov;
+      }
+    }
+  }
+}
+
+/* ======================================================================
+   TRAFFIC
+   ==================================================================== */
+function spawn(R){
+  const g=CFG.gait, f=CFG.fig;
+  const dir = rnd()<R.right ? 1 : -1;
+  const hs  = 1+f.vary*(rnd()*2-1);
+  const sp  = g.speed*(1+g.vary*(rnd()*2-1))*hs;
+  R.walkers.push({
+    x   : -dir*(R.halfW+0.55),
+    dir : dir,
+    hs  : hs,
+    speed: sp,
+    step : g.step*hs,
+    p   : rnd()
+  });
+}
+
+function stepWorld(dt){
+  for(const R of ranks){
+    R.tNext-=dt;
+    if(R.tNext<=0){ spawn(R); R.tNext=rrange(R.gap[0],R.gap[1]); }
+    for(let i=R.walkers.length-1;i>=0;i--){
+      const w=R.walkers[i];
+      w.x+=w.dir*w.speed*dt;
+      /* One full cycle is two steps. Deriving the period from speed and step
+         rather than setting it directly is what keeps the planted foot planted
+         instead of skating along the floor. */
+      w.p=(w.p+dt*w.speed/(2*w.step))%1;
+      if(Math.abs(w.x)>R.halfW+0.7) R.walkers.splice(i,1);
+    }
+  }
+}
+
+/* Where a foot is, relative to the hip, at gait phase p.
+   Stance carries the foot backward at exactly the walking speed — that is why
+   the range is 2*duty*step and not `step` — and swing returns it, faster and
+   lifted. */
+function foot(p,step,duty,lift){
+  const range=2*duty*step;
+  if(p<duty){
+    const u=p/duty;
+    return { x:range*(0.5-u), z:0 };
+  }
+  const u=(p-duty)/(1-duty), s=smooth(u);
+  return { x:range*(s-0.5), z:lift*Math.sin(Math.PI*u) };
+}
+
+/* ======================================================================
+   FIGURE
+   ==================================================================== */
+
+/* Two-link solve for the knee. The knee is drawn ANTERIOR — on the side the
+   walker is facing — because a leg that bends the other way stops being a leg
+   and the whole rank reads as furniture. */
+function knee(hx,hz,ax,az,L1,L2,dir){
+  let vx=ax-hx, vz=az-hz;
+  let d=Math.hypot(vx,vz);
+  const dmax=L1+L2-0.004, dmin=Math.abs(L1-L2)+0.004;
+  if(d>dmax){ const k=dmax/d; vx*=k; vz*=k; d=dmax; }
+  if(d<dmin){ const k=dmin/(d||1e-6); vx*=k; vz*=k; d=dmin; }
+  const a=(d*d+L1*L1-L2*L2)/(2*d), h=Math.sqrt(Math.max(0,L1*L1-a*a));
+  const ux=vx/d, uz=vz/d;
+  return { x:hx+ux*a + dir*h*(-uz), z:hz+uz*a + dir*h*(ux),
+           ax:hx+vx, az:hz+vz };
+}
+
+/* One leg, hip to shoe. `only` gates every stroke, so the same function draws
+   the silhouette and its separation rim. */
+function drawLeg(w,sc,p,tone,only,grow){
+  const f=CFG.fig, g=CFG.gait, hs=w.hs;
+  const ft=foot(p,w.step,g.duty,g.lift*hs);
+
+  /* The body is lowest at double support and highest at mid-stance. It is not
+     decoration: without the drop the leg cannot reach the end of its own
+     stride and the foot slips. */
+  const hipZ=f.hip*hs - g.bob*hs*(0.5+0.5*Math.cos(4*Math.PI*p));
+  const hipX=w.x;
+  const ankX=w.x+w.dir*ft.x, ankZ=f.ankle*hs+ft.z;
+
+  const K=knee(hipX,hipZ,ankX,ankZ,f.thigh*hs,f.shin*hs,w.dir);
+
+  const hpx=pxOf(sc,hipX), hpy=pyOf(sc,hipZ);
+  const kpx=pxOf(sc,K.x),  kpy=pyOf(sc,K.z);
+  const apx=pxOf(sc,K.ax), apy=pyOf(sc,K.az);
+
+  const rT=f.rThigh*hs*sc+grow, rK=f.rKnee*hs*sc+grow, rC=f.rCuff*hs*sc+grow;
+  capT(hpx,hpy,kpx,kpy,rT,rK,tone,only);
+  capT(kpx,kpy,apx,apy,rK,rC,tone,only);
+
+  /* Shoe. The toe dips through the swing, which is the only thing that stops
+     four shoes at four depths from reading as one repeated stamp. */
+  const th=-w.dir*0.55*(ft.z/(g.lift*hs||1));
+  const cs=Math.cos(th), sn=Math.sin(th);
+  const hlx=-w.dir*f.shoeL*hs*0.30, hlz=-(f.ankle*hs-f.shoeH*hs*0.5);
+  const tlx= w.dir*f.shoeL*hs*0.68, tlz=-(f.ankle*hs-f.shoeH*hs*0.40);
+  const heel=[ankX+hlx*cs-hlz*sn, ankZ+hlx*sn+hlz*cs];
+  const toe =[ankX+tlx*cs-tlz*sn, ankZ+tlx*sn+tlz*cs];
+  capT(pxOf(sc,heel[0]),pyOf(sc,heel[1]),
+       pxOf(sc,toe[0]), pyOf(sc,toe[1]),
+       f.shoeH*hs*sc*0.52+grow, f.shoeH*hs*sc*0.34+grow, tone, only);
+}
+
+function drawCoat(w,sc,tone,only,grow){
+  const f=CFG.fig, hs=w.hs;
+  /* A slow sway at the stride frequency. It is what keeps a rank of coats
+     from reading as a row of posts. */
+  const sway=f.sway*Math.sin(2*Math.PI*w.p)*w.dir;
+  const z0=(f.hip-f.coatDrop)*hs, z1=f.coatTop*hs;
+  const hw=f.coatW*hs;
+  const x0=w.x+sway*0.35, x1=w.x+sway;
+  const g=grow/sc;
+  quad([[pxOf(sc,x0-hw-g),pyOf(sc,z0)],
+        [pxOf(sc,x0+hw+g),pyOf(sc,z0)],
+        [pxOf(sc,x1+hw*1.08+g),pyOf(sc,z1)],
+        [pxOf(sc,x1-hw*1.08-g),pyOf(sc,z1)]],tone,only);
+}
+
+function drawWalker(w,R){
+  const sc=R.sc;
+  /* Order is load-bearing. The separation pass runs first, over the whole
+     figure, so it can only touch walkers of this rank already drawn; then the
+     body; then a second separation pass under the near leg alone, so a
+     walker's own legs stay two legs. */
+  drawCoat(w,sc,R.sepTone,R.tone,SEPW);
+  drawLeg(w,sc,w.p,R.sepTone,R.tone,SEPW);
+  drawLeg(w,sc,(w.p+0.5)%1,R.sepTone,R.tone,SEPW);
+
+  drawCoat(w,sc,R.tone,undefined,0);
+  drawLeg(w,sc,w.p,R.tone,undefined,0);
+
+  drawLeg(w,sc,(w.p+0.5)%1,R.sepTone,R.tone,SEPW);
+  drawLeg(w,sc,(w.p+0.5)%1,R.tone,undefined,0);
+}
+
+/* ======================================================================
+   GROUND
+   ==================================================================== */
+function floorToneAt(y){
+  const u=clamp((y-HOR)/(H-HOR),0,1);
+  return lerp(CFG.floor.far,CFG.floor.near,u);
+}
+
+function drawFloor(){
+  const fl=CFG.floor;
+  for(let y=Math.floor(HOR);y<H;y++){
+    const base=floorToneAt(y+0.5);
+    spanF(y,0,W,(x,cy)=>base+grain(x,cy)*fl.grain,1);
+  }
+}
+
+/* The only thing that fastens a silhouette to the floor. Without it the ranks
+   float and the horizon stops meaning anything. */
+function drawShadows(R){
+  const f=CFG.fig, g=CFG.gait, sc=R.sc, fl=CFG.floor;
+  for(const w of R.walkers){
+    for(let k=0;k<2;k++){
+      const p=(w.p+k*0.5)%1;
+      const ft=foot(p,w.step,g.duty,g.lift*w.hs);
+      const x=pxOf(sc,w.x+w.dir*ft.x);
+      const y=pyOf(sc,0);
+      const up=clamp(1-ft.z/(g.lift*w.hs||1),0,1);
+      const rx=f.shoeL*w.hs*sc*fl.shadowLen*(0.55+0.45*up);
+      const ry=f.shoeH*w.hs*sc*(0.85+0.5*up);
+      ellipse(x,y,rx,ry,floorToneAt(y)*fl.shadow,0.55*up+0.12);
+    }
+  }
+}
+
+/* ======================================================================
+   DITHER + BLIT
+   ==================================================================== */
+function dither(){
+  for(let y=0;y<H;y++){
+    const row=(y&7)<<3, o=y*W;
+    for(let x=0;x<W;x++){
+      const i=o+x;
+      buf32[i] = lum[i]*64 > BAYER[row|(x&7)]+0.5 ? CPAP : CINK;
+    }
+  }
+  ctx.putImageData(img,0,0);
+}
+
+/* ======================================================================
+   FRAME — back to front, rank by rank
+   ==================================================================== */
+function renderFrame(){
+  lum.fill(1.0);
+  drawFloor();
+  for(let i=ranks.length-1;i>=0;i--){
+    const R=ranks[i];
+    drawShadows(R);
+    for(const w of R.walkers) drawWalker(w,R);
+  }
+  dither();
+}
+
+/* ======================================================================
+   DRIVER
+   ==================================================================== */
+const DT=1/60;
+let acc=0,last=0,galleryPaused=false,driverActive=false,rafSeen=false;
+const loadEl=document.getElementById('load');
+
+/* There is no cycle to seek to, so the opening frame is simply the traffic
+   half a minute in. Without this the postcard opens on an empty floor and
+   fills up, which is a beginning — and this scene must not have one. */
+function warmup(){ for(let i=0;i<30*60;i++) stepWorld(DT); }
+
+/* The stage can measure zero for an arbitrarily long time — inside a gallery
+   iframe, or a pane that has not been rendered yet — and neither `resize` nor
+   ResizeObserver is guaranteed to fire when it finally has a size. So the fit
+   is driven from the render loop instead of from an event, and this guard is
+   what makes that cheap: everything below runs only when the stage has
+   actually changed size. */
+let fitW=-1, fitH=-1;
+function fitCanvas(){
+  const st=document.getElementById('stage');
+  const availW=st.clientWidth, availH=st.clientHeight;
+  if(availW===fitW && availH===fitH) return;
+  fitW=availW; fitH=availH;
+  let w,h;
+  if(CFG.fit==='crisp'){
+    const cell=Math.max(1,Math.floor(Math.min(availW/W, availH/H)));
+    w=W*cell; h=H*cell;
+  }else{
+    h=Math.floor(Math.min(availH, availW*16/9));
+    h-=h%16; if(h<16) h=16;
+    w=h*9/16;
+  }
+  cv.style.width=w+'px'; cv.style.height=h+'px';
+}
+
+function tick(now){
+  if(galleryPaused) return;
+  fitCanvas();
+  const n=(now===undefined)?performance.now():now;
+  let dtr=(n-last)/1000; last=n;
+  if(dtr>0.25) dtr=0.25;
+  acc+=dtr; while(acc>=DT){ stepWorld(DT); acc-=DT; }
+  renderFrame();
+}
+function rafLoop(now){
+  if(galleryPaused){ driverActive=false; return; }
+  rafSeen=true; tick(now); requestAnimationFrame(rafLoop);
+}
+function startDriver(){
+  if(driverActive||galleryPaused) return;
+  driverActive=true; last=performance.now();
+  requestAnimationFrame(rafLoop);
+  setTimeout(()=>{ if(!rafSeen) setInterval(()=>tick(),16); },400);
+}
+addEventListener('message',e=>{
+  const d=e.data;
+  if(!d||d.type!=='blinking-robot:preview-pause') return;
+  galleryPaused=Boolean(d.paused);
+  if(!galleryPaused) startDriver();
+});
+addEventListener('resize',fitCanvas);
+/* A plain resize listener is not enough. The stage can still have zero height
+   when this script first runs — inside a gallery iframe, or a pane that lays
+   out after load — and fitCanvas() would then lock the postcard to 9x16 CSS
+   pixels with no later resize event to rescue it. */
+if(typeof ResizeObserver!=='undefined') new ResizeObserver(fitCanvas).observe(document.getElementById('stage'));
+
+build();
+warmup();
+fitCanvas(); renderFrame();
+loadEl.remove();
+startDriver();
+
+/* Console handle. `run(sec)` advances the traffic without drawing, which is
+   how you look for a crossing rather than waiting for one. */
+window.__legs={ CFG:CFG,
+  run:function(sec){ for(let i=0;i<Math.round(sec*60);i++) stepWorld(DT); renderFrame(); },
+  pause:function(){ galleryPaused=true; driverActive=false; },
+  play:function(){ galleryPaused=false; startDriver(); },
+  state:function(){ return ranks.map(R=>({d:R.d,tone:R.tone,n:R.walkers.length,
+                                          x:R.walkers.map(w=>+w.x.toFixed(2))})); } };
+})();
+</script>
+</body>
+</html>

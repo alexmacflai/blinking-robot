@@ -21,6 +21,11 @@ Contains the individual coded animation postcards in the Blinking Robot gallery.
 - [`coffee/README.md`](coffee/README.md) routes work on the coffee postcard: an
   espresso machine filling a cup that is already full, with its `index.html` and
   `controls.html` surfaces.
+- [`passing-legs/README.md`](passing-legs/README.md) routes work on the passing
+  legs postcard: a camera on the floor and an indifferent crowd crossing above
+  it, with its `index.html` and `controls.html` surfaces. It is the first
+  postcard with no cycle — the traffic is spawned and destroyed rather than
+  looped.
 - To add a postcard, create a named folder, add its README and a `references/`
   folder with its own README, then add a directly runnable public `index.html`
   and a self-contained maker-facing `controls.html`. Follow the controls
