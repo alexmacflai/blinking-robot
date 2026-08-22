@@ -158,3 +158,32 @@ whether their rates are related at all.
 when the loop itself is the subject — see
 [a cycle that returns to its own first frame](#a-cycle-that-returns-to-its-own-first-frame),
 which is the opposite decision made for the opposite reason.
+
+## Plant the foot in the world and walk the body past it
+
+**Source:** [Passing legs postcard](../../gallery/postcards/passing-legs/README.md)
+
+**Effect:** A walk that reads as walking rather than as a figure marching on the
+spot. The contact point is fixed in world space for the whole of a stance and
+the body advances past it, so the foot cannot skate — the guarantee is algebraic
+rather than tuned. The pose the eye actually checks is the **foot roll**: the
+sole lands toe-up on the heel, flattens, then the heel lifts and the foot pivots
+about the toe. A foot held flat through stance and dipped in swing is backwards
+at both ends, and is the loudest tell of a hand-built cycle.
+
+**Works when:** the limb is solved by inverse kinematics from a contact pose, so
+the joint angles are consequences rather than keyframes. It carries one hard
+constraint with it: the body's height and its stride are **not independent**.
+A hip lower than the fully extended leg can never straighten, and the figure
+crouches through every frame; a stride longer than the leg can reach drags the
+IK clamp and reintroduces the slip the model existed to remove. Solve the two
+together against leg length, and check the extension at the roll from heel onto
+a flat foot — not at heel strike, which is not where the peak is.
+
+**May vary:** cadence, stance fraction, the tilt at each end of the roll, and
+how much the knee tucks after toe-off — that tuck is what separates walking from
+marching, and a little too much of it becomes a goose-step.
+
+**Do not reuse when:** the motion is meant to be mechanical, floating or
+inhuman, or when the contact is not load-bearing in the image. A figure seen
+from far enough away that the foot is a few pixels does not repay any of this.

@@ -19,10 +19,16 @@ came from the brief and from `knowledge/design/`, and the geometry was solved
 numerically rather than matched to a picture. The postcard README documents
 those decisions, and is the closest thing this scene has to a reference.
 
-The ticket left four choices open. They were settled as: three-to-five figures
-abreast per rank with real gaps between them; a mechanical, unhurried cadence;
-a pale floor articulated only by contact shadows; and motion that is neither
-hurried nor almost still but steady and indifferent.
+The ticket left four choices open. They were settled as: a close crop with one
+or two walkers abreast per rank rather than a distant crowd; a real walk cycle
+at an ordinary pace rather than a mechanical one; a pale floor with no cast
+shadow at all, fastened only by the shared contact line the shoes share; and
+motion that is neither hurried nor almost still but steady and indifferent.
+
+The crop, the missing torsos and the walk cycle all came from a second round of
+direction after a first version was reviewed: no shadows, no torsos, zoom in
+until the legs run off the top of the frame, and make the walk humane rather
+than the tell-tale march of a coded gait.
 
 When files arrive, retain the supplied filename where practical and add a short
 list entry here describing what each one is and how it informs the postcard.

@@ -2,15 +2,15 @@
 
 ## Purpose
 
-The camera lies on the floor, looking along it. People pass in formal trousers
-and shoes, in four depth ranks, at four cadences, and never stop. Nobody
-arrives, nobody is recognised, nothing happens. Procedural, self-contained, no
-external assets.
+The camera lies on the floor, looking along it. Legs pass in formal trousers and
+shoes, in four depth ranks, at four cadences, and never stop. There is nothing
+above the knee. Nobody arrives, nobody is recognised, nothing happens.
+Procedural, self-contained, no external assets.
 
 ## Boundaries
 
-- **In scope:** this scene, its projection, its gait, its traffic, and the
-  separation rule that keeps the ranks readable.
+- **In scope:** this scene, its projection, its walk cycle, its traffic, and
+  the separation rule that keeps the ranks readable.
 - **Out of scope:** shared runtime extraction, gallery navigation, and
   product-wide visual rules.
 
@@ -49,21 +49,24 @@ every rank's shoes land within about six pixels of each other. The floor is a
 line, not a plane, and depth therefore has nowhere to go but **scale, tone and
 cadence**.
 
-**`horizon` is the composition's only real lever, and it trades two things
-against each other.** The share of the frame above it that a figure spends on
-coat rather than leg is `1 - 0.81*scale/horizon`, and the number of figures
-that fit across the far rank is about `474/horizon`. Lower it and the crowd
-gets denser and leggier under a bigger floor; raise it and you get a few large
-walkers under a curtain of coats. The controls page prints both, per rank.
+**`horizon` sets the composition, and once the crop constraint is folded in
+there is only one number to trade.** Visible leg length is
+`horizon * hip / (hip - camera height)` pixels — about `1.12 * horizon` — and
+the floor gets whatever is left. Raise it for a tighter crop and bigger legs;
+lower it for more, smaller legs under more floor. The stride is fixed by the
+leg and does not shrink to make room: at the near rank one stride spans about
+200 of the frame's 234 pixels, so a near walker is often wider than the frame.
+That is what a floor-level close-up actually looks like.
 
-**`fig.coatTop` is a drawn extent, not a body height.** The silhouette must run
-off the top of the frame: cut at the hip it reads as an amputation, and cut any
-lower it acquires shoulders and becomes a picture of a person, which the brief
-rules out. `coatTop` is what guarantees the crop, it is always off-frame, and
-holding it at an anatomical 1.5m forces a focal length at which one walker is a
-third of the frame wide. Raising it is what lets the crowd be a crowd. The
-controls readout warns when a rank's coat top is no longer negative; if it is,
-that rank is being cut inside the picture.
+**There is no torso, and the frame does the cropping.** The focal length is not
+chosen for a look, it is solved so that the hip of the farthest *and shortest*
+walker still sits above the top edge:
+
+    scale >= horizon / (hip * (1 - fig.vary) - camera height)
+
+A waist with nothing above it reads as an amputation rather than as a crop, so
+this is an invariant, not a preference. The controls readout prints each rank's
+hip y and flags any that has stopped being negative.
 
 **Two silhouettes of the same rank are the same value.** A rank has exactly one
 tone — that is the depth cue, applied without exception — so where two of them
@@ -77,12 +80,31 @@ against a farther rank. It needs no bookkeeping, because the buffer already
 knows what is underneath. Set **separation → lift** to zero on the controls page
 to see what it is doing.
 
-**The cadence is derived, not set.** One gait cycle is `2*step/speed` seconds
-and the stance carries the foot backward across `2*duty*step`, which is exactly
-the distance the body advances while that foot is down. Set a period directly
-instead and the feet skate. The hip drop at double support is not decoration
-either: without it the leg cannot reach the end of its own stride and the foot
-slips.
+**The foot is planted in the world and the hip walks past it.** That is the
+whole gait, and it is the opposite of driving a foot along a path relative to
+the body — which is what makes a coded walk read as amateur. `plant()` returns
+the world x the sole occupies for an entire stance, and the hip term cancels
+exactly, so the no-slip guarantee is a property of the algebra rather than
+something tuned. Everything else follows from it:
+
+- **The foot rolls.** It lands toe-up on the heel, flattens, and then the heel
+  lifts and it pivots about the toe. A foot held flat through stance and dipped
+  in swing is backwards at both ends, and it is the loudest tell in a bad walk
+  cycle. The pivot moving to the toe is also what carries the ankle *up* at
+  push-off, which is what keeps the trailing leg within reach of the hip.
+- **Swing hits both contact poses exactly**, so nothing slips on take-off or
+  landing, with a small clearance over the middle and `tuck` pulling the ankle
+  toward the hip early. That tuck is one pose — the knee flexing hard just after
+  toe-off — and it is the single thing that separates walking from marching.
+- **`fig.hip` and `gait.step` are solved together, not chosen.** Thigh + shin +
+  ankle is 0.925m, and a hip below that can never straighten its own leg: the
+  walker then crouches through the entire cycle. Both are set so that mid-stance
+  and heel strike sit at 98% of leg length. Shorten the step and the walker
+  minces on bent knees; lengthen it and the IK clamp starts dragging the foot,
+  which is a slip. The binding moment is **not** heel strike but `p ≈ 0.08`,
+  during the roll from heel onto a flat foot, where the ankle is still
+  descending and the hip has not yet risen — peak extension there is 99.3%
+  against a clamp at 99.5%. Both figures are on the controls readout.
 
 `__legs.run(sec)` advances the traffic without waiting for it, which is how you
 look for a crossing rather than sitting through one; `__legs.state()` reports
@@ -96,7 +118,7 @@ each rank's population and lateral positions.
 - What matters most? That depth reads from value and cadence rather than from a
   receding floor, and that the awkward overlap is allowed to happen rather than
   staged.
-- What can be ignored or collapsed? Everything above the hip, the room, the
+- What can be ignored or collapsed? Everything above the knee, the room, the
   light source, and any individual.
 - What relationship or motion must read? Different rhythms at different depths,
   crossing.
@@ -107,6 +129,8 @@ Adjacent ranks are given opposing direction bias on purpose: walkers going the
 same way almost never cross, so without a counter-stream the overlap this scene
 is about would simply not occur. Keep the floor pale — a large area near mid
 luminance is a large area of 50% stipple, which reads as noise rather than as a
-surface, and the contact shadows rather than the floor tone are what fasten a
-walker to the ground. Keep both surfaces self-contained and asset-free at
-runtime, and keep development controls out of `index.html`.
+surface. There is no cast shadow under a foot: every rank's shoes land within a
+few pixels of the same line, and that shared contact line is what fastens them
+to the floor — a shadow only competed with it and made the sole ambiguous. Keep
+both surfaces self-contained and asset-free at runtime, and keep development
+controls out of `index.html`.
