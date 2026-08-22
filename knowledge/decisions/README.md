@@ -22,6 +22,10 @@ are.
 
 - [`0001-cloud-deck-as-field.md`](0001-cloud-deck-as-field.md) — why the
   windmill's interactive cloud layer stopped being a particle system.
+  Superseded in part by 0002.
+- [`0002-sail-cloud-interaction-as-emitter.md`](0002-sail-cloud-interaction-as-emitter.md)
+  — why all sail–cloud interaction moved into one invisible particle medium,
+  and why the deck it replaced had to be retired rather than left running.
 
 ## Local rules
 

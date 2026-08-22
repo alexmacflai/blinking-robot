@@ -20,5 +20,4 @@ The user-facing collection and routing layer for runnable coded animation postca
 
 ## Local rules
 
-Keep the gallery landing page lightweight. Every postcard belongs under `postcards/` and must have its own README and directly runnable HTML entry point.
-
+Keep the gallery landing page lightweight. Every postcard belongs under `postcards/` and must have its own README, `references/` folder, and directly runnable HTML entry point. References inform production only; they are not gallery assets.

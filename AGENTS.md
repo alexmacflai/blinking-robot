@@ -30,6 +30,7 @@ knowledge/   durable project knowledge: design, engineering, decisions, vocabula
 | Content | Location | Status |
 | --- | --- | --- |
 | A runnable postcard | `gallery/postcards/<name>/index.html` | live |
+| Postcard source references | `gallery/postcards/<name>/references/` | live |
 | Gallery landing page | `gallery/index.html` | live |
 | Tag vocabulary | `knowledge/vocabulary.md` | live |
 | Technical conventions, invariants, contracts | `knowledge/engineering/` | create on first use |
@@ -50,8 +51,10 @@ would go in it is overhead with no payoff until something actually needs it.
 
 1. Every directory **with content** has exactly one canonical `README.md`. No
    competing index files.
-2. Postcards are self-contained and asset-free: one directly runnable
-   `index.html`, no build step, no dependencies, no external files.
+2. Postcards are self-contained and asset-free at runtime: one directly
+   runnable `index.html`, no build step, no dependencies, and no files loaded
+   by the animation. Source material belongs in that postcard's `references/`
+   folder and must never become a runtime dependency.
 3. Do not extract shared code until a second postcard actually needs it. When
    it does, it goes in `gallery/shared/`.
 4. Repo-wide rules live on this page only. Link to it instead of restating it —
@@ -60,7 +63,9 @@ would go in it is overhead with no payoff until something actually needs it.
    rather than inventing policy.
 6. Tag documents using [`knowledge/vocabulary.md`](knowledge/vocabulary.md).
    Do not invent a tag without adding it there.
-7. Update the nearest README when you add a concept or an entry point.
+7. Update the nearest README when you add a concept or an entry point. A
+   postcard's `references/` folder has its own README documenting its supplied
+   source material.
 8. Before changing a postcard, consult the relevant durable knowledge in
    [`knowledge/`](knowledge/)—especially [`knowledge/design/`](knowledge/design/)
    for visual direction, motion, or rendering. Use it as project-level guidance;

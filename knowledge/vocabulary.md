@@ -33,7 +33,7 @@ using it is not doing that job — prefer an existing tag before adding one.
 
 ## Domain — technical or visual territory
 
-`[coded-animation]` `[procedural-rendering]` `[1-bit]` `[dither]`
+`[coded-animation]` `[procedural-rendering]` `[1-bit]` `[dither]` `[reference]`
 `[static-site]` `[browser]` `[performance]` `[scene]` `[vignette]`
 `[animation-controls]` `[art-direction]` `[motion]` `[rendering]`
 

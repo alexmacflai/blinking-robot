@@ -2,7 +2,17 @@
 
 `[decision]` `[decision-record]` `[procedural-rendering]` `[performance]`
 
-**Status:** accepted · applies to [`gallery/postcards/windmill`](../../gallery/postcards/windmill/)
+**Status:** superseded in part by
+[`0002`](0002-sail-cloud-interaction-as-emitter.md) · applies to
+[`gallery/postcards/windmill`](../../gallery/postcards/windmill/)
+
+> **What still stands:** the deck is a flat field, not a particle system, and
+> the reasoning below for why grain belongs at the silhouette rather than in
+> the bulk. **What 0002 reversed:** the carve field and the debris pool. The
+> deck no longer interacts with the sails at all; that moved to an invisible
+> particle medium in the depth slot behind it. Everything below about carving,
+> deposition, shred quantisation and tear-depth falloff describes code that has
+> been removed.
 
 ## Context
 
