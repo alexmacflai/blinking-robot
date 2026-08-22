@@ -15,7 +15,10 @@ The first Blinking Robot postcard: a static windmill scene with internal motion.
 
 ## Handbook
 
-Open [`index.html`](index.html) directly. Space pauses, H toggles the readout, and the panel exposes scene and output controls.
+Open [`index.html`](index.html) directly to view the clean, gallery-facing
+postcard. It contains only the animation. Open [`controls.html`](controls.html)
+to tune the same scene with its full maker-facing control panel; its values are
+session-only and can be copied back into source with the existing config export.
 
 [`references/README.md`](references/README.md) records source material supplied
 for this postcard. It informs the scene but is never loaded by the animation.
@@ -86,7 +89,7 @@ their blade-local coordinates when it does not.
 
 ## Local rules
 
-Keep the postcard self-contained and asset-free at runtime. Keep supplied source
-material in `references/`, never load it from `index.html`, and preserve the
-existing controls and export/config behavior unless the change explicitly
-concerns this postcard.
+Keep both runnable surfaces self-contained and asset-free at runtime. Keep
+supplied source material in `references/`, never load it from either HTML page.
+The public postcard must remain free of development controls; preserve the
+controls page's export/config behavior unless a change explicitly concerns it.

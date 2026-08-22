@@ -17,8 +17,11 @@ go straight to one:
 - [Windmill](gallery/postcards/windmill/index.html) — a windmill on a narrow
   hilltop, its arms turning through drifting cloud, under a low evening sun.
 
-Every postcard is a single HTML file. Open it in a browser; nothing else to
-install.
+To tune Windmill while making it, open
+[`gallery/postcards/windmill/controls.html`](gallery/postcards/windmill/controls.html).
+
+Every postcard surface is directly runnable HTML. Open it in a browser;
+nothing else to install.
 
 ## Repository
 

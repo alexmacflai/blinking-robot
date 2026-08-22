@@ -29,7 +29,8 @@ knowledge/   durable project knowledge: design, engineering, decisions, vocabula
 
 | Content | Location | Status |
 | --- | --- | --- |
-| A runnable postcard | `gallery/postcards/<name>/index.html` | live |
+| A public postcard surface | `gallery/postcards/<name>/index.html` | live |
+| A postcard controls surface | `gallery/postcards/<name>/controls.html` | live |
 | Postcard source references | `gallery/postcards/<name>/references/` | live |
 | Gallery landing page | `gallery/index.html` | live |
 | Tag vocabulary | `knowledge/vocabulary.md` | live |
@@ -51,12 +52,14 @@ would go in it is overhead with no payoff until something actually needs it.
 
 1. Every directory **with content** has exactly one canonical `README.md`. No
    competing index files.
-2. Postcards are self-contained and asset-free at runtime: one directly
-   runnable `index.html`, no build step, no dependencies, and no files loaded
-   by the animation. Source material belongs in that postcard's `references/`
-   folder and must never become a runtime dependency.
-3. Do not extract shared code until a second postcard actually needs it. When
-   it does, it goes in `gallery/shared/`.
+2. Postcard surfaces are self-contained and asset-free at runtime: each public
+   `index.html` and optional maker-facing `controls.html` is directly runnable,
+   with no build step, no dependencies, and no runtime-loaded source material.
+   Supplied material belongs in that postcard's `references/` folder and must
+   never become a runtime dependency.
+3. Do not extract shared postcard runtime code merely because a public and
+   controls surface duplicate it. Extract only when a second postcard actually
+   needs the same implementation; then it goes in `gallery/shared/`.
 4. Repo-wide rules live on this page only. Link to it instead of restating it —
    duplicated guidance is what drifts out of sync with the tree.
 5. Make small, reversible changes. State assumptions when the project is silent
@@ -97,6 +100,7 @@ a leaf to the area shape.
 
 ## Verifying a change
 
-Postcards open directly from the filesystem — no server required. After
-changing one, open its `index.html`, confirm the animation runs, and exercise
-its controls. There are no automated tests.
+Postcard surfaces open directly from the filesystem — no server required. After
+changing one, open its public `index.html`, confirm the animation runs, and open
+`controls.html` when present to exercise its controls. There are no automated
+tests.

@@ -38,20 +38,6 @@ gallery a clear public chronology.
 postcards exist in the repository but stay out of the gallery? Is moving files
 useful, or is metadata sufficient?
 
-## Viewport-aware animation
-
-**Status:** Seed
-
-**Idea:** Postcards animate indefinitely while they are relevant to the
-viewport, but stop when they are roughly half a viewport outside its top or
-bottom edge.
-
-**Why it might matter:** Retains the feeling of living postcards without doing
-unnecessary work far from view.
-
-**Open questions:** Does the threshold feel natural during fast scrolling? How
-should pausing interact with a postcard's own controls or gallery previews?
-
 ## Poems and spoken text
 
 **Status:** Seed
