@@ -57,26 +57,31 @@ would go in it is overhead with no payoff until something actually needs it.
    with no build step, no dependencies, and no runtime-loaded source material.
    Supplied material belongs in that postcard's `references/` folder and must
    never become a runtime dependency.
-3. Do not extract shared postcard runtime code merely because a public and
+3. Every postcard is portrait 9:16, authored on a 9k x 16k pixel grid. This is
+   the project's fixed frame — postcards are made to be watched the way a phone
+   is held — and it is not a per-scene decision. A brief that seems to want a
+   wider composition solves it inside the portrait frame, by cropping and by
+   what it leaves out, rather than by changing the frame.
+4. Do not extract shared postcard runtime code merely because a public and
    controls surface duplicate it. Extract only when a second postcard actually
    needs the same implementation; then it goes in `gallery/shared/`.
-4. Repo-wide rules live on this page only. Link to it instead of restating it —
+5. Repo-wide rules live on this page only. Link to it instead of restating it —
    duplicated guidance is what drifts out of sync with the tree.
-5. Make small, reversible changes. State assumptions when the project is silent
+6. Make small, reversible changes. State assumptions when the project is silent
    rather than inventing policy.
-6. Tag documents using [`knowledge/vocabulary.md`](knowledge/vocabulary.md).
+7. Tag documents using [`knowledge/vocabulary.md`](knowledge/vocabulary.md).
    Do not invent a tag without adding it there.
-7. Update the nearest README when you add a concept or an entry point. A
+8. Update the nearest README when you add a concept or an entry point. A
    postcard's `references/` folder has its own README documenting its supplied
    source material.
-8. Before changing a postcard, consult the relevant durable knowledge in
+9. Before changing a postcard, consult the relevant durable knowledge in
    [`knowledge/`](knowledge/)—especially [`knowledge/design/`](knowledge/design/)
    for visual direction, motion, or rendering. Use it as project-level guidance;
    the nearest README supplies local context and rules.
-9. Update the root [`README.md`](README.md) when a change affects the
+10. Update the root [`README.md`](README.md) when a change affects the
    human-facing description of the project, its public entry points, or how a
    visitor runs or browses it. Do not change it for internal-only maintenance.
-10. Before creating or materially revising a postcard, search existing
+11. Before creating or materially revising a postcard, search existing
     postcards and [`knowledge/design/visual-language.md`](knowledge/design/visual-language.md)
     for overlapping tags, objects, materials, or behaviours. Reuse an
     established visual or motion pattern only when it supports the new brief;
@@ -84,13 +89,13 @@ would go in it is overhead with no payoff until something actually needs it.
     When a postcard establishes a transferable pattern, record its effect,
     conditions, and limits in the visual-language catalogue. Keep implementation
     self-contained until a second postcard truly needs shared code.
-11. Every new postcard must include a maker-facing `controls.html`, alongside
+12. Every new postcard must include a maker-facing `controls.html`, alongside
     its clean public `index.html`. It must render the same postcard and expose
     live controls that let the human author meaningfully tune the scene without
     editing code. Start from the Windmill controls page as the interaction
     benchmark, adapting its UI and controls to the scene rather than copying its
     implementation blindly.
-12. Each controls page must include these generic controls: pixel settings
+13. Each controls page must include these generic controls: pixel settings
     (authoring grid/resolution and display fit where relevant), a monochrome
     color palette (at least darkest and brightest tones), **Save PNG**, and
     **Save values** (a copyable and/or downloadable complete configuration that

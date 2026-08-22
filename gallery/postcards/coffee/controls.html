@@ -2,24 +2,216 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Coffee</title>
+<title>Coffee — controls</title>
 <style>
-  :root{color-scheme:dark;--bg:#0a0a0c}
+  :root{ --bg:#0a0a0c; --ink:#e8e6df; --dim:#6f6d66; --line:#22232a; --acc:#c8b98a; }
   *{box-sizing:border-box}
-  html,body{margin:0;width:100%;height:100%;background:var(--bg);overflow:hidden}
-  body{display:flex;align-items:center;justify-content:center}
-  #stage{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
-  canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+  html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;
+    font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim)}
+  body{display:flex}
+  #stage{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;position:relative}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  #panel{width:280px;flex:none;height:100vh;overflow-y:auto;
+    background:#0d0d10;border-left:1px solid var(--line);padding:16px 16px 40px}
+  #panel h1{font-size:11px;letter-spacing:.22em;color:var(--ink);margin:0 0 2px;font-weight:600}
+  #panel .sub{font-size:10px;color:#4b4a45;margin:0 0 18px}
+  fieldset{border:0;border-top:1px solid var(--line);margin:0 0 4px;padding:14px 0 12px}
+  legend{font-size:9.5px;letter-spacing:.2em;color:#5d5c56;padding:0 6px 0 0}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0}
+  .row label{color:var(--dim);flex:none}
+  .val{color:var(--acc);font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:2px;
+    background:#2a2b33;outline:0;margin:6px 0 2px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;
+    border-radius:50%;background:var(--acc);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;
+    background:var(--acc);cursor:pointer}
+  input[type=color]{-webkit-appearance:none;appearance:none;border:1px solid var(--line);
+    width:46px;height:22px;padding:0;background:none;cursor:pointer;border-radius:2px}
+  input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+  input[type=color]::-webkit-color-swatch{border:0;border-radius:1px}
+  .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+  .chip{border:1px solid var(--line);background:#141519;color:var(--dim);
+    padding:4px 7px;cursor:pointer;border-radius:2px;font:inherit;white-space:nowrap}
+  .chip:hover{border-color:#3a3b44;color:var(--ink)}
+  .chip[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:#15140f}
+  .btn{width:100%;border:1px solid var(--line);background:#141519;color:var(--ink);
+    padding:8px;cursor:pointer;border-radius:2px;font:inherit;letter-spacing:.1em;margin-top:8px}
+  .btn:hover{border-color:var(--acc);color:var(--acc)}
+  .btn.primary{background:var(--acc);border-color:var(--acc);color:#15140f}
+  .btn.primary:hover{filter:brightness(1.1);color:#15140f}
+  .note{font-size:9.5px;color:#4b4a45;margin-top:7px}
+  #toast{position:fixed;right:296px;bottom:18px;background:#141519;border:1px solid var(--acc);
+    color:var(--acc);padding:7px 11px;border-radius:2px;opacity:0;transition:opacity .2s;
+    pointer-events:none}
+  #toast.on{opacity:1}
+  #dump{position:fixed;inset:8%;background:#0d0d10;border:1px solid var(--acc);color:var(--ink);
+    padding:14px;display:none;z-index:9}
+  #dump textarea{width:100%;height:calc(100% - 34px);background:#141519;color:var(--ink);
+    border:1px solid var(--line);font:inherit;padding:8px;resize:none}
   #load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-    background:var(--bg);color:#6f6d66;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
-    letter-spacing:.2em;z-index:20}
+    background:var(--bg);letter-spacing:.2em;z-index:20;color:var(--dim)}
 </style>
 </head>
 <body>
 <div id="stage"><canvas id="c"></canvas></div>
+
+<aside id="panel">
+  <h1>COFFEE</h1>
+  <p class="sub">procedural 1-bit · no assets</p>
+
+  <fieldset><legend>CANVAS</legend>
+    <div class="row"><label>grid</label><span class="val" id="vGrid">—</span></div>
+    <div class="chips" id="gridChips"></div>
+    <p class="note">Only 9:16 grids (9k × 16k) tile into whole internal pixels.</p>
+    <div class="row" style="margin-top:14px"><label>fit</label><span class="val" id="vCells">—</span></div>
+    <div class="chips" id="fitChips"></div>
+    <div class="row" style="margin-top:12px"><label>postcard</label><span class="val" id="vPost">—</span></div>
+    <div class="row"><label>cell</label><span class="val" id="vZoom">—</span></div>
+    <div class="row"><label>darkest</label><input type="color" id="cInk"></div>
+    <div class="row"><label>brightest</label><input type="color" id="cPap"></div>
+    <button class="btn" id="bSwap">SWAP TONES</button>
+  </fieldset>
+
+  <fieldset><legend>CYCLE</legend>
+    <div class="row"><label>period</label><span class="val" id="vPeriod"></span></div>
+    <input type="range" id="rPeriod" min="4" max="20" step="0.1">
+    <div class="row"><label>pour</label><span class="val" id="vPour"></span></div>
+    <input type="range" id="rPour" min="0.6" max="14" step="0.1">
+    <p class="note">Pour must stay shorter than the period, or the surface never
+       gets to settle and the cup never returns to still.</p>
+    <div class="row" style="margin-top:12px"><label>ramp on</label><span class="val" id="vRamp"></span></div>
+    <input type="range" id="rRamp" min="0.05" max="1.2" step="0.01">
+    <div class="row"><label>break</label><span class="val" id="vBreak"></span></div>
+    <input type="range" id="rBreak" min="0.05" max="1.5" step="0.01">
+    <div class="row"><label>after-drops</label><span class="val" id="vDropN"></span></div>
+    <input type="range" id="rDropN" min="0" max="8" step="1">
+    <div class="row" style="margin-top:12px"><label>seek</label><span class="val" id="vSeek">—</span></div>
+    <input type="range" id="bSeek" min="0" max="20" step="0.05">
+    <button class="btn" id="bPlay">PLAY / PAUSE</button>
+    <p class="note">Seek replays the cycle from a clean cup, so the spill and
+       ripple state match the moment shown. Space also pauses.</p>
+  </fieldset>
+
+  <fieldset><legend>COMPOSITION</legend>
+    <div class="row"><label>scene x</label><span class="val" id="vOX"></span></div>
+    <input type="range" id="rOX" min="40" max="190" step="1">
+    <div class="row"><label>scene y</label><span class="val" id="vOY"></span></div>
+    <input type="range" id="rOY" min="200" max="380" step="1">
+    <div class="row" style="margin-top:12px"><label>cup x</label><span class="val" id="vCupX"></span></div>
+    <input type="range" id="rCupX" min="10" max="80" step="1">
+    <div class="row"><label>cup y</label><span class="val" id="vCupY"></span></div>
+    <input type="range" id="rCupY" min="4" max="70" step="1">
+    <p class="note">Cup x/y are its place on the tray, in world units. The group
+       head follows the cup, so the pour lands wherever the cup goes.</p>
+    <div class="row" style="margin-top:12px"><label>cup radius</label><span class="val" id="vCupR"></span></div>
+    <input type="range" id="rCupR" min="12" max="42" step="0.5">
+    <div class="row"><label>cup rim z</label><span class="val" id="vCupH"></span></div>
+    <input type="range" id="rCupH" min="20" max="80" step="1">
+    <div class="row"><label>base radius</label><span class="val" id="vCupB"></span></div>
+    <input type="range" id="rCupB" min="6" max="34" step="0.5">
+    <div class="row" style="margin-top:12px"><label>tray width</label><span class="val" id="vTrayW"></span></div>
+    <input type="range" id="rTrayW" min="40" max="140" step="1">
+    <div class="row"><label>tray depth</label><span class="val" id="vTrayD"></span></div>
+    <input type="range" id="rTrayD" min="30" max="120" step="1">
+  </fieldset>
+
+  <fieldset><legend>MACHINE</legend>
+    <div class="row"><label>housing base</label><span class="val" id="vMachZ"></span></div>
+    <input type="range" id="rMachZ" min="80" max="200" step="1">
+    <div class="row"><label>spout z</label><span class="val" id="vSpoutZ"></span></div>
+    <input type="range" id="rSpoutZ" min="55" max="150" step="1">
+    <div class="row"><label>portafilter</label><span class="val" id="vCollar"></span></div>
+    <input type="range" id="rCollar" min="8" max="30" step="0.5">
+    <p class="note">Drop the spout toward the rim to shorten the fall; the
+       ripples wait for the stream to land either way.</p>
+  </fieldset>
+
+  <fieldset><legend>STREAM</legend>
+    <div class="row"><label>width at spout</label><span class="val" id="vStrT"></span></div>
+    <input type="range" id="rStrT" min="0.6" max="6" step="0.05">
+    <div class="row"><label>width at cup</label><span class="val" id="vStrB"></span></div>
+    <input type="range" id="rStrB" min="0.4" max="5" step="0.05">
+    <div class="row"><label>wander</label><span class="val" id="vStrW"></span></div>
+    <input type="range" id="rStrW" min="0" max="3" step="0.05">
+  </fieldset>
+
+  <fieldset><legend>RIPPLES</legend>
+    <div class="row"><label>ring spacing</label><span class="val" id="vWaveK"></span></div>
+    <input type="range" id="rWaveK" min="0.15" max="1.8" step="0.01">
+    <div class="row"><label>speed</label><span class="val" id="vWaveW"></span></div>
+    <input type="range" id="rWaveW" min="0" max="20" step="0.1">
+    <div class="row"><label>reach</label><span class="val" id="vWaveD"></span></div>
+    <input type="range" id="rWaveD" min="6" max="160" step="1">
+    <div class="row"><label>catch</label><span class="val" id="vWaveG"></span></div>
+    <input type="range" id="rWaveG" min="0" max="1.6" step="0.02">
+    <div class="row"><label>settle</label><span class="val" id="vWaveF"></span></div>
+    <input type="range" id="rWaveF" min="0.05" max="4" step="0.01">
+    <p class="note">Shading is the wave's slope, not its height — "catch" is how
+       hard a crest takes the light. Lower "settle" makes the surface take
+       longer to go still.</p>
+  </fieldset>
+
+  <fieldset><legend>OVERFLOW</legend>
+    <div class="row"><label>rivulets</label><span class="val" id="vSpN"></span></div>
+    <input type="range" id="rSpN" min="0" max="12" step="1">
+    <div class="row"><label>spread</label><span class="val" id="vSpSpread"></span></div>
+    <input type="range" id="rSpSpread" min="0.1" max="1.1" step="0.02">
+    <div class="row"><label>first goes over</label><span class="val" id="vSpStart"></span></div>
+    <input type="range" id="rSpStart" min="0" max="4" step="0.05">
+    <div class="row"><label>run speed</label><span class="val" id="vSpSpeed"></span></div>
+    <input type="range" id="rSpSpeed" min="4" max="160" step="1">
+    <div class="row"><label>dry speed</label><span class="val" id="vSpDry"></span></div>
+    <input type="range" id="rSpDry" min="4" max="200" step="1">
+    <div class="row"><label>width</label><span class="val" id="vSpW"></span></div>
+    <input type="range" id="rSpW" min="0.4" max="4" step="0.05">
+    <p class="note">Dry speed is what returns the cup to clean before the next
+       pour. Set it low and the streaks are still there when it starts again.</p>
+    <div class="row" style="margin-top:12px"><label>pool grows</label><span class="val" id="vPoolG"></span></div>
+    <input type="range" id="rPoolG" min="0" max="40" step="0.5">
+    <div class="row"><label>pool max</label><span class="val" id="vPoolM"></span></div>
+    <input type="range" id="rPoolM" min="0" max="70" step="1">
+    <div class="row"><label>pool drains</label><span class="val" id="vPoolD"></span></div>
+    <input type="range" id="rPoolD" min="0" max="30" step="0.5">
+    <div class="row"><label>drip every</label><span class="val" id="vDripE"></span></div>
+    <input type="range" id="rDripE" min="0.05" max="3" step="0.05">
+  </fieldset>
+
+  <fieldset><legend>SHADES</legend>
+    <div class="row"><label>lit face</label><span class="val" id="vTnLeft"></span></div>
+    <input type="range" id="rTnLeft" min="0" max="1" step="0.01">
+    <div class="row"><label>shaded face</label><span class="val" id="vTnRight"></span></div>
+    <input type="range" id="rTnRight" min="0" max="1" step="0.01">
+    <div class="row"><label>top face</label><span class="val" id="vTnTop"></span></div>
+    <input type="range" id="rTnTop" min="0" max="1" step="0.01">
+    <div class="row"><label>coffee</label><span class="val" id="vTnCoffee"></span></div>
+    <input type="range" id="rTnCoffee" min="0" max="1" step="0.01">
+    <div class="row"><label>inner wall</label><span class="val" id="vTnWall"></span></div>
+    <input type="range" id="rTnWall" min="0" max="1" step="0.01">
+    <div class="row"><label>spill</label><span class="val" id="vTnSpill"></span></div>
+    <input type="range" id="rTnSpill" min="0" max="1" step="0.01">
+    <p class="note">1 is solid brightest and 0 is solid darkest; everything
+       between dithers. Spilled coffee wants one of the two ends — mid grey
+       makes it texture instead of liquid.</p>
+  </fieldset>
+
+  <fieldset><legend>OUTPUT</legend>
+    <button class="btn primary" id="bCopy">COPY CONFIG TO CLIPBOARD</button>
+    <button class="btn" id="bValues">SAVE VALUES</button>
+    <button class="btn" id="bPng">SAVE PNG</button>
+    <button class="btn" id="bReset">RESET ALL</button>
+    <p class="note">Saved values replace the <code>CFG</code> block at the top of
+       <code>index.html</code>. Space pauses.</p>
+  </fieldset>
+</aside>
+
+<div id="toast"></div>
+<div id="dump"><textarea spellcheck="false"></textarea>
+  <button class="btn" onclick="document.getElementById('dump').style.display='none'">CLOSE</button></div>
 <div id="load">WARMING THE GROUP…</div>
+
 <script>
+
 (function(){
 "use strict";
 
@@ -53,7 +245,7 @@
 
 const BASE_W=234, BASE_H=416;
 
-const CFG = {
+const DEFAULT_CFG = {
   gridK : 26,          // grid is 9k x 16k cells -> 234x416 at k=26
   fit   : 'fill',      // 'fill' = grow into the space | 'crisp' = integer zoom
   ink   : '#0d1424',
@@ -107,6 +299,8 @@ const CFG = {
             poolGrow:11, poolMax:30, poolDrain:5.5,
             dripEvery:0.5, dripSpeed:110 }
 };
+
+let CFG = JSON.parse(JSON.stringify(DEFAULT_CFG));
 
 /* ---------- helpers --------------------------------------------------- */
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
@@ -690,7 +884,7 @@ function renderFrame(){
    DRIVER
    ==================================================================== */
 const DT=1/60;
-let acc=0,last=0,galleryPaused=false,driverActive=false,rafSeen=false;
+let acc=0,last=0,galleryPaused=false,manualPaused=false,driverActive=false,rafSeen=false;
 const loadEl=document.getElementById('load');
 
 /* Warm up off-screen so the first visible frame is a still, full cup rather
@@ -717,7 +911,7 @@ function tick(now){
   const n=(now===undefined)?performance.now():now;
   let dtr=(n-last)/1000; last=n;
   if(dtr>0.25) dtr=0.25;
-  acc+=dtr; while(acc>=DT){ step(DT); acc-=DT; }
+  if(!manualPaused){ acc+=dtr; while(acc>=DT){ step(DT); acc-=DT; } }
   renderFrame();
 }
 function rafLoop(now){
@@ -736,26 +930,220 @@ addEventListener('message',e=>{
   galleryPaused=Boolean(d.paused);
   if(!galleryPaused) startDriver();
 });
-addEventListener('resize',fitCanvas);
+addEventListener('resize',()=>{ fitCanvas(); syncReadout(); });
 
+
+/* ======================================================================
+   REBUILD — every control writes CFG and comes back through here, so a
+   control can never leave a derived value stale.
+   ==================================================================== */
+function rebuild(keepTime){
+  const t0=keepTime?t:0;
+  build();
+  t=t0;
+  if(!keepTime){ waveAmp=0; wavePhase=0; pool=0; drips=[]; drops=[]; resetCycle(); warmup(); }
+  fitCanvas(); renderFrame();
+  syncReadout();
+}
+
+/* ======================================================================
+   CONTROL PANEL
+   ==================================================================== */
+const $=id=>document.getElementById(id);
+function toast(msg){
+  const el=$('toast'); el.textContent=msg; el.classList.add('on');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),1400);
+}
+
+/* get/set a dotted path into CFG, so every slider is one declarative line */
+function getPath(o,path){ return path.split('.').reduce((v,k)=>v[k],o); }
+function setPath(o,path,v){
+  const k=path.split('.'), last=k.pop();
+  k.reduce((x,n)=>x[n],o)[last]=v;
+}
+
+const BOUND=[];
+function bind(id,path,fmt,keepTime){
+  const r=$('r'+id), v=$('v'+id);
+  if(!r) return;
+  const f=fmt||(x=>(Math.round(x*100)/100).toString());
+  r.value=getPath(CFG,path);
+  if(v) v.textContent=f(+r.value);
+  r.oninput=e=>{
+    const val=parseFloat(e.target.value);
+    setPath(CFG,path,val);
+    if(v) v.textContent=f(val);
+    rebuild(keepTime===undefined?true:keepTime);
+  };
+  BOUND.push({id:id,path:path,fmt:f});
+}
+function syncBound(){
+  for(const b of BOUND){
+    const r=$('r'+b.id), v=$('v'+b.id);
+    const val=getPath(CFG,b.path);
+    if(r) r.value=val;
+    if(v) v.textContent=b.fmt(val);
+  }
+}
+
+function chips(hostId,items,current,pick){
+  const host=$(hostId); host.innerHTML='';
+  for(const it of items){
+    const b=document.createElement('button');
+    b.className='chip'; b.textContent=it.label;
+    b.setAttribute('aria-pressed', String(it.value===current()));
+    b.onclick=()=>{ pick(it.value); chips(hostId,items,current,pick); };
+    host.appendChild(b);
+  }
+}
+
+function syncReadout(){
+  const cell=parseFloat(cv.style.height)/H;
+  const even=Math.abs(cell-Math.round(cell))<1e-9;
+  $('vGrid').textContent=W+'×'+H;
+  $('vPost').textContent=parseFloat(cv.style.width)+'×'+parseFloat(cv.style.height);
+  $('vZoom').textContent=even?cell+'px':cell.toFixed(2)+'px';
+  $('vCells').textContent=even?'even cells':'cells ±1px';
+}
+
+function wirePanel(){
+  BOUND.length=0;
+
+  chips('gridChips',[{label:'18',value:18},{label:'22',value:22},{label:'26',value:26},
+                     {label:'32',value:32},{label:'40',value:40}],
+        ()=>CFG.gridK, v=>{ CFG.gridK=v; rebuild(false); });
+  chips('fitChips',[{label:'fill',value:'fill'},{label:'crisp',value:'crisp'}],
+        ()=>CFG.fit, v=>{ CFG.fit=v; fitCanvas(); renderFrame(); syncReadout(); });
+
+  $('cInk').value=CFG.ink; $('cPap').value=CFG.paper;
+  $('cInk').oninput=e=>{ CFG.ink=e.target.value; rebuild(true); };
+  $('cPap').oninput=e=>{ CFG.paper=e.target.value; rebuild(true); };
+  $('bSwap').onclick=()=>{
+    const a=CFG.ink; CFG.ink=CFG.paper; CFG.paper=a;
+    $('cInk').value=CFG.ink; $('cPap').value=CFG.paper;
+    rebuild(true); toast('tones swapped');
+  };
+
+  /* CYCLE */
+  bind('Period','cyc.period',x=>x.toFixed(1)+'s',true);
+  bind('Pour','cyc.pour',x=>x.toFixed(1)+'s',true);
+  bind('Ramp','cyc.onRamp',x=>x.toFixed(2)+'s',true);
+  bind('Break','cyc.breakDur',x=>x.toFixed(2)+'s',true);
+  bind('DropN','cyc.dropN',x=>x.toFixed(0),true);
+
+  /* COMPOSITION */
+  bind('OX','proj.ox',x=>x.toFixed(0),true);
+  bind('OY','proj.oy',x=>x.toFixed(0),true);
+  bind('CupX','cup.wx',x=>x.toFixed(0),true);
+  bind('CupY','cup.wy',x=>x.toFixed(0),true);
+  bind('CupR','cup.rTop',x=>x.toFixed(0),true);
+  bind('CupH','cup.top',x=>x.toFixed(0),true);
+  bind('CupB','cup.rBot',x=>x.toFixed(1),true);
+  bind('TrayW','tray.x1',x=>x.toFixed(0),true);
+  bind('TrayD','tray.y1',x=>x.toFixed(0),true);
+
+  /* MACHINE */
+  bind('MachZ','mach.bz0',x=>x.toFixed(0),true);
+  bind('SpoutZ','mach.spoutZ0',x=>x.toFixed(0),true);
+  bind('Collar','mach.collarR',x=>x.toFixed(1),true);
+
+  /* STREAM */
+  bind('StrT','strm.wTop',x=>x.toFixed(2),true);
+  bind('StrB','strm.wBot',x=>x.toFixed(2),true);
+  bind('StrW','strm.wander',x=>x.toFixed(2),true);
+
+  /* RIPPLES */
+  bind('WaveK','wave.k',x=>x.toFixed(2),true);
+  bind('WaveW','wave.w',x=>x.toFixed(1),true);
+  bind('WaveD','wave.decay',x=>x.toFixed(0),true);
+  bind('WaveG','wave.gain',x=>x.toFixed(2),true);
+  bind('WaveF','wave.fall',x=>x.toFixed(2),true);
+
+  /* OVERFLOW */
+  bind('SpN','spill.n',x=>x.toFixed(0),false);
+  bind('SpSpread','spill.spread',x=>x.toFixed(2),false);
+  bind('SpStart','spill.start',x=>x.toFixed(2)+'s',true);
+  bind('SpSpeed','spill.speed',x=>x.toFixed(0),true);
+  bind('SpDry','spill.drySpeed',x=>x.toFixed(0),true);
+  bind('SpW','spill.w',x=>x.toFixed(2),true);
+  bind('PoolG','spill.poolGrow',x=>x.toFixed(1),true);
+  bind('PoolM','spill.poolMax',x=>x.toFixed(0),true);
+  bind('PoolD','spill.poolDrain',x=>x.toFixed(1),true);
+  bind('DripE','spill.dripEvery',x=>x.toFixed(2)+'s',true);
+
+  /* SHADES */
+  bind('TnLeft','tone.left',x=>x.toFixed(2),true);
+  bind('TnRight','tone.right',x=>x.toFixed(2),true);
+  bind('TnTop','tone.top',x=>x.toFixed(2),true);
+  bind('TnCoffee','tone.coffee',x=>x.toFixed(2),true);
+  bind('TnWall','tone.wall',x=>x.toFixed(2),true);
+  bind('TnSpill','tone.spill',x=>x.toFixed(2),true);
+
+  $('bSeek').oninput=e=>{
+    manualPaused=true;
+    const sec=parseFloat(e.target.value);
+    $('vSeek').textContent=sec.toFixed(2)+'s';
+    t=0; waveAmp=0; wavePhase=0; pool=0; drips=[]; drops=[]; resetCycle();
+    for(let i=0;i<Math.round(sec*60);i++) step(DT);
+    renderFrame();
+  };
+  $('bPlay').onclick=()=>{ manualPaused=!manualPaused; toast(manualPaused?'paused':'playing'); };
+
+  $('bCopy').onclick=()=>{
+    const txt='const CFG = '+JSON.stringify(CFG,null,2)+';';
+    navigator.clipboard.writeText(txt).then(()=>toast('config copied')).catch(()=>{
+      const d=$('dump'); d.style.display='block';
+      d.querySelector('textarea').value=txt;
+      d.querySelector('textarea').select();
+    });
+  };
+  $('bValues').onclick=()=>{
+    const txt='const CFG = '+JSON.stringify(CFG,null,2)+';';
+    const a=document.createElement('a');
+    a.download='coffee-config.js';
+    a.href='data:text/javascript;charset=utf-8,'+encodeURIComponent(txt);
+    a.click();
+    const d=$('dump'); d.style.display='block';
+    d.querySelector('textarea').value=txt;
+    toast('values saved');
+  };
+  $('bPng').onclick=()=>{
+    const a=document.createElement('a');
+    a.download='coffee-'+W+'x'+H+'.png'; a.href=cv.toDataURL('image/png'); a.click();
+  };
+  $('bReset').onclick=()=>{
+    CFG=JSON.parse(JSON.stringify(DEFAULT_CFG));
+    rebuild(false); wirePanel(); toast('reset');
+  };
+  syncBound();
+  syncReadout();
+}
+
+addEventListener('keydown',e=>{
+  if(e.code==='Space'){ e.preventDefault(); manualPaused=!manualPaused; }
+});
+
+/* ======================================================================
+   BOOT
+   ==================================================================== */
 build();
 t=0; resetCycle(); warmup();
 fitCanvas(); renderFrame();
+wirePanel();
 loadEl.remove();
 startDriver();
+/* The stage has no size until the panel has laid out, so the first fit runs
+   against a zero-width box and the readout would report a 9x16 postcard. */
+requestAnimationFrame(()=>{ fitCanvas(); syncReadout(); });
 
-/* Console handle for tuning a still frame without a control panel. */
-/* seek() replays the cycle from a clean cup up to `sec`, so a given moment can
-   be inspected as the animation actually reaches it — setting the clock alone
-   would show that phase with the wrong spill and ripple state. */
-window.__coffee={ CFG:CFG,
-                  seek:function(sec){ galleryPaused=true; driverActive=false;
-                    t=0; waveAmp=0; wavePhase=0; pool=0; drips=[]; resetCycle();
+window.__coffee={ cfg:()=>CFG, rebuild:rebuild,
+                  seek:function(sec){ manualPaused=true;
+                    t=0; waveAmp=0; wavePhase=0; pool=0; drips=[]; drops=[]; resetCycle();
                     for(let i=0;i<Math.round(sec*60);i++) step(DT);
                     renderFrame(); },
-                  play:function(){ galleryPaused=false; startDriver(); },
+                  play:function(){ manualPaused=false; },
                   state:function(){ return {t:t,phase:phase(),amp:waveAmp,pool:pool,
-                                            spills:spills.length,drips:drips.length}; } };
+                                           spills:spills.length,drips:drips.length}; } };
 })();
 </script>
 </body>

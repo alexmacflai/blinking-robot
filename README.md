@@ -16,9 +16,12 @@ go straight to one:
 
 - [Windmill](gallery/postcards/windmill/index.html) — a windmill on a narrow
   hilltop, its arms turning through drifting cloud, under a low evening sun.
+- [Coffee](gallery/postcards/coffee/index.html) — an espresso machine filling a
+  cup that is already full, over and over, and the spill running off the tray.
 
-To tune Windmill while making it, open
-[`gallery/postcards/windmill/controls.html`](gallery/postcards/windmill/controls.html).
+To tune a postcard while making it, open its controls page —
+[`windmill/controls.html`](gallery/postcards/windmill/controls.html) or
+[`coffee/controls.html`](gallery/postcards/coffee/controls.html).
 
 Every postcard surface is directly runnable HTML. Open it in a browser;
 nothing else to install.

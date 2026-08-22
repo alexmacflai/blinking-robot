@@ -18,6 +18,9 @@ Contains the individual coded animation postcards in the Blinking Robot gallery.
 - [`windmill/README.md`](windmill/README.md) routes work on the first postcard,
   including its clean `index.html` and maker-facing `controls.html` surfaces,
   which set the practical benchmark for new controls pages.
+- [`coffee/README.md`](coffee/README.md) routes work on the coffee postcard: an
+  espresso machine filling a cup that is already full, with its `index.html` and
+  `controls.html` surfaces.
 - To add a postcard, create a named folder, add its README and a `references/`
   folder with its own README, then add a directly runnable public `index.html`
   and a self-contained maker-facing `controls.html`. Follow the controls

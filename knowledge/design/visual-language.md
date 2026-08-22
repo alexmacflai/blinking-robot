@@ -47,3 +47,62 @@ deliberately isolated.
 
 See the [cloud-deck decision](../decisions/0001-cloud-deck-as-field.md) for
 the technical rationale behind this particular implementation.
+
+## A cycle that returns to its own first frame
+
+**Source:** [Coffee postcard](../../gallery/postcards/coffee/README.md)
+
+**Effect:** Something irreversible happens — liquid goes over a rim, runs down,
+and leaves — and yet the scene is identical at the start of every cycle. The
+loop is not hidden; it is the subject. The contradiction (the cup never rises
+and never empties) does the work that a narrative would otherwise have to.
+
+**Works when:** the consequence can genuinely *leave the frame* rather than be
+tidied away, and the composition is one still frame with an event inside it. It
+depends on the cycle being phase-driven with no accumulating state, so the rest
+position is guaranteed rather than approached.
+
+**May vary:** the material, the event, the period, and how much residue is
+allowed to persist between cycles — a little is what keeps the reset from
+reading as a rewind.
+
+**Do not reuse when:** the scene should show change over time, or when the
+consequence would have to pile up in frame to be believed.
+
+## Value split by state, not by light
+
+**Source:** [Coffee postcard](../../gallery/postcards/coffee/README.md)
+
+**Effect:** One material is drawn in two opposite values depending on what it is
+doing: coffee is ink on a surface and paper in the air. Every falling form reads
+against the dark ground and every spilled form reads against the lit object,
+with no outlines and no extra shades.
+
+**Works when:** the palette is two values and a material has to cross between a
+dark ground and a light mass. It is a legibility convention, not a lighting
+model, so it must be applied without exception or it reads as an error.
+
+**May vary:** which state takes which value, so long as it follows the grounds
+the material actually crosses in that scene.
+
+**Do not reuse when:** the same material appears against both grounds in one
+state, or when a scene's light is doing real work that this would contradict.
+
+## Flat mass so a mark can only mean one thing
+
+**Source:** [Coffee postcard](../../gallery/postcards/coffee/README.md)
+
+**Effect:** A curved object is shaded as a near-solid mass with the fall-off
+pushed to its edge, instead of as a full gradient. Ordered dithering turns a
+smooth ramp into vertical bands; if the scene's *event* is also vertical marks
+on that object, the two become indistinguishable and the shading eats the story.
+Flattening the mass reserves the mark for the event.
+
+**Works when:** an object carries a moving mark that shares an axis with its own
+shading bands, and the object's form is already given by its silhouette.
+
+**May vary:** how much of the width stays solid, and whether a light stroke is
+needed to hold the silhouette against a same-value background.
+
+**Do not reuse when:** the object's roundness is the point, or when nothing is
+drawn on it that the banding could be confused with.

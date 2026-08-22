@@ -21,8 +21,13 @@ no external assets.
 
 ## Handbook
 
-Open [`index.html`](index.html) directly to view the postcard. It is the only
-surface: the scene has no maker controls, so there is no `controls.html`.
+Open [`index.html`](index.html) directly to view the clean, gallery-facing
+postcard. It contains only the animation. Open [`controls.html`](controls.html)
+to tune the same scene with its maker-facing panel; its values are session-only
+and are copied back into source with **COPY CONFIG** or **SAVE VALUES**, which
+emit the whole `CFG` block. **SEEK** replays the cycle from a clean cup to the
+chosen second, which is the only honest way to inspect a moment: setting the
+clock alone would show the right phase with the wrong spill and ripple state.
 
 [`references/README.md`](references/README.md) records the source material
 supplied for this postcard. It informs the scene but is never loaded by it.
@@ -89,5 +94,10 @@ right phase with the wrong spill and ripple state.
 ## Local rules
 
 Keep this surface self-contained and asset-free at runtime. Keep supplied source
-material in `references/`, never load it from the HTML. If maker controls are
-ever added, they belong in a separate `controls.html`, not in this page.
+material in `references/`, never load it from either HTML page. The public
+postcard must stay free of development controls.
+
+Two controls can break the postcard's premise and are worth knowing about:
+**pour** longer than **period** never lets the surface settle, so the cup is
+never still; and a low **dry speed** leaves the streaks on the cup when the next
+pour starts, so it stops reading as a fresh cup each time.
