@@ -15,7 +15,8 @@ The user-facing collection and routing layer for runnable coded animation postca
 
 ## Handbook
 
-- [`index.html`](index.html) is the user-facing gallery entry point.
+- [`index.html`](index.html) is the user-facing gallery entry point. It renders
+  a responsive grid of live, viewport-aware postcard previews.
 - [`postcards/README.md`](postcards/README.md) routes work on individual postcards.
 
 ## Local rules

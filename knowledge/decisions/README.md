@@ -26,6 +26,8 @@ are.
 - [`0002-sail-cloud-interaction-as-emitter.md`](0002-sail-cloud-interaction-as-emitter.md)
   — why all sail–cloud interaction moved into one invisible particle medium,
   and why the deck it replaced had to be retired rather than left running.
+- [`0003-three-render-surfaces.md`](0003-three-render-surfaces.md) — why a
+  postcard has separate public, controls, and gallery render surfaces.
 
 ## Local rules
 

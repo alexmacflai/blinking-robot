@@ -18,5 +18,5 @@ short list entry here describing what it is and how it informs the postcard.
 ## Local rules
 
 These files are source context only. Do not load, link, or copy them into
-`../index.html`; the postcard must remain self-contained and asset-free at
-runtime.
+`../index.html` or `../controls.html`; both postcard surfaces must remain
+self-contained and asset-free at runtime.

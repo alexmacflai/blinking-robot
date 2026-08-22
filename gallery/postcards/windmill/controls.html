@@ -1,24 +1,199 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Windmill</title>
+<title>Windmill — controls</title>
 <style>
-  :root{color-scheme:dark;--bg:#0a0a0c}
+  :root{ --bg:#0a0a0c; --ink:#e8e6df; --dim:#6f6d66; --line:#22232a; --acc:#c8b98a; }
   *{box-sizing:border-box}
-  html,body{margin:0;width:100%;height:100%;background:var(--bg);overflow:hidden}
-  body{display:flex;align-items:center;justify-content:center}
-  #stage{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
-  canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+  html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;
+    font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim)}
+  body{display:flex}
+
+  #stage{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;position:relative}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  #hud{position:absolute;left:10px;bottom:8px;opacity:.4;pointer-events:none;white-space:pre}
+
+  #panel{width:280px;flex:none;height:100vh;overflow-y:auto;
+    background:#0d0d10;border-left:1px solid var(--line);padding:16px 16px 40px}
+  #panel h1{font-size:11px;letter-spacing:.22em;color:var(--ink);margin:0 0 2px;font-weight:600}
+  #panel .sub{font-size:10px;color:#4b4a45;margin:0 0 18px}
+  fieldset{border:0;border-top:1px solid var(--line);margin:0 0 4px;padding:14px 0 12px}
+  legend{font-size:9.5px;letter-spacing:.2em;color:#5d5c56;padding:0 6px 0 0}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0}
+  .row label{color:var(--dim);flex:none}
+  .val{color:var(--acc);font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:2px;
+    background:#2a2b33;outline:0;margin:6px 0 2px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;
+    border-radius:50%;background:var(--acc);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;
+    background:var(--acc);cursor:pointer}
+  input[type=color]{-webkit-appearance:none;appearance:none;border:1px solid var(--line);
+    width:46px;height:22px;padding:0;background:none;cursor:pointer;border-radius:2px}
+  input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+  input[type=color]::-webkit-color-swatch{border:0;border-radius:1px}
+  input[type=number]{background:#141519;border:1px solid var(--line);color:var(--ink);
+    width:74px;padding:3px 6px;font:inherit;border-radius:2px}
+  .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+  .chip{border:1px solid var(--line);background:#141519;color:var(--dim);
+    padding:4px 7px;cursor:pointer;border-radius:2px;font:inherit;white-space:nowrap}
+  .chip:hover{border-color:#3a3b44;color:var(--ink)}
+  .chip[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:#15140f}
+  .btn{width:100%;border:1px solid var(--line);background:#141519;color:var(--ink);
+    padding:8px;cursor:pointer;border-radius:2px;font:inherit;letter-spacing:.1em;margin-top:8px}
+  .btn:hover{border-color:var(--acc);color:var(--acc)}
+  .btn.primary{background:var(--acc);border-color:var(--acc);color:#15140f}
+  .btn.primary:hover{filter:brightness(1.1);color:#15140f}
+  .note{font-size:9.5px;color:#4b4a45;margin-top:7px}
+  #toast{position:fixed;right:296px;bottom:18px;background:#141519;border:1px solid var(--acc);
+    color:var(--acc);padding:7px 11px;border-radius:2px;opacity:0;transition:opacity .2s;
+    pointer-events:none}
+  #toast.on{opacity:1}
+  #dump{position:fixed;inset:8%;background:#0d0d10;border:1px solid var(--acc);color:var(--ink);
+    padding:14px;display:none;z-index:9}
+  #dump textarea{width:100%;height:calc(100% - 34px);background:#141519;color:var(--ink);
+    border:1px solid var(--line);font:inherit;padding:8px;resize:none}
   #load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-    background:var(--bg);color:#6f6d66;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
-    letter-spacing:.2em;z-index:20}
+    background:var(--bg);letter-spacing:.2em;z-index:20;color:var(--dim)}
 </style>
 </head>
 <body>
-<div id="stage"><canvas id="c"></canvas></div>
+<div id="stage"><canvas id="c"></canvas><div id="hud"></div></div>
+
+<aside id="panel">
+  <h1>WINDMILL</h1>
+  <p class="sub">procedural 1-bit · no assets</p>
+
+  <fieldset><legend>CANVAS</legend>
+    <div class="row"><label>grid</label><span class="val" id="vGrid">—</span></div>
+    <div class="chips" id="gridChips"></div>
+    <p class="note">Only 9:16 grids (9k × 16k) tile into whole internal pixels.</p>
+    <div class="row" style="margin-top:14px"><label>fit</label><span class="val" id="vCells">—</span></div>
+    <div class="chips" id="fitChips"></div>
+    <p class="note">Fill grows the postcard to the space left, keeping 9:16.
+       Crisp letterboxes to an integer zoom so every cell is identical.</p>
+    <div class="row" style="margin-top:12px"><label>postcard</label><span class="val" id="vPost">—</span></div>
+    <div class="row"><label>cell</label><span class="val" id="vZoom">—</span></div>
+    <div class="row"><label>darkest</label><input type="color" id="cInk"></div>
+    <div class="row"><label>brightest</label><input type="color" id="cPap"></div>
+    <button class="btn" id="bSwap">SWAP TONES</button>
+  </fieldset>
+
+  <fieldset><legend>SCENE</legend>
+    <div class="row"><label>horizon</label><span class="val" id="vLift"></span></div>
+    <input type="range" id="rLift" min="-10" max="70" step="1">
+  </fieldset>
+
+  <fieldset><legend>SKY</legend>
+    <div class="row"><label>top tone</label><span class="val" id="vSkyT"></span></div>
+    <input type="range" id="rSkyT" min="0" max="0.6" step="0.01">
+    <div class="row"><label>horizon tone</label><span class="val" id="vSkyH"></span></div>
+    <input type="range" id="rSkyH" min="0.3" max="1" step="0.01">
+    <div class="row"><label>curve</label><span class="val" id="vSkyC"></span></div>
+    <input type="range" id="rSkyC" min="0.35" max="2.2" step="0.05">
+    <p class="note">Curve &lt; 1 pushes the bright band up toward the horizon.</p>
+    <div class="row" style="margin-top:12px"><label>sun x</label><span class="val" id="vSunX"></span></div>
+    <input type="range" id="rSunX" min="0" max="234" step="1">
+    <div class="row"><label>sun y</label><span class="val" id="vSunY"></span></div>
+    <input type="range" id="rSunY" min="60" max="380" step="1">
+    <div class="row"><label>star every</label><span class="val" id="vStar"></span></div>
+    <input type="range" id="rStar" min="3" max="45" step="1">
+    <button class="btn" id="bStarNow">TRIGGER STAR</button>
+  </fieldset>
+
+  <fieldset><legend>MILL</legend>
+    <div class="row"><label>vertical</label><span class="val" id="vMillY"></span></div>
+    <input type="range" id="rMillY" min="-90" max="90" step="1">
+    <div class="row"><label>spin</label><span class="val" id="vSpin"></span></div>
+    <input type="range" id="rSpin" min="-0.6" max="0.6" step="0.005">
+    <p class="note">Signed turns per second. 0 stops the rotor.</p>
+    <div class="row" style="margin-top:12px"><label>yaw</label><span class="val" id="vYaw"></span></div>
+    <input type="range" id="rYaw" min="0" max="55" step="0.5">
+  </fieldset>
+
+  <fieldset><legend>WIND</legend>
+    <div class="row"><label>strength</label><span class="val" id="vWind"></span></div>
+    <input type="range" id="rWind" min="-2.5" max="2.5" step="0.05">
+    <p class="note">Negative reverses every layer, the deck, the birds and the
+       star. The deck's seam is off-screen on both sides, so it just runs the
+       other way.</p>
+    <div class="row" style="margin-top:12px"><label>slowest (back)</label><span class="val" id="vSpMin"></span></div>
+    <input type="range" id="rSpMin" min="0.5" max="40" step="0.5">
+    <div class="row"><label>fastest (front)</label><span class="val" id="vSpMax"></span></div>
+    <input type="range" id="rSpMax" min="5" max="140" step="1">
+    <p class="note" id="nLadder"></p>
+  </fieldset>
+
+  <fieldset><legend>LAYER HEIGHT</legend>
+    <div class="row"><label>L4 back</label><span class="val" id="vY0"></span></div>
+    <input type="range" id="rY0" min="-90" max="90" step="1">
+    <div class="row"><label>L3 mid</label><span class="val" id="vY1"></span></div>
+    <input type="range" id="rY1" min="-90" max="90" step="1">
+    <div class="row"><label>L2 particles</label><span class="val" id="vY2"></span></div>
+    <input type="range" id="rY2" min="-90" max="90" step="1">
+    <div class="row"><label>L1 front</label><span class="val" id="vY3"></span></div>
+    <input type="range" id="rY3" min="-90" max="90" step="1">
+  </fieldset>
+
+  <fieldset><legend>CLOUD DECK (inert)</legend>
+    <div class="row"><label>tone</label><span class="val" id="vTone"></span></div>
+    <input type="range" id="rTone" min="-0.14" max="0.14" step="0.005">
+    <div class="row"><label>shading</label><span class="val" id="vShade"></span></div>
+    <input type="range" id="rShade" min="0" max="0.14" step="0.005">
+    <div class="row"><label>edge</label><span class="val" id="vSoft"></span></div>
+    <input type="range" id="rSoft" min="1" max="12" step="0.5">
+    <p class="note">Flat fill like the other banks. Shading darkens with depth
+       below the surface — form, not grain.</p>
+    <p class="note">The deck does not interact with the sails. Everything the
+       mill does to cloud happens in the 5th cloud.</p>
+    <div class="row" style="margin-top:12px"><label>seed</label>
+      <input type="number" id="nSeed" step="1"></div>
+    <button class="btn" id="bReroll">RE-ROLL SHAPES</button>
+  </fieldset>
+
+  <fieldset><legend>5th CLOUD</legend>
+    <div class="row"><label>density</label><span class="val" id="vEDens"></span></div>
+    <input type="range" id="rEDens" min="0.1" max="12" step="0.1">
+    <div class="row"><label>emitter output</label><span class="val" id="vEOut"></span></div>
+    <input type="range" id="rEOut" min="0.1" max="6" step="0.1">
+    <div class="row"><label>feeding</label><span class="val" id="vERate"></span></div>
+    <div class="row"><label>in frame</label><span class="val" id="vECount"></span></div>
+    <p class="note">An invisible particle cloud sitting between L3 and the deck.
+       Nothing is drawn until a sail touches it.</p>
+    <p class="note">The rotor sweeps nearly the full width, so there is no
+       upwind reservoir: once the medium already in frame is eaten, throughput
+       is fixed at <em>density × band height × drift speed</em>. If it looks
+       like spitting, raise DENSITY — output alone cannot beat that limit, it
+       only over-feeds the incoming edge.</p>
+    <div class="row" style="margin-top:12px"><label>launch</label><span class="val" id="vEFling"></span></div>
+    <input type="range" id="rEFling" min="0" max="2.5" step="0.05">
+    <div class="row"><label>fade</label><span class="val" id="vELife"></span></div>
+    <input type="range" id="rELife" min="0.3" max="8" step="0.1">
+    <p class="note">Launch is the kick off the blade face; fade is how long a
+       revealed grain lasts before it is gone. Longer fade means more of them
+       in the air at once for the same feed rate.</p>
+    <div class="row" style="margin-top:12px"><label>clearance</label><span class="val" id="vEPad"></span></div>
+    <input type="range" id="rEPad" min="0.6" max="6" step="0.1">
+    <p class="note">Gap held between a particle and the blade's drawn edge. It
+       is a positional constraint, not a force — a particle can never be inside
+       a blade at any clearance.</p>
+  </fieldset>
+
+  <fieldset><legend>OUTPUT</legend>
+    <button class="btn primary" id="bCopy">COPY CONFIG TO CLIPBOARD</button>
+    <button class="btn" id="bPng">SAVE PNG</button>
+    <button class="btn" id="bReset">RESET ALL</button>
+    <p class="note">Config paste replaces the <code>CFG</code> block at the top of the file.
+       Space pauses · H toggles readout.</p>
+  </fieldset>
+</aside>
+
+<div id="toast"></div>
+<div id="dump"><textarea spellcheck="false"></textarea>
+  <button class="btn" onclick="document.getElementById('dump').style.display='none'">CLOSE</button></div>
 <div id="load">SETTLING THE AIR…</div>
+
 <script>
 (function(){
 "use strict";
@@ -1043,8 +1218,8 @@ function renderFrame(t){
 /* ======================================================================
    DRIVER
    ==================================================================== */
-let t=0, acc=0, last=0, manualPaused=false, galleryPaused=false, driverActive=false;
-const hud=null;
+let t=0, acc=0, last=0, paused=false;
+const hud=document.getElementById('hud');
 const loadEl=document.getElementById('load');
 
 /* The 5th cloud must reach EQUILIBRIUM here, not on screen. Warming up without
@@ -1101,34 +1276,29 @@ function rebuild(keepTime){
 }
 
 function tick(now){
-  if(galleryPaused) return;
   const n=(now===undefined)?performance.now():now;
   let dtr=(n-last)/1000; last=n;
   if(dtr>0.25) dtr=0.25;
-  if(!manualPaused){ acc+=dtr; while(acc>=DT){ stepDeck(DT,t); t+=DT; acc-=DT; } }
+  if(!paused){ acc+=dtr; while(acc>=DT){ stepDeck(DT,t); t+=DT; acc-=DT; } }
   renderFrame(t);
-  if(hud) hud.textContent=t.toFixed(1)+'s  '+W+'x'+H+'  '+eN+'p '+eLit+' lit';
+  hud.textContent=t.toFixed(1)+'s  '+W+'x'+H+'  '+eN+'p '+eLit+' lit';
   const c=$('vECount'); if(c) c.textContent=eN+' · '+eLit+' lit';
 }
 
 let rafSeen=false;
-function rafLoop(now){
-  if(galleryPaused){ driverActive=false; return; }
-  rafSeen=true; tick(now); requestAnimationFrame(rafLoop);
-}
+function rafLoop(now){ rafSeen=true; tick(now); requestAnimationFrame(rafLoop); }
 function startDriver(){
-  if(driverActive || galleryPaused) return;
-  driverActive=true; last=performance.now();
+  last=performance.now();
   requestAnimationFrame(rafLoop);
   setTimeout(()=>{ if(!rafSeen) setInterval(()=>tick(), 16); }, 400);
 }
-addEventListener('message',e=>{
-  const data=e.data;
-  if(!data || data.type!=='blinking-robot:preview-pause') return;
-  galleryPaused=Boolean(data.paused);
-  if(!galleryPaused) startDriver();
-});
 
+addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea') return;
+  if(e.code==='Space'){paused=!paused;e.preventDefault();}
+  if(e.key==='h'){hud.style.display=hud.style.display==='none'?'':'none';}
+});
 addEventListener('resize',fitCanvas);
 
 /* ======================================================================
@@ -1290,7 +1460,7 @@ window.__mill={
   cfg:()=>CFG, at:()=>t, rebuild,
   run(n){ for(let i=0;i<(n||1);i++){ stepDeck(DT,t); t+=DT; } renderFrame(t); },
   render(){ renderFrame(t); },
-  hud(v){ if(hud) hud.style.display=v?'':'none'; },
+  hud(v){ hud.style.display=v?'':'none'; },
   size(){ return {W,H,S}; },
   speeds(){ return {L4:+BANKS[0].speed.toFixed(2), L3:+BANKS[1].speed.toFixed(2),
                     L2deck:+VW.toFixed(2), L1:+BANKS[2].speed.toFixed(2),
@@ -1381,6 +1551,7 @@ window.__mill={
 
 setTimeout(()=>{
   build(); warmup(); fitCanvas(); renderFrame(t);
+  wirePanel();
   loadEl.style.display='none';
   startDriver();
 },30);
