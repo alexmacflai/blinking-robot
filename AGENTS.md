@@ -30,7 +30,7 @@ knowledge/   durable project knowledge: design, engineering, decisions, vocabula
 | Content | Location | Status |
 | --- | --- | --- |
 | A public postcard surface | `gallery/postcards/<name>/index.html` | live |
-| A postcard controls surface | `gallery/postcards/<name>/controls.html` | live |
+| A postcard controls surface | `gallery/postcards/<name>/controls.html` | required |
 | Postcard source references | `gallery/postcards/<name>/references/` | live |
 | Gallery landing page | `gallery/index.html` | live |
 | Tag vocabulary | `knowledge/vocabulary.md` | live |
@@ -53,7 +53,7 @@ would go in it is overhead with no payoff until something actually needs it.
 1. Every directory **with content** has exactly one canonical `README.md`. No
    competing index files.
 2. Postcard surfaces are self-contained and asset-free at runtime: each public
-   `index.html` and optional maker-facing `controls.html` is directly runnable,
+   `index.html` and required maker-facing `controls.html` is directly runnable,
    with no build step, no dependencies, and no runtime-loaded source material.
    Supplied material belongs in that postcard's `references/` folder and must
    never become a runtime dependency.
@@ -84,6 +84,22 @@ would go in it is overhead with no payoff until something actually needs it.
     When a postcard establishes a transferable pattern, record its effect,
     conditions, and limits in the visual-language catalogue. Keep implementation
     self-contained until a second postcard truly needs shared code.
+11. Every new postcard must include a maker-facing `controls.html`, alongside
+    its clean public `index.html`. It must render the same postcard and expose
+    live controls that let the human author meaningfully tune the scene without
+    editing code. Start from the Windmill controls page as the interaction
+    benchmark, adapting its UI and controls to the scene rather than copying its
+    implementation blindly.
+12. Each controls page must include these generic controls: pixel settings
+    (authoring grid/resolution and display fit where relevant), a monochrome
+    color palette (at least darkest and brightest tones), **Save PNG**, and
+    **Save values** (a copyable and/or downloadable complete configuration that
+    can be restored or pasted back into source). Its scene controls must expose
+    the parameters a human is most likely to need: motion speed and duration,
+    element position (x/y/z or the scene's meaningful equivalent), tonal
+    shades, and any brief-specific or requested behaviour. Exercise judgement:
+    expose useful creative levers and dependent values, not every internal
+    implementation constant. A human may request additional controls later.
 
 ## README shapes
 
@@ -102,5 +118,5 @@ a leaf to the area shape.
 
 Postcard surfaces open directly from the filesystem — no server required. After
 changing one, open its public `index.html`, confirm the animation runs, and open
-`controls.html` when present to exercise its controls. There are no automated
-tests.
+`controls.html` to exercise its controls, including PNG and values export.
+There are no automated tests.

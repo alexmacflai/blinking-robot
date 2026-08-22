@@ -16,11 +16,13 @@ Contains the individual coded animation postcards in the Blinking Robot gallery.
 ## Handbook
 
 - [`windmill/README.md`](windmill/README.md) routes work on the first postcard,
-  including its clean `index.html` and maker-facing `controls.html` surfaces.
+  including its clean `index.html` and maker-facing `controls.html` surfaces,
+  which set the practical benchmark for new controls pages.
 - To add a postcard, create a named folder, add its README and a `references/`
-  folder with its own README, then add a directly runnable public `index.html`.
-  Add a self-contained `controls.html` only when the postcard exposes maker
-  controls.
+  folder with its own README, then add a directly runnable public `index.html`
+  and a self-contained maker-facing `controls.html`. Follow the controls
+  contract in [`AGENTS.md`](../../AGENTS.md), selecting scene-appropriate
+  creative levers in addition to the required generic controls.
 
 ## Local rules
 
