@@ -15,19 +15,17 @@ them, so a later reader can tell what was deliberate from what was accident.
 
 ## Context
 
-`[knowledge]` `[decision]` `[decision-record]` — why things are the way they
+`[knowledge]` `[decision]` `[readme]` `[index]` — why things are the way they
 are.
 
 ## Handbook
 
-- [`0001-cloud-deck-as-field.md`](0001-cloud-deck-as-field.md) — why the
-  windmill's interactive cloud layer stopped being a particle system.
-  Superseded in part by 0002.
+- [`0001-cloud-deck-as-field.md`](0001-cloud-deck-as-field.md) — `[decision-record]
+  [windmill]` — superseded in part by 0002
 - [`0002-sail-cloud-interaction-as-emitter.md`](0002-sail-cloud-interaction-as-emitter.md)
-  — why all sail–cloud interaction moved into one invisible particle medium,
-  and why the deck it replaced had to be retired rather than left running.
-- [`0003-three-render-surfaces.md`](0003-three-render-surfaces.md) — why a
-  postcard has separate public, controls, and gallery render surfaces.
+  — `[decision-record] [windmill]`
+- [`0003-three-render-surfaces.md`](0003-three-render-surfaces.md) —
+  `[decision-record] [rendering]`
 
 ## Local rules
 

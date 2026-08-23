@@ -15,16 +15,13 @@ directions for the gallery and the tools used to make postcards.
 
 ## Context
 
-`[product]` `[idea]` `[routing]`
+`[product]` `[readme]` `[index]` `[routing]`
 
 ## Handbook
 
-- [gallery-ideas.md](gallery-ideas.md) — possible gallery experience and
-  publishing directions.
-- [postcard-editor-ideas.md](postcard-editor-ideas.md) — possible authoring
-  tools for composing and tuning postcards.
-- [production-ideas.md](production-ideas.md) — possible export and production
-  workflows.
+- [gallery-ideas.md](gallery-ideas.md) — `[gallery] [idea]`
+- [postcard-editor-ideas.md](postcard-editor-ideas.md) — `[idea] [workflow]`
+- [production-ideas.md](production-ideas.md) — `[idea] [workflow]`
 
 ## Local rules
 

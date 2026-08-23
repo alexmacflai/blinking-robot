@@ -1,10 +1,10 @@
-# Windmill postcard
+# Coffee postcard
 
-A coded animation postcard of a windmill.
+A coded animation postcard of an espresso machine and a full cup.
 
 ## Context
 
-`[windmill]` `[cloud]` `[sky]` `[bird]` `[wind]` `[particles]` `[sim]`
+`[coffee]` `[liquid]` `[sim]` `[particles]`
 
 ## Open
 
@@ -16,5 +16,4 @@ A coded animation postcard of a windmill.
 ## Local rules
 
 Postcard surface, controls, and reference-material requirements live in
-[`AGENTS.md`](../../../AGENTS.md). Preserve the controls page's configuration
-export when changing this postcard.
+[`AGENTS.md`](../../../AGENTS.md).

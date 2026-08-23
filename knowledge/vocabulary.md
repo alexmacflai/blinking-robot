@@ -2,28 +2,29 @@
 
 `[vocabulary]` `[tags]` `[documentation]`
 
-The controlled list of `[tag]` markers used in README `## Context` lines and
-other documents. Tags exist so an agent can scan a directory of documents and
-tell what each is about without opening it. A tag with only one document
-using it is not doing that job — prefer an existing tag before adding one.
+The controlled list of `[tag]` markers used for routing. Tags exist so an agent
+can identify the right instructions to open, or find postcard elements and
+behaviours that can be reused. They do not restate the project's baseline
+visual medium or format.
 
 ## How to use this file
 
-- Pick tags from the list below. Combine 2–4 per document; more stops being a
-  signal.
-- If nothing fits, add ONE new tag to the matching section here in the same
-  change that introduces its first use. Never add a tag only in a document.
+- Use tags in README `## Context` lines and handbook entries. Do not tag briefs
+  or reference inventories.
+- Add a tag here in the same change that introduces it. Prefer an existing tag
+  before adding a close synonym.
 - Prefer a tag already used nearby over inventing a close synonym (`decision`
   not `rationale`; `spec` not `specification`).
-- Exception: a postcard's own name (`[windmill]`) is expected to appear only
-  in that postcard's README. That is naming, not vocabulary sprawl — it does
-  not need an entry here, and a new postcard adds a new one-off name tag as a
-  matter of course.
+- A postcard's name may appear in its README and routing entries; it does not
+  need a vocabulary entry. When its tags change, update the matching
+  `gallery/postcards/README.md` entry in the same change.
+- Never use `[1-bit]`, `[pixelated]`, `[postcard]`, or `[dither]`: those
+  describe the project baseline, not a useful route or reusable element.
 - Retire a tag here only when no document uses it anymore.
 
 ## Subject — what the content is about
 
-`[postcard]` `[gallery]` `[knowledge]` `[mission]` `[product]` `[design]`
+`[gallery]` `[knowledge]` `[mission]` `[product]` `[design]`
 `[engineering]` `[decision]` `[spec]` `[vocabulary]`
 
 ## Kind — what shape the document is
@@ -33,9 +34,14 @@ using it is not doing that job — prefer an existing tag before adding one.
 
 ## Domain — technical or visual territory
 
-`[coded-animation]` `[procedural-rendering]` `[1-bit]` `[dither]` `[reference]`
-`[static-site]` `[browser]` `[performance]` `[scene]` `[vignette]`
+`[coded-animation]` `[procedural-rendering]` `[reference]` `[static-site]`
+`[browser]` `[performance]` `[scene]` `[vignette]`
 `[animation-controls]` `[art-direction]` `[motion]` `[rendering]`
+
+## Postcard elements and behaviours
+
+`[bird]` `[cloud]` `[leg]` `[liquid]` `[particles]` `[people]` `[sim]` `[sky]`
+`[walking]` `[wind]`
 
 ## Process — how work gets done here
 

@@ -1,29 +1,33 @@
 # Design
 
-Durable art-direction guidance for Blinking Robot postcards: the visual ideas
-that make an image belong here, separate from any one scene's brief or code.
+## Purpose
+
+Durable art-direction guidance for Blinking Robot postcards, separate from any
+one scene's brief or code.
+
+## Boundaries
+
+- **In scope:** project-wide visual direction and reusable visual patterns.
+- **Out of scope:** a postcard's scene-specific brief and implementation.
 
 ## Context
 
-`[design]` `[art-direction]` `[scene]` `[coded-animation]`
+`[design]` `[readme]` `[index]` `[routing]`
 
-## What's here
+## Handbook
 
-- [art-direction.md](art-direction.md) — composition, form, tone, and the
-  project-wide visual judgement behind an image.
-- [motion.md](motion.md) — how movement should behave and communicate.
-- [rendering.md](rendering.md) — palette, light, resolution, dither, and edge
-  treatment.
-- [visual-language.md](visual-language.md) — reusable visual and motion
-  patterns, with their conditions and limits.
-- [postcard-brief.md](postcard-brief.md) — the short, scene-specific brief to
-  add to a postcard README.
+- [art-direction.md](art-direction.md) — `[art-direction]`
+- [gallery.md](gallery.md) — `[gallery]`
+- [motion.md](motion.md) — `[motion]`
+- [rendering.md](rendering.md) — `[rendering]`
+- [visual-language.md](visual-language.md) — `[scene] [motion]`
+- [postcard-brief.md](postcard-brief.md) — `[brief]`
 
 ## Local rules
 
-Keep enduring principles here and scene-specific choices in the relevant
-postcard's README. Rendering supports the image; it does not compensate for
-weak composition or an unclear visual idea.
+Keep enduring principles here. Keep scene-specific intent in its canonical
+brief, not in a routing or orientation README. Rendering supports the image; it
+does not compensate for weak composition or an unclear visual idea.
 
 Before making a new postcard, inspect the visual-language catalogue and
 postcards with overlapping tags. Reuse only what serves the new brief; record

@@ -9,9 +9,10 @@ absence of decorative softness support the project’s quiet, graphic character.
 ## Layout
 
 Show postcards as a responsive grid with generous enough space for each work
-to retain its frame. Explore cells governed by minimum and maximum widths or
-by postcard aspect ratio. Use at most three columns on a large screen and one
-on a small screen.
+to retain its frame. Every postcard shares one portrait frame (see
+[`AGENTS.md`](../../AGENTS.md)), so cells can be governed by minimum and
+maximum widths alone — the grid never has to reconcile competing aspect
+ratios. Use at most three columns on a large screen and one on a small screen.
 
 ## Restraint
 

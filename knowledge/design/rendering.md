@@ -1,6 +1,6 @@
 # Rendering
 
-`[design]` `[rendering]` `[procedural-rendering]` `[1-bit]` `[dither]`
+`[design]` `[rendering]` `[procedural-rendering]`
 
 Rendering is a distinct layer of the work: 1-bit treatment, dithering, low
 resolution, hard edges, palette, and related techniques. It must reinforce an

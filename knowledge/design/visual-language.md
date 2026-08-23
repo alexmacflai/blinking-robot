@@ -47,3 +47,143 @@ deliberately isolated.
 
 See the [cloud-deck decision](../decisions/0001-cloud-deck-as-field.md) for
 the technical rationale behind this particular implementation.
+
+## A cycle that returns to its own first frame
+
+**Source:** [Coffee postcard](../../gallery/postcards/coffee/README.md)
+
+**Effect:** Something irreversible happens — liquid goes over a rim, runs down,
+and leaves — and yet the scene is identical at the start of every cycle. The
+loop is not hidden; it is the subject. The contradiction (the cup never rises
+and never empties) does the work that a narrative would otherwise have to.
+
+**Works when:** the consequence can genuinely *leave the frame* rather than be
+tidied away, and the composition is one still frame with an event inside it. It
+depends on the cycle being phase-driven with no accumulating state, so the rest
+position is guaranteed rather than approached.
+
+**May vary:** the material, the event, the period, and how much residue is
+allowed to persist between cycles — a little is what keeps the reset from
+reading as a rewind.
+
+**Do not reuse when:** the scene should show change over time, or when the
+consequence would have to pile up in frame to be believed.
+
+## Value split by state, not by light
+
+**Source:** [Coffee postcard](../../gallery/postcards/coffee/README.md)
+
+**Effect:** One material is drawn in two opposite values depending on what it is
+doing: coffee is ink on a surface and paper in the air. Every falling form reads
+against the dark ground and every spilled form reads against the lit object,
+with no outlines and no extra shades.
+
+**Works when:** the palette is two values and a material has to cross between a
+dark ground and a light mass. It is a legibility convention, not a lighting
+model, so it must be applied without exception or it reads as an error.
+
+**May vary:** which state takes which value, so long as it follows the grounds
+the material actually crosses in that scene.
+
+**Do not reuse when:** the same material appears against both grounds in one
+state, or when a scene's light is doing real work that this would contradict.
+
+## Flat mass so a mark can only mean one thing
+
+**Source:** [Coffee postcard](../../gallery/postcards/coffee/README.md)
+
+**Effect:** A curved object is shaded as a near-solid mass with the fall-off
+pushed to its edge, instead of as a full gradient. Ordered dithering turns a
+smooth ramp into vertical bands; if the scene's *event* is also vertical marks
+on that object, the two become indistinguishable and the shading eats the story.
+Flattening the mass reserves the mark for the event.
+
+**Works when:** an object carries a moving mark that shares an axis with its own
+shading bands, and the object's form is already given by its silhouette.
+
+**May vary:** how much of the width stays solid, and whether a light stroke is
+needed to hold the silhouette against a same-value background.
+
+**Do not reuse when:** the object's roundness is the point, or when nothing is
+drawn on it that the banding could be confused with.
+
+## A rim drawn only where two equal values touch
+
+**Source:** [Passing legs postcard](../../gallery/postcards/passing-legs/README.md)
+
+**Effect:** Overlapping shapes that share a value stay separate without being
+outlined. A silhouette lays a lighter tone behind its own edge, but the write is
+filtered to pixels **already at or below its own value** — so the rim appears
+against material of its own kind and is invisible against the background, the
+ground, or anything lighter. Nothing gains a contour it did not need.
+
+**Works when:** depth or category is encoded as flat value, so same-value
+overlap is both frequent and genuinely ambiguous, and the compositing buffer is
+continuous luminance drawn back to front. It costs no bookkeeping: the buffer
+already records what is underneath, so the filter is a comparison at write time
+rather than a list of what overlaps what. It also resolves a shape against
+*itself* — in the source postcard a walker's own two legs — which an outline
+pass over a finished silhouette cannot do.
+
+**May vary:** the width of the rim, how much lighter it is, and whether it is
+applied to whole figures, to selected parts, or only to the nearer of two
+overlapping forms.
+
+**Do not reuse when:** the merging of two shapes is the intended reading, or
+when a scene's values are already all distinct — the filter then never fires and
+the extra pass is dead weight. It is also wrong where an object must read
+against a *lighter* neighbour, which is the opposite problem and wants
+[value split by state](#value-split-by-state-not-by-light) instead.
+
+## A scene with no cycle to return to
+
+**Source:** [Passing legs postcard](../../gallery/postcards/passing-legs/README.md)
+
+**Effect:** The postcard never repeats. Subjects are spawned at a randomised
+cadence from a seeded stream, cross the frame, and are destroyed. There is no
+period, so there is no first frame to come back to and no accumulating state to
+drift — the guarantee the coffee postcard buys with a phase-driven cycle is had
+here by owning nothing that persists.
+
+**Works when:** the subject is traffic rather than an event — something whose
+whole character is that it does not resolve. It requires a warm-up run before
+the first visible frame, or the scene opens empty and fills, which reads as a
+beginning; and it requires a seeded generator, or a change to the motion cannot
+be judged because the population changed underneath it.
+
+**May vary:** the spawn cadence, how many independent streams run at once, and
+whether their rates are related at all.
+
+**Do not reuse when:** the image depends on a state being reliably reachable, or
+when the loop itself is the subject — see
+[a cycle that returns to its own first frame](#a-cycle-that-returns-to-its-own-first-frame),
+which is the opposite decision made for the opposite reason.
+
+## Plant the foot in the world and walk the body past it
+
+**Source:** [Passing legs postcard](../../gallery/postcards/passing-legs/README.md)
+
+**Effect:** A walk that reads as walking rather than as a figure marching on the
+spot. The contact point is fixed in world space for the whole of a stance and
+the body advances past it, so the foot cannot skate — the guarantee is algebraic
+rather than tuned. The pose the eye actually checks is the **foot roll**: the
+sole lands toe-up on the heel, flattens, then the heel lifts and the foot pivots
+about the toe. A foot held flat through stance and dipped in swing is backwards
+at both ends, and is the loudest tell of a hand-built cycle.
+
+**Works when:** the limb is solved by inverse kinematics from a contact pose, so
+the joint angles are consequences rather than keyframes. It carries one hard
+constraint with it: the body's height and its stride are **not independent**.
+A hip lower than the fully extended leg can never straighten, and the figure
+crouches through every frame; a stride longer than the leg can reach drags the
+IK clamp and reintroduces the slip the model existed to remove. Solve the two
+together against leg length, and check the extension at the roll from heel onto
+a flat foot — not at heel strike, which is not where the peak is.
+
+**May vary:** cadence, stance fraction, the tilt at each end of the roll, and
+how much the knee tucks after toe-off — that tuck is what separates walking from
+marching, and a little too much of it becomes a goose-step.
+
+**Do not reuse when:** the motion is meant to be mechanical, floating or
+inhuman, or when the contact is not load-bearing in the image. A figure seen
+from far enough away that the foot is a few pixels does not repay any of this.
