@@ -560,7 +560,7 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
      heel-off and toe-off, see ankleAt) is exactly the moment a real sole
      flexes at the ball of the foot — so drive the tip's height off it: flat
      through heel-strike and mid-stance, opening as push-off deepens. */
-  const tipFrac=Math.min(f.midFrac,f.tipFrac+f.tipFlexAmt*Math.max(0,-th));
+  const tipFrac=Math.min(f.midFrac,f.tipFrac+f.tipFlexAmt*Math.max(0,-A.th));
   const tipZ=soleZ+F.sh*tipFrac+growM;
   const seam1X=heelX+(toeX-heelX)*f.seam1Frac;
   const seam2X=heelX+(toeX-heelX)*f.seam2Frac;
