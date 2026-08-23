@@ -121,6 +121,7 @@ const CFG = {
      against it rather than chosen. */
   fig   : { hip:0.910, thigh:0.43, shin:0.42, ankle:0.075,
             rThigh:0.088, rKnee:0.066, rCuff:0.076,
+            sockLen:0.05, rSock:0.045,
             shoeL:0.27, shoeH:0.055, heelBack:0.30,
             vary:0.06 },
 
@@ -526,7 +527,40 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
 
   const rT=f.rThigh*hs*sc+grow, rK=f.rKnee*hs*sc+grow, rC=f.rCuff*hs*sc+grow;
   capT(hpx,hpy,kpx,kpy,rT,rK,tone,only);
-  capT(kpx,kpy,apx,apy,rK,rC,tone,only);
+
+  /* Cuff: the shin is a QUAD, not a capsule — straight sides, straight ends.
+     The knee joint still reads as round because the thigh capsule above
+     ends in its own circular cap at the same point; the shin's flat top
+     edge just sits inside it. The shin stops short of the ankle, closed
+     with a straight cut, and a second, narrower, constant-width quad — the
+     sock — fills the remaining stretch down to the ankle. knee->ankle is
+     one straight IK link, so both quads share a perpendicular and meet with
+     no seam, only a hard step down in width at the cuff line. */
+  const cuffT=clamp(1-f.sockLen/f.shin,0,1);
+  const cx=K.x+(K.ax-K.x)*cuffT, cz=K.z+(K.az-K.z)*cuffT;
+  const cpx=pxOf(sc,cx), cpy=pyOf(sc,cz);
+  const ndx=apx-kpx, ndy=apy-kpy, nlen=Math.hypot(ndx,ndy)||1;
+  const px_=-ndy/nlen, py_=ndx/nlen;
+  const dux=ndx/nlen, duy=ndy/nlen;
+
+  /* Two separately-rasterised quads that share an edge can leave a hairline
+     gap where the scanline fill rounds each one's boundary differently.
+     Overlap them by a fraction of a pixel along the leg instead of butting
+     them exactly — same tone on both sides, so the overlap itself is
+     invisible, but it kills the seam. Also over-extends the sock past the
+     ankle so it will overlap the two-piece shoe the same way, once that
+     exists. */
+  const OVERLAP=1.5*S;
+
+  quad([[kpx-px_*rK,kpy-py_*rK],[kpx+px_*rK,kpy+py_*rK],
+        [cpx+px_*rC+dux*OVERLAP,cpy+py_*rC+duy*OVERLAP],
+        [cpx-px_*rC+dux*OVERLAP,cpy-py_*rC+duy*OVERLAP]], tone, only);
+
+  const rS=f.rSock*hs*sc+grow;
+  quad([[cpx-px_*rS-dux*OVERLAP,cpy-py_*rS-duy*OVERLAP],
+        [cpx+px_*rS-dux*OVERLAP,cpy+py_*rS-duy*OVERLAP],
+        [apx+px_*rS+dux*OVERLAP,apy+py_*rS+duy*OVERLAP],
+        [apx-px_*rS+dux*OVERLAP,apy-py_*rS+duy*OVERLAP]], tone, only);
 
   /* The shoe rides the ankle and the roll angle. Its centreline sits half a
      shoe-height above the sole, so a flat foot puts the sole exactly on the
