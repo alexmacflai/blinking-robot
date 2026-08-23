@@ -15,10 +15,10 @@ using it is not doing that job — prefer an existing tag before adding one.
   change that introduces its first use. Never add a tag only in a document.
 - Prefer a tag already used nearby over inventing a close synonym (`decision`
   not `rationale`; `spec` not `specification`).
-- Exception: a postcard's own name (`[windmill]`) is expected to appear only
-  in that postcard's README. That is naming, not vocabulary sprawl — it does
-  not need an entry here, and a new postcard adds a new one-off name tag as a
-  matter of course.
+- Exception: a postcard's own name (`[windmill]`) may appear in that postcard's
+  README, its reference inventory, and routing entries. That is naming, not
+  vocabulary sprawl — it does not need an entry here, and a new postcard adds a
+  new one-off name tag as a matter of course.
 - Retire a tag here only when no document uses it anymore.
 
 ## Subject — what the content is about

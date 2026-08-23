@@ -9,23 +9,19 @@ This version reimagines that world as small, self-contained, procedurally
 generated animations — no video, no image assets, just code drawing a still
 scene with something quietly moving inside it.
 
+`[readme]` `[gallery]` `[postcard]` `[entry-point]`
+
 ## Watch
 
 Open [`gallery/index.html`](gallery/index.html) to browse the postcards, or
 go straight to one:
 
-- [Windmill](gallery/postcards/windmill/index.html) — a windmill on a narrow
-  hilltop, its arms turning through drifting cloud, under a low evening sun.
-- [Coffee](gallery/postcards/coffee/index.html) — an espresso machine filling a
-  cup that is already full, over and over, and the spill running off the tray.
-- [Passing legs](gallery/postcards/passing-legs/index.html) — a camera lying on
-  the floor while people pass in trousers and shoes, at four depths and four
-  cadences, going nowhere in particular.
+- [Windmill](gallery/postcards/windmill/index.html) — `[windmill] [motion] [dither]`
+- [Coffee](gallery/postcards/coffee/index.html) — `[coffee] [motion] [dither]`
+- [Passing legs](gallery/postcards/passing-legs/index.html) — `[passing-legs] [motion] [dither]`
 
-To tune a postcard while making it, open its controls page —
-[`windmill/controls.html`](gallery/postcards/windmill/controls.html),
-[`coffee/controls.html`](gallery/postcards/coffee/controls.html) or
-[`passing-legs/controls.html`](gallery/postcards/passing-legs/controls.html).
+Each postcard folder also has a maker-facing `controls.html`; its README routes
+to both surfaces and its supplied source material.
 
 Every postcard surface is directly runnable HTML. Open it in a browser;
 nothing else to install.

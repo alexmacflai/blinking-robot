@@ -11,14 +11,15 @@ The user-facing collection and routing layer for runnable coded animation postca
 
 ## Context
 
-`[gallery]` `[routing]` `[postcard]` `[runnable]` `[entry-point]` — the path from the collection to an individual animation.
+`[gallery]` `[readme]` `[index]` `[routing]` — the path from the collection to
+an individual animation.
 
 ## Handbook
 
-- [`index.html`](index.html) is the user-facing gallery entry point. It renders
-  a responsive grid of live, viewport-aware postcard previews.
-- [`postcards/README.md`](postcards/README.md) routes work on individual postcards.
+- [`index.html`](index.html) — `[entry-point] [runnable]`
+- [`postcards/README.md`](postcards/README.md) — `[postcard] [index] [routing]`
 
 ## Local rules
 
-Keep the gallery landing page lightweight. Every postcard belongs under `postcards/` and must have its own README, `references/` folder, clean directly runnable `index.html`, and maker-facing directly runnable `controls.html`. The repository-wide controls contract lives in [`AGENTS.md`](../AGENTS.md). References inform production only; they are not gallery assets.
+Keep the gallery landing page lightweight. Postcard structure, controls, and
+reference-material rules live in [`AGENTS.md`](../AGENTS.md).

@@ -2,7 +2,7 @@
 
 `[design]` `[brief]` `[postcard]` `[scene]`
 
-Use this compact brief in a postcard's README. It captures choices that change
+Use this compact brief in a postcard's dedicated brief document. It captures choices that change
 from image to image and should not become project-wide art-direction rules.
 
 ## Template

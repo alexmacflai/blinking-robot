@@ -32,6 +32,7 @@ knowledge/   durable project knowledge: design, engineering, decisions, vocabula
 | A public postcard surface | `gallery/postcards/<name>/index.html` | live |
 | A postcard controls surface | `gallery/postcards/<name>/controls.html` | required |
 | Postcard source references | `gallery/postcards/<name>/references/` | live |
+| Postcard scene brief | `gallery/postcards/<name>/brief.md` | live |
 | Gallery landing page | `gallery/index.html` | live |
 | Tag vocabulary | `knowledge/vocabulary.md` | live |
 | Technical conventions, invariants, contracts | `knowledge/engineering/` | create on first use |
@@ -72,8 +73,8 @@ would go in it is overhead with no payoff until something actually needs it.
 7. Tag documents using [`knowledge/vocabulary.md`](knowledge/vocabulary.md).
    Do not invent a tag without adding it there.
 8. Update the nearest README when you add a concept or an entry point. A
-   postcard's `references/` folder has its own README documenting its supplied
-   source material.
+   postcard's `brief.md` owns its scene-specific intent; its `references/`
+   folder has its own README documenting supplied source material.
 9. Before changing a postcard, consult the relevant durable knowledge in
    [`knowledge/`](knowledge/)—especially [`knowledge/design/`](knowledge/design/)
    for visual direction, motion, or rendering. Use it as project-level guidance;
@@ -89,8 +90,9 @@ would go in it is overhead with no payoff until something actually needs it.
     When a postcard establishes a transferable pattern, record its effect,
     conditions, and limits in the visual-language catalogue. Keep implementation
     self-contained until a second postcard truly needs shared code.
-12. Every new postcard must include a maker-facing `controls.html`, alongside
-    its clean public `index.html`. It must render the same postcard and expose
+12. Every new postcard must include a maker-facing `controls.html` and a
+    `brief.md`, alongside its clean public `index.html`. The controls surface
+    must render the same postcard and expose
     live controls that let the human author meaningfully tune the scene without
     editing code. Start from the Windmill controls page as the interaction
     benchmark, adapting its UI and controls to the scene rather than copying its
@@ -112,12 +114,23 @@ Two forms. Use the lighter one unless the directory routes to children.
 
 **Area README** — for a directory whose job is routing (`gallery/`,
 `knowledge/`). Sections: Purpose, Boundaries, Context, Handbook, Local rules.
+The Handbook is a compact, tagged index: it names the destinations and links to
+them so readers can choose where to go without opening every file. It does not
+repeat the contents, rationale, or implementation of an entry.
 
 **Leaf README** — for a directory that holds files rather than routing to
 subtrees (a postcard, once created; `knowledge/engineering/`, once created).
 Sections: a one-or-two-line purpose, Context tags, what is in here or how to
-run it, and Local rules only when a rule is genuinely non-obvious. Do not pad
-a leaf to the area shape.
+run it, and Local rules only when a rule is genuinely non-obvious. A leaf
+README orients; it does not narrate the artifact, reproduce its brief, or
+explain its implementation. Do not pad a leaf to the area shape.
+
+**References README** — the small factual inventory for a postcard's
+`references/` folder. List the files actually present, their provenance when
+known, and a short note on how each informs the work. Do not record absent
+material, conversation history, design rationale, or implementation details.
+Link to the repository rule that references are production context, never
+runtime assets.
 
 ## Verifying a change
 
