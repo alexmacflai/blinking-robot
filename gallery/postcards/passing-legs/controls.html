@@ -153,7 +153,8 @@ const CFG = {
   fig   : { hip:0.910, thigh:0.43, shin:0.42, ankle:0.075,
             rThigh:0.088, rKnee:0.066, rCuff:0.076,
             sockLen:0.05, rSock:0.045,
-            shoeL:0.27, shoeH:0.055, heelBack:0.30, seamFrac:0.35,
+            shoeL:0.27, shoeH:0.055, heelBack:0.30,
+            seam1Frac:0.35, seam2Frac:0.68, midFrac:0.55, tipFrac:0.22, insetFrac:0.25,
             vary:0.06 },
 
   /* Gait. The foot is PLANTED IN THE WORLD and the hip walks past it — the
@@ -570,6 +571,56 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
   const rT=f.rThigh*hs*sc+grow, rK=f.rKnee*hs*sc+grow, rC=f.rCuff*hs*sc+grow;
   capT(hpx,hpy,kpx,kpy,rT,rK,tone,only);
 
+  /* ---- SHOE (computed first: the sock below needs its top-back / top-front
+     corners to attach to). Three flat, sharp-edged quads — never a triangle,
+     each one a rectangle with exactly one vertex dragged, same as the
+     reference: a collar, a vamp, a toe cap. All three live in the FOOT's own
+     local frame (x along the sole, z up from it, origin at the ankle) and
+     are carried into world space by the exact rotation the roll math already
+     computes — `th` — so this is the drawing, not a second physics.
+
+     The load-bearing property: the collar's back-bottom corner (heelX,soleZ)
+     and the toe cap's front-bottom corner (toeX,soleZ) are, after that
+     rotation, ALGEBRAICALLY the same points `ankleAt`'s stance branches
+     solve the ankle position from (worldHeel = ankleWorld + rot(-dir*hb,
+     -ah,th), worldToe = ankleWorld + rot(dir*tf,-ah,th) — the same rot()
+     with the same th). Those two corners are the only ones a "moved vertex"
+     is never allowed to touch: move any other corner and the drawn foot
+     still traces z=0 exactly through heel-strike and toe-off. */
+  const th=dir*A.th;
+  const growM=grow/sc;
+  const heelX=-dir*(F.hb+growM), toeX=dir*(F.tf+growM);
+  const soleZ=-F.ah-growM, topZ=soleZ+F.sh+growM;
+  const midZ=soleZ+F.sh*f.midFrac+growM, tipZ=soleZ+F.sh*f.tipFrac+growM;
+  const seam1X=heelX+(toeX-heelX)*f.seam1Frac;
+  const seam2X=heelX+(toeX-heelX)*f.seam2Frac;
+  const insetX=dir*(seam1X-heelX)*f.insetFrac;
+
+  /* `EPS` — world metres, so it survives the per-rank projection scale —
+     nudges each internal seam's two pieces past each other, the same
+     hairline-gap fix as the cuff/sock seam below. */
+  const EPS=0.006;
+  const seam1A=seam1X+dir*EPS, seam1B=seam1X-dir*EPS;
+  const seam2B=seam2X+dir*EPS, seam2C=seam2X-dir*EPS;
+
+  const pt=(lx,lz)=>{ const r=rot(lx,lz,th); return [pxOf(sc,K.ax+r[0]),pyOf(sc,K.az+r[1])]; };
+
+  /* Collar: back-bottom is the exact heel pivot (unmoved); back-top is the
+     one moved vertex, inset toward the toe — the slanted back edge the
+     reference draws, without touching the pivot. */
+  const collarBack =pt(heelX+insetX,topZ), collarFront=pt(seam1A,topZ);
+  quad([pt(heelX,soleZ),collarBack,collarFront,pt(seam1A,soleZ)], tone, only);
+
+  /* Vamp: full collar height on the back edge, tapered down to `midZ` on
+     the front (moved vertex) — no pivot on either corner. */
+  quad([pt(seam1B,soleZ),pt(seam1B,topZ),pt(seam2B,midZ),pt(seam2B,soleZ)], tone, only);
+
+  /* Toe cap: continues the taper from `midZ` down to `tipZ` — short and
+     blunt, not a point, so this stays a quad like the other two. Front-
+     bottom is the exact toe pivot (unmoved); front-top (the tip) is the
+     moved vertex. */
+  quad([pt(seam2C,soleZ),pt(seam2C,midZ),pt(toeX,tipZ),pt(toeX,soleZ)], tone, only);
+
   /* Cuff: the shin is a QUAD, not a capsule — straight sides, straight ends.
      The knee joint still reads as round because the thigh capsule above
      ends in its own circular cap at the same point; the shin's flat top
@@ -589,56 +640,24 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
      gap where the scanline fill rounds each one's boundary differently.
      Overlap them by a fraction of a pixel along the leg instead of butting
      them exactly — same tone on both sides, so the overlap itself is
-     invisible, but it kills the seam. Also over-extends the sock past the
-     ankle so it will overlap the two-piece shoe the same way, once that
-     exists. */
+     invisible, but it kills the seam. */
   const OVERLAP=1.5*S;
 
   quad([[kpx-px_*rK,kpy-py_*rK],[kpx+px_*rK,kpy+py_*rK],
         [cpx+px_*rC+dux*OVERLAP,cpy+py_*rC+duy*OVERLAP],
         [cpx-px_*rC+dux*OVERLAP,cpy-py_*rC+duy*OVERLAP]], tone, only);
 
+  /* The sock's bottom edge is not computed independently — it IS the
+     collar's top edge, the same two points, shared exactly. The sock lives
+     in the LEG's frame (it is trouser, not foot — it should not spin with
+     the roll) while the collar lives in the FOOT's frame, so the two only
+     agree at this one shared edge; sharing the actual vertices instead of
+     two separately-aimed overlaps is what keeps them aligned through the
+     whole roll, not just at rest. */
   const rS=f.rSock*hs*sc+grow;
   quad([[cpx-px_*rS-dux*OVERLAP,cpy-py_*rS-duy*OVERLAP],
         [cpx+px_*rS-dux*OVERLAP,cpy+py_*rS-duy*OVERLAP],
-        [apx+px_*rS+dux*OVERLAP,apy+py_*rS+duy*OVERLAP],
-        [apx-px_*rS+dux*OVERLAP,apy-py_*rS+duy*OVERLAP]], tone, only);
-
-  /* The shoe is two flat, sharp-edged pieces, not one tapered capsule: a
-     heel block and a triangular toe sliver, meeting at a seam. Both are
-     built in the FOOT's own local frame (x along the sole, z up from it,
-     origin at the ankle) and carried into world space by the exact same
-     rotation the roll math already computes — `th` — so this is the
-     drawing, not a second physics.
-
-     The load-bearing property: heel base point (heelX,soleZ) and toe apex
-     (toeX,soleZ) are, after that rotation, ALGEBRAICALLY the same points
-     `ankleAt`'s stance branches solve the ankle position from (worldHeel =
-     ankleWorld + rot(-dir*hb,-ah,th), worldToe = ankleWorld + rot(dir*tf,
-     -ah,th) — the same rot() with the same th). So the drawn heel and toe
-     do not merely look planted: they trace z=0 exactly through heel-strike
-     and toe-off, the same no-slip guarantee the gait already has, now also
-     true of the silhouette. */
-  const th=dir*A.th;
-  const growM=grow/sc;
-  const heelX=-dir*(F.hb+growM), toeX=dir*(F.tf+growM);
-  const soleZ=-F.ah-growM;
-  const seamX=heelX+(toeX-heelX)*f.seamFrac;
-
-  /* Heel top reaches the ankle itself (plus a hair past it) so it always
-     meets the sock with no gap; the toe sliver's height is `shoeH`, well
-     short of the heel, which is what makes the seam read as a seam. `EPS`
-     — world metres, so it survives the per-rank projection scale — nudges
-     both pieces past the seam line for the same reason: two quads that
-     only just touch can rasterise a hairline gap between them. */
-  const EPS=0.006;
-  const heelTopZ=EPS+growM, seamTopZ=soleZ+F.sh+growM;
-  const heelSeamX=seamX+dir*EPS, toeSeamX=seamX-dir*EPS;
-
-  const pt=(lx,lz)=>{ const r=rot(lx,lz,th); return [pxOf(sc,K.ax+r[0]),pyOf(sc,K.az+r[1])]; };
-
-  quad([pt(heelX,soleZ),pt(heelX,heelTopZ),pt(heelSeamX,heelTopZ),pt(heelSeamX,soleZ)], tone, only);
-  quad([pt(toeSeamX,soleZ),pt(toeSeamX,seamTopZ),pt(toeX,soleZ)], tone, only);
+        collarFront, collarBack], tone, only);
 }
 
 function drawWalker(w,R){
@@ -995,7 +1014,11 @@ function readout(){
   reg(ctl(s,'shoe length (m)',()=>f.shoeL,v=>{f.shoeL=v;readout();},0.12,0.42,0.005,'render'));
   reg(ctl(s,'shoe height (m)',()=>f.shoeH,v=>f.shoeH=v,0.02,0.14,0.002,'render'));
   reg(ctl(s,'heel set back',()=>f.heelBack,v=>f.heelBack=v,0.10,0.50,0.01,'render'));
-  reg(ctl(s,'shoe seam (frac)',()=>f.seamFrac,v=>f.seamFrac=v,0.10,0.90,0.01,'render'));
+  reg(ctl(s,'shoe seam 1 (frac)',()=>f.seam1Frac,v=>f.seam1Frac=v,0.05,0.90,0.01,'render'));
+  reg(ctl(s,'shoe seam 2 (frac)',()=>f.seam2Frac,v=>f.seam2Frac=v,0.10,0.95,0.01,'render'));
+  reg(ctl(s,'shoe mid height (frac)',()=>f.midFrac,v=>f.midFrac=v,0.05,1.20,0.01,'render'));
+  reg(ctl(s,'shoe tip height (frac)',()=>f.tipFrac,v=>f.tipFrac=v,0,1.00,0.01,'render'));
+  reg(ctl(s,'shoe collar inset (frac)',()=>f.insetFrac,v=>f.insetFrac=v,0,0.90,0.01,'render'));
   reg(ctl(s,'height variation',()=>f.vary,v=>{f.vary=v;readout();},0,0.25,0.005,'refresh'));
 }
 
