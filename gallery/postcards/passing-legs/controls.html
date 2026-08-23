@@ -153,7 +153,7 @@ const CFG = {
   fig   : { hip:0.910, thigh:0.43, shin:0.42, ankle:0.075,
             rThigh:0.088, rKnee:0.066, rCuff:0.076,
             sockLen:0.05, rSock:0.045,
-            shoeL:0.27, shoeH:0.055, heelBack:0.30,
+            shoeL:0.27, shoeH:0.055, heelBack:0.30, seamFrac:0.35,
             vary:0.06 },
 
   /* Gait. The foot is PLANTED IN THE WORLD and the hip walks past it — the
@@ -604,15 +604,41 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
         [apx+px_*rS+dux*OVERLAP,apy+py_*rS+duy*OVERLAP],
         [apx-px_*rS+dux*OVERLAP,apy-py_*rS+duy*OVERLAP]], tone, only);
 
-  /* The shoe rides the ankle and the roll angle. Its centreline sits half a
-     shoe-height above the sole, so a flat foot puts the sole exactly on the
-     floor and a rolled one lifts off it the way a real sole does. */
+  /* The shoe is two flat, sharp-edged pieces, not one tapered capsule: a
+     heel block and a triangular toe sliver, meeting at a seam. Both are
+     built in the FOOT's own local frame (x along the sole, z up from it,
+     origin at the ankle) and carried into world space by the exact same
+     rotation the roll math already computes — `th` — so this is the
+     drawing, not a second physics.
+
+     The load-bearing property: heel base point (heelX,soleZ) and toe apex
+     (toeX,soleZ) are, after that rotation, ALGEBRAICALLY the same points
+     `ankleAt`'s stance branches solve the ankle position from (worldHeel =
+     ankleWorld + rot(-dir*hb,-ah,th), worldToe = ankleWorld + rot(dir*tf,
+     -ah,th) — the same rot() with the same th). So the drawn heel and toe
+     do not merely look planted: they trace z=0 exactly through heel-strike
+     and toe-off, the same no-slip guarantee the gait already has, now also
+     true of the silhouette. */
   const th=dir*A.th;
-  const h=rot(-dir*F.hb, F.sh*0.5-F.ah, th);
-  const t=rot( dir*F.tf, F.sh*0.42-F.ah, th);
-  capT(pxOf(sc,K.ax+h[0]),pyOf(sc,K.az+h[1]),
-       pxOf(sc,K.ax+t[0]),pyOf(sc,K.az+t[1]),
-       F.sh*sc*0.52+grow, F.sh*sc*0.34+grow, tone, only);
+  const growM=grow/sc;
+  const heelX=-dir*(F.hb+growM), toeX=dir*(F.tf+growM);
+  const soleZ=-F.ah-growM;
+  const seamX=heelX+(toeX-heelX)*f.seamFrac;
+
+  /* Heel top reaches the ankle itself (plus a hair past it) so it always
+     meets the sock with no gap; the toe sliver's height is `shoeH`, well
+     short of the heel, which is what makes the seam read as a seam. `EPS`
+     — world metres, so it survives the per-rank projection scale — nudges
+     both pieces past the seam line for the same reason: two quads that
+     only just touch can rasterise a hairline gap between them. */
+  const EPS=0.006;
+  const heelTopZ=EPS+growM, seamTopZ=soleZ+F.sh+growM;
+  const heelSeamX=seamX+dir*EPS, toeSeamX=seamX-dir*EPS;
+
+  const pt=(lx,lz)=>{ const r=rot(lx,lz,th); return [pxOf(sc,K.ax+r[0]),pyOf(sc,K.az+r[1])]; };
+
+  quad([pt(heelX,soleZ),pt(heelX,heelTopZ),pt(heelSeamX,heelTopZ),pt(heelSeamX,soleZ)], tone, only);
+  quad([pt(toeSeamX,soleZ),pt(toeSeamX,seamTopZ),pt(toeX,soleZ)], tone, only);
 }
 
 function drawWalker(w,R){
@@ -969,6 +995,7 @@ function readout(){
   reg(ctl(s,'shoe length (m)',()=>f.shoeL,v=>{f.shoeL=v;readout();},0.12,0.42,0.005,'render'));
   reg(ctl(s,'shoe height (m)',()=>f.shoeH,v=>f.shoeH=v,0.02,0.14,0.002,'render'));
   reg(ctl(s,'heel set back',()=>f.heelBack,v=>f.heelBack=v,0.10,0.50,0.01,'render'));
+  reg(ctl(s,'shoe seam (frac)',()=>f.seamFrac,v=>f.seamFrac=v,0.10,0.90,0.01,'render'));
   reg(ctl(s,'height variation',()=>f.vary,v=>{f.vary=v;readout();},0,0.25,0.005,'refresh'));
 }
 
