@@ -2,10 +2,6 @@
 
 Production source material for the Passing legs postcard.
 
-## Context
-
-`[postcard]` `[passing-legs]` `[reference]` `[readme]`
-
 ## Inventory
 
 - `br-passing-legs.af` — supplied Affinity document

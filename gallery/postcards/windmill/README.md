@@ -4,7 +4,7 @@ A coded animation postcard of a windmill.
 
 ## Context
 
-`[postcard]` `[windmill]` `[motion]` `[dither]`
+`[windmill]` `[cloud]` `[sky]` `[bird]` `[wind]` `[particles]` `[sim]`
 
 ## Open
 

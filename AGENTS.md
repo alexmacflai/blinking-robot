@@ -70,8 +70,10 @@ would go in it is overhead with no payoff until something actually needs it.
    duplicated guidance is what drifts out of sync with the tree.
 6. Make small, reversible changes. State assumptions when the project is silent
    rather than inventing policy.
-7. Tag documents using [`knowledge/vocabulary.md`](knowledge/vocabulary.md).
-   Do not invent a tag without adding it there.
+7. Tag README files using [`knowledge/vocabulary.md`](knowledge/vocabulary.md).
+   Do not invent a tag without adding it there. When changing a postcard
+   README's tags, update the matching entry in `gallery/postcards/README.md` in
+   the same change.
 8. Update the nearest README when you add a concept or an entry point. A
    postcard's `brief.md` owns its scene-specific intent; its `references/`
    folder has its own README documenting supplied source material.

@@ -2,10 +2,6 @@
 
 Production source material for the Windmill postcard.
 
-## Context
-
-`[postcard]` `[windmill]` `[reference]` `[readme]`
-
 ## Inventory
 
 No source files are currently present.

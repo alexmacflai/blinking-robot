@@ -1,6 +1,6 @@
 # Postcard brief
 
-`[design]` `[brief]` `[postcard]` `[scene]`
+`[design]` `[brief]` `[scene]`
 
 Use this compact brief in a postcard's dedicated brief document. It captures choices that change
 from image to image and should not become project-wide art-direction rules.

@@ -1,7 +1,5 @@
 # Coffee brief
 
-`[postcard]` `[coffee]` `[brief]` `[motion]`
-
 - An espresso machine fills a cup that is already full.
 - The machine must visibly cause a connected chain: pour, ripple, overflow, and
   spill off the tray.

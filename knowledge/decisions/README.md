@@ -25,7 +25,7 @@ are.
 - [`0002-sail-cloud-interaction-as-emitter.md`](0002-sail-cloud-interaction-as-emitter.md)
   — `[decision-record] [windmill]`
 - [`0003-three-render-surfaces.md`](0003-three-render-surfaces.md) —
-  `[decision-record] [postcard] [rendering]`
+  `[decision-record] [rendering]`
 
 ## Local rules
 

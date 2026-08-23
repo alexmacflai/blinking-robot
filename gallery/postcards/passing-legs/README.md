@@ -4,7 +4,7 @@ A coded animation postcard of people passing a floor-level camera.
 
 ## Context
 
-`[postcard]` `[passing-legs]` `[motion]` `[dither]`
+`[passing-legs]` `[people]` `[walking]` `[leg]`
 
 ## Open
 

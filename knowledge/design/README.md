@@ -19,9 +19,9 @@ one scene's brief or code.
 - [art-direction.md](art-direction.md) — `[art-direction]`
 - [gallery.md](gallery.md) — `[gallery]`
 - [motion.md](motion.md) — `[motion]`
-- [rendering.md](rendering.md) — `[rendering] [dither]`
+- [rendering.md](rendering.md) — `[rendering]`
 - [visual-language.md](visual-language.md) — `[scene] [motion]`
-- [postcard-brief.md](postcard-brief.md) — `[brief] [postcard]`
+- [postcard-brief.md](postcard-brief.md) — `[brief]`
 
 ## Local rules
 

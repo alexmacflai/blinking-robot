@@ -1,7 +1,5 @@
 # Passing legs brief
 
-`[postcard]` `[passing-legs]` `[brief]` `[motion]`
-
 - Legs cross above a camera lying on the floor.
 - Anonymous legs should occasionally assemble into the suggestion of a body that
   is never shown.

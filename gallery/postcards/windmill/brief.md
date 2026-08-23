@@ -1,7 +1,5 @@
 # Windmill brief
 
-`[postcard]` `[windmill]` `[brief]` `[motion]`
-
 - A windmill turns through a wind-driven cloud sky.
 - The sails reveal cloud material that was already present in apparently empty
   air.

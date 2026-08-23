@@ -4,7 +4,7 @@ A coded animation postcard of an espresso machine and a full cup.
 
 ## Context
 
-`[postcard]` `[coffee]` `[motion]` `[dither]`
+`[coffee]` `[liquid]` `[sim]` `[particles]`
 
 ## Open
 

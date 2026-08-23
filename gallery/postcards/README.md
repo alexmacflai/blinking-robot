@@ -11,13 +11,15 @@ Contains the individual coded animation postcards in the Blinking Robot gallery.
 
 ## Context
 
-`[postcard]` `[readme]` `[index]` `[routing]` — one small world per folder.
+`[readme]` `[index]` `[routing]` — one small world per folder.
 
 ## Handbook
 
-- [`windmill/README.md`](windmill/README.md) — `[windmill] [motion] [dither]`
-- [`coffee/README.md`](coffee/README.md) — `[coffee] [motion] [dither]`
-- [`passing-legs/README.md`](passing-legs/README.md) — `[passing-legs] [motion] [dither]`
+- [`windmill/README.md`](windmill/README.md) — `[windmill] [cloud] [sky]
+  [bird] [wind] [particles] [sim]`
+- [`coffee/README.md`](coffee/README.md) — `[coffee] [liquid] [sim] [particles]`
+- [`passing-legs/README.md`](passing-legs/README.md) — `[passing-legs] [people]
+  [walking] [leg]`
 
 ## Local rules
 

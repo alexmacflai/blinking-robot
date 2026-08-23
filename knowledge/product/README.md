@@ -20,7 +20,7 @@ directions for the gallery and the tools used to make postcards.
 ## Handbook
 
 - [gallery-ideas.md](gallery-ideas.md) — `[gallery] [idea]`
-- [postcard-editor-ideas.md](postcard-editor-ideas.md) — `[postcard] [idea]`
+- [postcard-editor-ideas.md](postcard-editor-ideas.md) — `[idea] [workflow]`
 - [production-ideas.md](production-ideas.md) — `[idea] [workflow]`
 
 ## Local rules

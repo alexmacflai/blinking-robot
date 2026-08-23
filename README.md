@@ -9,16 +9,19 @@ This version reimagines that world as small, self-contained, procedurally
 generated animations — no video, no image assets, just code drawing a still
 scene with something quietly moving inside it.
 
-`[readme]` `[gallery]` `[postcard]` `[entry-point]`
+`[readme]` `[gallery]` `[entry-point]`
 
 ## Watch
 
 Open [`gallery/index.html`](gallery/index.html) to browse the postcards, or
 go straight to one:
 
-- [Windmill](gallery/postcards/windmill/index.html) — `[windmill] [motion] [dither]`
-- [Coffee](gallery/postcards/coffee/index.html) — `[coffee] [motion] [dither]`
-- [Passing legs](gallery/postcards/passing-legs/index.html) — `[passing-legs] [motion] [dither]`
+- [Windmill](gallery/postcards/windmill/index.html) — `[windmill] [cloud] [sky]
+  [bird] [wind] [particles] [sim]`
+- [Coffee](gallery/postcards/coffee/index.html) — `[coffee] [liquid] [sim]
+  [particles]`
+- [Passing legs](gallery/postcards/passing-legs/index.html) — `[passing-legs]
+  [people] [walking] [leg]`
 
 Each postcard folder also has a maker-facing `controls.html`; its README routes
 to both surfaces and its supplied source material.

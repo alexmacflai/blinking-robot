@@ -17,7 +17,7 @@ an individual animation.
 ## Handbook
 
 - [`index.html`](index.html) — `[entry-point] [runnable]`
-- [`postcards/README.md`](postcards/README.md) — `[postcard] [index] [routing]`
+- [`postcards/README.md`](postcards/README.md) — `[index] [routing]`
 
 ## Local rules
 

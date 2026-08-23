@@ -1,6 +1,6 @@
 # 0003 — Postcards have public, controls, and gallery render surfaces
 
-`[decision]` `[decision-record]` `[postcard]` `[gallery]` `[animation-controls]`
+`[decision]` `[decision-record]` `[gallery]` `[animation-controls]`
 
 **Status:** accepted · applies to [`gallery/`](../../gallery/)
 
