@@ -155,6 +155,7 @@ const CFG = {
             sockLen:0.05, rSock:0.045, sockReach:0.055,
             shoeL:0.31, shoeH:0.09, heelBack:0.30,
             seam1Frac:0.35, seam2Frac:0.68, midFrac:0.55, tipFrac:0.34, insetFrac:0.25,
+            tipFlexAmt:0.35,
             vary:0.06 },
 
   /* Gait. The foot is PLANTED IN THE WORLD and the hip walks past it — the
@@ -591,7 +592,18 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
   const growM=grow/sc;
   const heelX=-dir*(F.hb+growM), toeX=dir*(F.tf+growM);
   const soleZ=-F.ah-growM, topZ=soleZ+F.sh+growM;
-  const midZ=soleZ+F.sh*f.midFrac+growM, tipZ=soleZ+F.sh*f.tipFrac+growM;
+  const midZ=soleZ+F.sh*f.midFrac+growM;
+
+  /* The toe cap's tip is the one moved vertex nothing else is pinned to —
+     the collar and vamp attach to the ankle pivot and to each other, and
+     the toe cap's OTHER three corners attach to the vamp's seam and to the
+     true floor pivot, so none of those can move without breaking something.
+     The tip can, freely, and `th` going negative (toe rolling down through
+     heel-off and toe-off, see ankleAt) is exactly the moment a real sole
+     flexes at the ball of the foot — so drive the tip's height off it: flat
+     through heel-strike and mid-stance, opening as push-off deepens. */
+  const tipFrac=Math.min(f.midFrac,f.tipFrac+f.tipFlexAmt*Math.max(0,-th));
+  const tipZ=soleZ+F.sh*tipFrac+growM;
   const seam1X=heelX+(toeX-heelX)*f.seam1Frac;
   const seam2X=heelX+(toeX-heelX)*f.seam2Frac;
   const insetX=(seam1X-heelX)*f.insetFrac;
@@ -1026,6 +1038,7 @@ function readout(){
   reg(ctl(s,'shoe seam 2 (frac)',()=>f.seam2Frac,v=>f.seam2Frac=v,0.10,0.95,0.01,'render'));
   reg(ctl(s,'shoe mid height (frac)',()=>f.midFrac,v=>f.midFrac=v,0.05,1.20,0.01,'render'));
   reg(ctl(s,'shoe tip height (frac)',()=>f.tipFrac,v=>f.tipFrac=v,0,1.00,0.01,'render'));
+  reg(ctl(s,'toe flex on push-off',()=>f.tipFlexAmt,v=>f.tipFlexAmt=v,0,1.00,0.01,'render'));
   reg(ctl(s,'shoe collar inset (frac)',()=>f.insetFrac,v=>f.insetFrac=v,0,0.90,0.01,'render'));
   reg(ctl(s,'height variation',()=>f.vary,v=>{f.vary=v;readout();},0,0.25,0.005,'refresh'));
 }
