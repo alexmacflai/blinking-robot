@@ -159,8 +159,24 @@ const CFG = {
   /* No contact shadow. Every rank's shoes land within about nine pixels of
      each other, so the shared contact line is what fastens them to the floor;
      a cast shadow under each foot only competed with it and made the sole
-     ambiguous. */
-  floor : { far:0.99, near:0.88, grain:0.016 },
+     ambiguous.
+
+     The floor itself is a hard, undithered black — it starts at FLOORY (the
+     nearest rank's contact line, computed in build()), not the horizon. */
+
+  /* Background. A dark-to-light gradient reads as depth in the air above the
+     scene. It always spans the TOP EDGE to HOR (the horizon) — never
+     FLOORY — so it stays fixed to the frame and does not have to be
+     compensated whenever the camera moves the contact line. */
+  bg    : { top:0.55, bottom:0.72, grain:0.016 },
+
+  /* Ground. A flat light fill between HOR (horizon) and FLOORY (the nearest
+     rank's contact line, the top of the hard floor band). Both bounds are
+     dynamic — this fill simply occupies whatever gap camera and depth leave
+     between them. Kept a clear step above bg.bottom so the horizon reads as
+     an edge, not a continuation of the gradient — but still well short of
+     paper white so it doesn't compete with a rank's lightest tone. */
+  ground: { tone:0.88, grain:0.016 },
 
   /* Separation. Two silhouettes of the SAME rank are the same value, so where
      they overlap they merge into one unreadable mass — and a walker's own two
@@ -195,6 +211,12 @@ function rnd(){
 }
 const rrange=(a,b)=>a+(b-a)*rnd();
 
+/* Sentinel luminance for the hard floor band — always below every gate's
+   `lim` and always below the dither threshold, so it reads as solid ink
+   unconditionally and is immune to separation rims painted through the
+   silhouette gate below (see capT/quad). */
+const FLOOR=-1;
+
 const BAYER = new Uint8Array([
    0,32, 8,40, 2,34,10,42,  48,16,56,24,50,18,58,26,
   12,44, 4,36,14,46, 6,38,  60,28,52,20,62,30,54,22,
@@ -213,6 +235,7 @@ function packColor(hex){
 let W,H,S;
 let lum,img,buf32,CINK,CPAP;
 let HOR;                 // horizon, in grid pixels
+let FLOORY;               // y where the nearest rank's soles touch — top of the hard floor band
 let SEPW;                // separation width, in grid pixels
 let ranks=[];            // { d, tone, sepTone, sc, halfW, gap, right, walkers, tNext }
 
@@ -240,6 +263,14 @@ function build(){
              gap:r.gap, right:r.right,
              walkers:[], tNext:rrange(0,r.gap[1]) };
   });
+
+  /* The floor band starts at the NEAREST rank's contact line, not the
+     horizon — everything between the horizon and that line is still air
+     (the background gradient), not ground. The nearest rank has the
+     largest scale, so its contact point (z=0) sits lowest on screen; that
+     is the max, not an arbitrary pick. */
+  FLOORY=0;
+  for(const R of ranks) FLOORY=Math.max(FLOORY,pyOf(R.sc,0));
 }
 
 /* World -> grid. x is lateral metres from the frame's centre line, z is height
@@ -311,7 +342,7 @@ function capT(ax,ay,bx,by,ra,rb,tone,only){
       const r=ra+(rb-ra)*t;
       const cov=clamp(r+0.5-Math.sqrt(qx*qx+qy*qy),0,1); if(cov<=0) continue;
       const i=o+x;
-      if(gated && lum[i]>lim) continue;
+      if(gated && (lum[i]>lim || lum[i]<0)) continue;
       lum[i]+=(tone-lum[i])*cov;
     }
   }
@@ -339,7 +370,7 @@ function quad(pts,tone,only){
       const o=y*W;
       for(let x=Math.floor(xa);x<Math.ceil(xb);x++){
         const cov=Math.min(x+1,xb)-Math.max(x,xa); if(cov<=0) continue;
-        const k=o+x; if(lum[k]>lim) continue;
+        const k=o+x; if(lum[k]>lim || lum[k]<0) continue;
         lum[k]+=(tone-lum[k])*cov;
       }
     }
@@ -532,11 +563,27 @@ function drawWalker(w,R){
 /* ======================================================================
    GROUND
    ==================================================================== */
+function drawBackground(){
+  const bg=CFG.bg;
+  const y1=Math.floor(HOR);
+  for(let y=0;y<y1;y++){
+    const base=lerp(bg.top,bg.bottom,smooth(y/HOR));
+    spanF(y,0,W,(x,cy)=>base+grain(x,cy)*bg.grain,1);
+  }
+}
+
+/* Between the horizon and the nearest rank's contact line — both move
+   independently, so this is just whatever gap they leave, filled flat. */
+function drawGround(){
+  const gr=CFG.ground;
+  const y0=Math.max(0,Math.floor(HOR)), y1=Math.floor(FLOORY);
+  for(let y=y0;y<y1;y++) spanF(y,0,W,(x,cy)=>gr.tone+grain(x,cy)*gr.grain,1);
+}
+
 function drawFloor(){
-  const fl=CFG.floor;
-  for(let y=Math.floor(HOR);y<H;y++){
-    const base=lerp(fl.far,fl.near,clamp((y+0.5-HOR)/(H-HOR),0,1));
-    spanF(y,0,W,(x,cy)=>base+grain(x,cy)*fl.grain,1);
+  for(let y=Math.floor(FLOORY);y<H;y++){
+    const o=y*W;
+    for(let x=0;x<W;x++) lum[o+x]=FLOOR;
   }
 }
 
@@ -559,6 +606,8 @@ function dither(){
    ==================================================================== */
 function renderFrame(){
   lum.fill(1.0);
+  drawBackground();
+  drawGround();
   drawFloor();
   for(let i=ranks.length-1;i>=0;i--){
     const R=ranks[i];
