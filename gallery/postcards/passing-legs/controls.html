@@ -594,7 +594,7 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
   const midZ=soleZ+F.sh*f.midFrac+growM, tipZ=soleZ+F.sh*f.tipFrac+growM;
   const seam1X=heelX+(toeX-heelX)*f.seam1Frac;
   const seam2X=heelX+(toeX-heelX)*f.seam2Frac;
-  const insetX=dir*(seam1X-heelX)*f.insetFrac;
+  const insetX=(seam1X-heelX)*f.insetFrac;
 
   /* `EPS` — world metres, so it survives the per-rank projection scale —
      nudges each internal seam's two pieces past each other, the same
