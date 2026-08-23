@@ -155,7 +155,7 @@ const CFG = {
             sockLen:0.05, rSock:0.045, sockReach:0.055,
             shoeL:0.31, shoeH:0.09, heelBack:0.30,
             seam1Frac:0.35, seam2Frac:0.68, midFrac:0.55, tipFrac:0.34, insetFrac:0.25,
-            tipFlexAmt:0.35,
+            tipFlexAmt:0.35, toeHingeAmt:0.9,
             vary:0.06 },
 
   /* Gait. The foot is PLANTED IN THE WORLD and the hip walks past it — the
@@ -629,9 +629,28 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
 
   /* Toe cap: continues the taper from `midZ` down to `tipZ` — short and
      blunt, not a point, so this stays a quad like the other two. Front-
-     bottom is the exact toe pivot (unmoved); front-top (the tip) is the
-     moved vertex. */
-  quad([pt(seam2C,soleZ),pt(seam2C,midZ),pt(toeX,tipZ),pt(toeX,soleZ)], tone, only);
+     bottom is the exact toe pivot (unmoved at rest); front-top (the tip)
+     is the moved vertex.
+
+     ARTICULATION: on top of that static shape, the whole piece hinges at
+     (seam2X,soleZ) — right where it meets the vamp — by an extra angle
+     that peaks at toe-off and relaxes through swing. That hinge point is
+     the pivot, not a corner that moves, so the seam stays attached to the
+     vamp at any angle; what swings is the tip, same as a sole flexing
+     open at the ball of the foot.
+
+     This is gated to SWING ONLY (p>=duty): during STANCE the toe's sole
+     corner is the literal point ankleAt solves the roll from, continuously,
+     not just at the two boundary instants — rotating it independently
+     would lift it visibly off a floor it is supposed to still be rolling
+     on. During swing there is no floor contact to keep exact, so the same
+     hinge is free, and because -A.th is continuous across the stance/swing
+     boundary the motion still starts exactly where the static taper above
+     left off — no snap. */
+  const swingFlex=p>=CFG.gait.duty ? f.toeHingeAmt*Math.max(0,-A.th) : 0;
+  const hingeAng=dir*swingFlex, hx=seam2X, hz=soleZ;
+  const pth=(lx,lz)=>{ const r=rot(lx-hx,lz-hz,hingeAng); return pt(hx+r[0],hz+r[1]); };
+  quad([pth(seam2C,soleZ),pth(seam2C,midZ),pth(toeX,tipZ),pth(toeX,soleZ)], tone, only);
 
   /* Cuff: the shin is a QUAD, not a capsule — straight sides, straight ends.
      The knee joint still reads as round because the thigh capsule above
@@ -1039,6 +1058,7 @@ function readout(){
   reg(ctl(s,'shoe mid height (frac)',()=>f.midFrac,v=>f.midFrac=v,0.05,1.20,0.01,'render'));
   reg(ctl(s,'shoe tip height (frac)',()=>f.tipFrac,v=>f.tipFrac=v,0,1.00,0.01,'render'));
   reg(ctl(s,'toe flex on push-off',()=>f.tipFlexAmt,v=>f.tipFlexAmt=v,0,1.00,0.01,'render'));
+  reg(ctl(s,'toe hinge swing (rad/unit)',()=>f.toeHingeAmt,v=>f.toeHingeAmt=v,0,2.00,0.02,'render'));
   reg(ctl(s,'shoe collar inset (frac)',()=>f.insetFrac,v=>f.insetFrac=v,0,0.90,0.01,'render'));
   reg(ctl(s,'height variation',()=>f.vary,v=>{f.vary=v;readout();},0,0.25,0.005,'refresh'));
 }
