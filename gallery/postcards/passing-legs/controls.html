@@ -152,7 +152,7 @@ const CFG = {
      against it rather than chosen. */
   fig   : { hip:0.910, thigh:0.43, shin:0.42, ankle:0.075,
             rThigh:0.088, rKnee:0.066, rCuff:0.076,
-            sockLen:0.05, rSock:0.045,
+            sockLen:0.05, rSock:0.045, sockReach:0.03,
             shoeL:0.27, shoeH:0.055, heelBack:0.30,
             seam1Frac:0.35, seam2Frac:0.68, midFrac:0.55, tipFrac:0.22, insetFrac:0.25,
             vary:0.06 },
@@ -647,17 +647,24 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
         [cpx+px_*rC+dux*OVERLAP,cpy+py_*rC+duy*OVERLAP],
         [cpx-px_*rC+dux*OVERLAP,cpy-py_*rC+duy*OVERLAP]], tone, only);
 
-  /* The sock's bottom edge is not computed independently — it IS the
-     collar's top edge, the same two points, shared exactly. The sock lives
-     in the LEG's frame (it is trouser, not foot — it should not spin with
-     the roll) while the collar lives in the FOOT's frame, so the two only
-     agree at this one shared edge; sharing the actual vertices instead of
-     two separately-aimed overlaps is what keeps them aligned through the
-     whole roll, not just at rest. */
+  /* Straight, constant width, same orientation as the shin above it — the
+     sock does NOT rotate with the foot's roll (`th`); it is trouser, not
+     foot. It runs from the cuff to the ankle point along the leg's own
+     perpendicular (`px_,py_`, `dux,duy` — the same basis the cuff quad
+     above uses).
+
+     The collar it must meet DOES rotate with `th` and can sit a real
+     distance from the ankle point (not a rasterisation hairline) once the
+     foot rolls, so the ankle end reaches past the ankle by `f.sockReach`
+     — a real margin, not the sub-pixel OVERLAP used for seams between two
+     quads that share a frame. This end of the sock is the one place it is
+     allowed to overlap the collar rather than butt against it exactly. */
   const rS=f.rSock*hs*sc+grow;
+  const reach=f.sockReach*sc;
   quad([[cpx-px_*rS-dux*OVERLAP,cpy-py_*rS-duy*OVERLAP],
         [cpx+px_*rS-dux*OVERLAP,cpy+py_*rS-duy*OVERLAP],
-        collarFront, collarBack], tone, only);
+        [apx+px_*rS+dux*reach,apy+py_*rS+duy*reach],
+        [apx-px_*rS+dux*reach,apy-py_*rS+duy*reach]], tone, only);
 }
 
 function drawWalker(w,R){
@@ -1011,6 +1018,7 @@ function readout(){
   reg(ctl(s,'trouser cuff (m)',()=>f.rCuff,v=>f.rCuff=v,0.03,0.16,0.002,'render'));
   reg(ctl(s,'sock length (m)',()=>f.sockLen,v=>f.sockLen=v,0.01,0.15,0.002,'render'));
   reg(ctl(s,'sock width (m)',()=>f.rSock,v=>f.rSock=v,0.02,0.12,0.002,'render'));
+  reg(ctl(s,'sock reach into shoe (m)',()=>f.sockReach,v=>f.sockReach=v,0,0.08,0.002,'render'));
   reg(ctl(s,'shoe length (m)',()=>f.shoeL,v=>{f.shoeL=v;readout();},0.12,0.42,0.005,'render'));
   reg(ctl(s,'shoe height (m)',()=>f.shoeH,v=>f.shoeH=v,0.02,0.14,0.002,'render'));
   reg(ctl(s,'heel set back',()=>f.heelBack,v=>f.heelBack=v,0.10,0.50,0.01,'render'));
