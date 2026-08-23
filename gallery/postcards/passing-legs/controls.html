@@ -155,7 +155,7 @@ const CFG = {
             sockLen:0.05, rSock:0.045, sockReach:0.055,
             shoeL:0.31, shoeH:0.09, heelBack:0.30,
             seam1Frac:0.35, seam2Frac:0.68, midFrac:0.55, tipFrac:0.34, insetFrac:0.25,
-            tipFlexAmt:0.35, toeHingeAmt:0.9,
+            toeHingeAmt:0.9,
             vary:0.06 },
 
   /* Gait. The foot is PLANTED IN THE WORLD and the hip walks past it — the
@@ -592,18 +592,7 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
   const growM=grow/sc;
   const heelX=-dir*(F.hb+growM), toeX=dir*(F.tf+growM);
   const soleZ=-F.ah-growM, topZ=soleZ+F.sh+growM;
-  const midZ=soleZ+F.sh*f.midFrac+growM;
-
-  /* The toe cap's tip is the one moved vertex nothing else is pinned to —
-     the collar and vamp attach to the ankle pivot and to each other, and
-     the toe cap's OTHER three corners attach to the vamp's seam and to the
-     true floor pivot, so none of those can move without breaking something.
-     The tip can, freely, and `th` going negative (toe rolling down through
-     heel-off and toe-off, see ankleAt) is exactly the moment a real sole
-     flexes at the ball of the foot — so drive the tip's height off it: flat
-     through heel-strike and mid-stance, opening as push-off deepens. */
-  const tipFrac=Math.min(f.midFrac,f.tipFrac+f.tipFlexAmt*Math.max(0,-A.th));
-  const tipZ=soleZ+F.sh*tipFrac+growM;
+  const midZ=soleZ+F.sh*f.midFrac+growM, tipZ=soleZ+F.sh*f.tipFrac+growM;
   const seam1X=heelX+(toeX-heelX)*f.seam1Frac;
   const seam2X=heelX+(toeX-heelX)*f.seam2Frac;
   const insetX=(seam1X-heelX)*f.insetFrac;
@@ -623,32 +612,37 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
   const collarBack =pt(heelX+insetX,topZ), collarFront=pt(seam1A,topZ);
   quad([pt(heelX,soleZ),collarBack,collarFront,pt(seam1A,soleZ)], tone, only);
 
-  /* Vamp: full collar height on the back edge, tapered down to `midZ` on
-     the front (moved vertex) — no pivot on either corner. */
+  /* Vamp: a proper four-cornered quad like the other two — back edge full
+     collar height, front edge short but STILL VERTICAL, from soleZ up to
+     `midZ`. The moved vertex is the front-top one (dropped to midZ); the
+     front-bottom stays on the sole at the same x, so the front reads as a
+     real edge. Do not run the bottom out past `seam2B` to meet the toe:
+     that turns the front into one long diagonal and the piece stops being
+     a quad and reads as a triangle. It is also unnecessary — the toe cap
+     hinges about (seam2X,soleZ), a corner this quad already owns, so the
+     two can never come apart there however far the toe flexes. */
   quad([pt(seam1B,soleZ),pt(seam1B,topZ),pt(seam2B,midZ),pt(seam2B,soleZ)], tone, only);
 
   /* Toe cap: continues the taper from `midZ` down to `tipZ` — short and
-     blunt, not a point, so this stays a quad like the other two. Front-
-     bottom is the exact toe pivot (unmoved at rest); front-top (the tip)
-     is the moved vertex.
+     blunt, not a point, so this stays a quad like the other two.
 
-     ARTICULATION: on top of that static shape, the whole piece hinges at
-     (seam2X,soleZ) — right where it meets the vamp — by an extra angle
-     that peaks at toe-off and relaxes through swing. That hinge point is
-     the pivot, not a corner that moves, so the seam stays attached to the
-     vamp at any angle; what swings is the tip, same as a sole flexing
-     open at the ball of the foot.
+     ARTICULATION: the whole piece hinges at (seam2X,soleZ) — the BACK-
+     BOTTOM corner, where it meets the vamp, which is where the ball of a
+     real foot is. That is where a forefoot actually flexes: the ball
+     stays down, under load, and the TOES peel up off the ground as push-
+     off finishes — not the other way around. So the pivot is the back of
+     this piece, and what swings is the front: the tip lifts and the true
+     toe-pivot corner (toeX,soleZ) — the point ankleAt's late-stance roll
+     is solved from — comes UP OFF the floor with it. That is not a bug to
+     protect against here; a lifting toe is the correct picture once the
+     sole is flexing. The vamp's sole was extended above for exactly this
+     moment, so the ground line still reads as solid underneath.
 
-     This is gated to SWING ONLY (p>=duty): during STANCE the toe's sole
-     corner is the literal point ankleAt solves the roll from, continuously,
-     not just at the two boundary instants — rotating it independently
-     would lift it visibly off a floor it is supposed to still be rolling
-     on. During swing there is no floor contact to keep exact, so the same
-     hinge is free, and because -A.th is continuous across the stance/swing
-     boundary the motion still starts exactly where the static taper above
-     left off — no snap. */
-  const swingFlex=p>=CFG.gait.duty ? f.toeHingeAmt*Math.max(0,-A.th) : 0;
-  const hingeAng=dir*swingFlex, hx=seam2X, hz=soleZ;
+     Driven by `-A.th` with NO phase gate: it is naturally zero through
+     heel-strike and flat stance, rises through heel-off, peaks exactly at
+     toe-off, and eases back down through the first part of swing — a
+     continuous curve with no on/off seam anywhere to snap across. */
+  const hingeAng=dir*f.toeHingeAmt*Math.max(0,-A.th), hx=seam2X, hz=soleZ;
   const pth=(lx,lz)=>{ const r=rot(lx-hx,lz-hz,hingeAng); return pt(hx+r[0],hz+r[1]); };
   quad([pth(seam2C,soleZ),pth(seam2C,midZ),pth(toeX,tipZ),pth(toeX,soleZ)], tone, only);
 
@@ -1057,8 +1051,7 @@ function readout(){
   reg(ctl(s,'shoe seam 2 (frac)',()=>f.seam2Frac,v=>f.seam2Frac=v,0.10,0.95,0.01,'render'));
   reg(ctl(s,'shoe mid height (frac)',()=>f.midFrac,v=>f.midFrac=v,0.05,1.20,0.01,'render'));
   reg(ctl(s,'shoe tip height (frac)',()=>f.tipFrac,v=>f.tipFrac=v,0,1.00,0.01,'render'));
-  reg(ctl(s,'toe flex on push-off',()=>f.tipFlexAmt,v=>f.tipFlexAmt=v,0,1.00,0.01,'render'));
-  reg(ctl(s,'toe hinge swing (rad/unit)',()=>f.toeHingeAmt,v=>f.toeHingeAmt=v,0,2.00,0.02,'render'));
+  reg(ctl(s,'toe hinge (rad/unit)',()=>f.toeHingeAmt,v=>f.toeHingeAmt=v,0,2.00,0.02,'render'));
   reg(ctl(s,'shoe collar inset (frac)',()=>f.insetFrac,v=>f.insetFrac=v,0,0.90,0.01,'render'));
   reg(ctl(s,'height variation',()=>f.vary,v=>{f.vary=v;readout();},0,0.25,0.005,'refresh'));
 }
