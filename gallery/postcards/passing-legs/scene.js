@@ -128,8 +128,12 @@ function build(previousRanks=[]){
   ranks=CFG.ranks.map((r,index)=>{
     const previous=previousRanks[index];
     const sc=CFG.cam.focal*S/r.d;      // pixels per metre at this depth
-    return { d:r.d, tone:r.tone,
-             sepTone:Math.min(0.92, r.tone+CFG.sep),
+    /* Rank one receives the darkest leg tone and the final rank the
+       brightest; intermediate ranks are evenly interpolated. */
+    const fraction=CFG.ranks.length>1 ? index/(CFG.ranks.length-1) : 0;
+    const tone=CFG.legTones.min+(CFG.legTones.max-CFG.legTones.min)*fraction;
+    return { d:r.d, tone:tone,
+             sepTone:Math.min(0.92, tone+CFG.sep),
              sc:sc, halfW:(W*0.5)/sc,
              gap:r.gap, right:r.right,
              walkers:previous?.walkers||[], tNext:previous?.tNext??rrange(0,r.gap[1]) };
