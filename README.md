@@ -35,6 +35,8 @@ it requires the locally installed `ffmpeg` command (`brew install ffmpeg`). For 
 `python3 -m http.server` still works. Older postcards can still be opened
 directly; migrated postcards use nearby scene and values files.
 
+Run the playback regression check with `node --test test/playback.test.mjs`.
+
 ## Repository
 
 - [`gallery/`](gallery/) — the postcards themselves, and the page that lists

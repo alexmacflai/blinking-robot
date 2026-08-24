@@ -103,11 +103,14 @@ would go in it is overhead with no payoff until something actually needs it.
     shared builder owns the shell, Postcard Basics, Gallery writing and publish
     controls, component behaviour, and action sheet; the postcard’s
     `authoring.js` declares only its scene-specific sections.
-13. Each controls page must include these generic controls: pixel settings
-    (authoring grid/resolution and display fit where relevant), a monochrome
-    color palette (at least darkest and brightest tones), **Save PNG**, and
-    **Save values** (a copyable and downloadable complete configuration file
-    that replaces the postcard's values file). Its scene controls must expose
+13. Each controls page must use the shared builder and include its generic
+    **Postcard Basics** and **Gallery** sections: pixel settings (authoring
+    grid/resolution and display fit where relevant), a monochrome color palette
+    (at least darkest and brightest tones), publish state, and hover writing.
+    Its shared action sheet supplies **Play/Pause**, **Reset**, **Save Frame**,
+    **Save Video**, **Copy values**, and **Save values**. Save Values must be a
+    complete downloadable replacement for the postcard's `values.json`. Its
+    scene controls must expose
     the parameters a human is most likely to need: motion speed and duration,
     element position (x/y/z or the scene's meaningful equivalent), tonal
     shades, and any brief-specific or requested behaviour. Exercise judgement:

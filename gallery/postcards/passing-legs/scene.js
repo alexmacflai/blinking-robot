@@ -1,3 +1,5 @@
+import { createPlaybackState } from '../../shared/playback.js';
+
 (function(){
 "use strict";
 
@@ -610,8 +612,9 @@ function renderFrame(){
    DRIVER
    ==================================================================== */
 const DT=1/60;
-let acc=0,last=0,galleryPaused=false,manualPaused=false,driverActive=false,rafSeen=false,driverGeneration=0;
-const isPaused=()=>galleryPaused||manualPaused;
+let acc=0,last=0,driverActive=false,rafSeen=false;
+const playback=createPlaybackState();
+const isPaused=()=>playback.isPaused();
 const loadEl=document.getElementById('load');
 
 /* There is no cycle to seek to, so the opening frame is simply the traffic
@@ -653,22 +656,21 @@ function tick(now){
   renderFrame();
 }
 function rafLoop(now,generation){
-  if(generation!==driverGeneration) return;
+  if(!playback.isCurrent(generation)) return;
   if(isPaused()){ driverActive=false; return; }
   rafSeen=true; tick(now); requestAnimationFrame(next=>rafLoop(next,generation));
 }
 function startDriver(){
   if(driverActive||isPaused()) return;
   driverActive=true; last=performance.now();
-  const generation=++driverGeneration;
+  const generation=playback.generation();
   requestAnimationFrame(now=>rafLoop(now,generation));
   setTimeout(()=>{ if(!rafSeen) setInterval(()=>tick(),16); },400);
 }
 addEventListener('message',e=>{
   const d=e.data;
   if(!d||d.type!=='blinking-robot:preview-pause') return;
-  galleryPaused=Boolean(d.paused);
-  if(!isPaused()) startDriver();
+  if(playback.setGalleryPaused(d.paused)) startDriver(); else driverActive=false;
 });
 addEventListener('resize',fitCanvas);
 /* A plain resize listener is not enough. The stage can still have zero height
@@ -690,13 +692,13 @@ function png(){ const a=document.createElement('a'); a.download='passing-legs-'+
 window.__legs={ CFG:CFG,
   fit:fitCanvas, render:renderFrame, refresh:rebuild, update:renderFrame, rebuild, png,
   toggle:function(){
-    manualPaused=!manualPaused;
-    if(!manualPaused) startDriver(); else { driverActive=false; driverGeneration++; }
-    return manualPaused;
+    const shouldRun=playback.toggleManual();
+    if(shouldRun) startDriver(); else driverActive=false;
+    return !shouldRun;
   },
   run:function(sec){ for(let i=0;i<Math.round(sec*60);i++) stepWorld(DT); renderFrame(); },
-  pause:function(){ manualPaused=true; driverActive=false; driverGeneration++; },
-  play:function(){ manualPaused=false; startDriver(); },
+  pause:function(){ playback.pauseManual(); driverActive=false; },
+  play:function(){ if(playback.playManual()) startDriver(); },
   state:function(){ return ranks.map(R=>({d:R.d,tone:R.tone,n:R.walkers.length,
                                           x:R.walkers.map(w=>+w.x.toFixed(2))})); } };
 })();
