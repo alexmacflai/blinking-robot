@@ -391,8 +391,8 @@ function spawn(R){
   const dir = rnd()<R.right ? 1 : -1;
   const hs  = 1+f.vary*(rnd()*2-1);
   const sp  = g.speed*(1+g.vary*(rnd()*2-1))*hs;
-  const lead=(g.step*g.duty+g.leadReach)*hs;
-  const trail=(g.step*g.duty+g.trailReach)*hs;
+  const lead=(g.step*g.duty+g.leadReach-g.trailReach)*hs;
+  const trail=(g.step*g.duty-g.leadReach+g.trailReach)*hs;
   R.walkers.push({
     x   : -dir*(R.halfW+0.55),
     dir : dir,
@@ -400,7 +400,7 @@ function spawn(R){
     speed: sp,
     lead : lead,
     trail : trail,
-    stride : (lead+trail)/g.duty,
+    stride : 2*g.step*hs,
     p   : rnd()
   });
 }

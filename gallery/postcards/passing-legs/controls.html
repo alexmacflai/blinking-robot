@@ -433,8 +433,8 @@ function spawn(R){
   const dir = rnd()<R.right ? 1 : -1;
   const hs  = 1+f.vary*(rnd()*2-1);
   const sp  = g.speed*(1+g.vary*(rnd()*2-1))*hs;
-  const lead=(g.step*g.duty+g.leadReach)*hs;
-  const trail=(g.step*g.duty+g.trailReach)*hs;
+  const lead=(g.step*g.duty+g.leadReach-g.trailReach)*hs;
+  const trail=(g.step*g.duty-g.leadReach+g.trailReach)*hs;
   R.walkers.push({
     x   : -dir*(R.halfW+0.55),
     dir : dir,
@@ -442,7 +442,7 @@ function spawn(R){
     speed: sp,
     lead : lead,
     trail : trail,
-    stride : (lead+trail)/g.duty,
+    stride : 2*g.step*hs,
     p   : rnd()
   });
 }
@@ -1002,8 +1002,8 @@ function readout(){
   const L=f.thigh+f.shin;
   let out='rank   px/m  stride  cross    hip y\n';
   let bad=false;
-  const lead=g.step*g.duty+g.leadReach;
-  const trail=g.step*g.duty+g.trailReach;
+  const lead=g.step*g.duty+g.leadReach-g.trailReach;
+  const trail=g.step*g.duty-g.leadReach+g.trailReach;
   CFG.ranks.forEach((r,i)=>{
     const sc=CFG.cam.focal*S/r.d;
     const stride=(lead+trail)*sc;
@@ -1042,7 +1042,7 @@ function readout(){
 
 /* ---------- gait ------------------------------------------------------ */
 {
-  const s=section('GAIT','The foot is planted in the world and the hip walks past it. Lead and trailing reach set each contact pose independently; their sum sets the stride, so the planted foot still cannot skate. Hip height and reach are solved together against leg length: watch the two extension figures above, and keep heel strike under 99.5% or the IK clamp starts dragging the foot instead of planting it.');
+  const s=section('GAIT','The foot is planted in the world and the hip walks past it. Upcoming and pushing-off reach redistribute a fixed stride, so changing either pose does not slow the cadence or make the airborne shoe float. Hip height and reach are solved together against leg length: watch the two extension figures above, and keep heel strike under 99.5% or the IK clamp starts dragging the foot instead of planting it.');
   reg(ctl(s,'speed (m/s)',()=>CFG.gait.speed,v=>CFG.gait.speed=v,0.15,1.80,0.01,'render'));
   reg(ctl(s,'step base (m)',()=>{return CFG.gait.step;},v=>{CFG.gait.step=v;readout();},0.20,0.80,0.005,'rebuild'));
   reg(ctl(s,'stance fraction',()=>CFG.gait.duty,v=>{CFG.gait.duty=v;readout();},0.50,0.75,0.01,'rebuild'));
