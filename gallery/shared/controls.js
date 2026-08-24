@@ -113,13 +113,14 @@ export async function createGalleryMetadataControls({ mount, metadataUrl = './ga
   const editorLabel = document.createElement('label'); editorLabel.className = 'postcard-editor-label'; editorLabel.textContent = 'hover text';
   const tools = document.createElement('div'); tools.className = 'postcard-editor-tools';
   const editor = document.createElement('div'); editor.className = 'postcard-rich-text'; editor.contentEditable = 'true'; editor.spellcheck = true; editor.setAttribute('role', 'textbox'); editor.setAttribute('aria-multiline', 'true'); editor.setAttribute('aria-label', 'Hover text'); editor.dataset.placeholder = 'Write the text that appears over this postcard in the gallery.'; editor.innerHTML = cleanGalleryText(metadata.galleryText);
-  const saveText = () => { metadata.galleryText = cleanGalleryText(editor.innerHTML); };
+  const saveText = () => { metadata.galleryText = editor.innerHTML; };
   for (const [command, labelText] of [['bold', 'B'], ['italic', 'I']]) {
     const tool = document.createElement('button'); tool.type = 'button'; tool.className = 'postcard-editor-tool'; tool.textContent = labelText;
     tool.addEventListener('mousedown', event => event.preventDefault()); tool.addEventListener('click', () => { editor.focus(); document.execCommand(command); saveText(); }); tools.append(tool);
   }
-  editor.addEventListener('input', saveText); editor.addEventListener('blur', () => { saveText(); editor.innerHTML = cleanGalleryText(metadata.galleryText); });
-  section.append(row, editorLabel, tools, editor, note('Use Enter for a new paragraph. Select text, then use B or I.'), button('SAVE GALLERY DETAILS', () => { saveText(); downloadJson('gallery.json', metadata); }));
+  editor.addEventListener('keydown', event => event.stopPropagation());
+  editor.addEventListener('input', saveText); editor.addEventListener('blur', () => { metadata.galleryText = cleanGalleryText(editor.innerHTML); editor.innerHTML = metadata.galleryText; });
+  section.append(row, editorLabel, tools, editor, note('Use Enter for a new paragraph. Select text, then use B or I.'), button('SAVE GALLERY DETAILS', () => { metadata.galleryText = cleanGalleryText(editor.innerHTML); downloadJson('gallery.json', metadata); }));
   mount.append(section);
   return metadata;
 }
@@ -232,8 +233,9 @@ export function createPostcardControls({ panel, title, description, scene, confi
         };
         format('bold', 'B'); format('italic', 'I');
         const show = () => { if (document.activeElement !== editor) editor.innerHTML = cleanGalleryText(get()); };
-        const save = () => { set(cleanGalleryText(editor.innerHTML)); applySceneUpdate(scene, options.update || 'none'); };
-        editor.addEventListener('input', save); editor.addEventListener('blur', () => { save(); editor.innerHTML = cleanGalleryText(get()); sync(); });
+        const save = () => { set(editor.innerHTML); };
+        editor.addEventListener('keydown', event => event.stopPropagation());
+        editor.addEventListener('input', save); editor.addEventListener('blur', () => { set(cleanGalleryText(editor.innerHTML)); editor.innerHTML = cleanGalleryText(get()); sync(); });
         element.append(label, toolbar, editor); syncers.push(show); show(); return api;
       },
       action(label, callback, updateKind = null) { const control = button(label, () => { callback(); if (updateKind) update(updateKind); else sync(); }); if (updateKind) control.dataset.update = updateKind; element.append(control); return api; },

@@ -1018,7 +1018,7 @@ function startDriver(){
 
 addEventListener('keydown',e=>{
   const tag=(e.target.tagName||'').toLowerCase();
-  if(tag==='input'||tag==='textarea') return;
+  if(tag==='input'||tag==='textarea'||tag==='select'||e.target.isContentEditable) return;
   if(e.code==='Space'){paused=!paused;e.preventDefault();}
   if(e.key==='h'&&hud){hud.style.display=hud.style.display==='none'?'':'none';}
 });

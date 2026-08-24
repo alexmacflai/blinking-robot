@@ -18,7 +18,7 @@
     iframe { width:100%; height:100%; display:block; border:0; pointer-events:none; }
     .gallery-overlay { position:absolute; inset:0; z-index:1; display:flex; align-items:flex-end; padding:clamp(16px,7%,28px); background:var(--pc-white); color:var(--pc-black); opacity:0; text-decoration:none; transition:opacity .12s linear; }
     .preview:hover .gallery-overlay, .preview:focus-within .gallery-overlay { opacity:1; }
-    .gallery-copy { width:100%; font:400 clamp(14px,1.7vw,19px)/1.35 var(--pc-font-mono); letter-spacing:-.04em; background:conic-gradient(#000 25%,#242424 0 50%,#000 0 75%,#242424 0) 0 0/2px 2px; color:transparent; -webkit-background-clip:text; background-clip:text; }
+    .gallery-copy { width:100%; font:400 clamp(14px,1.7vw,19px)/1.35 var(--pc-font-mono); letter-spacing:-.04em; white-space:pre-wrap; tab-size:2; background:conic-gradient(#000 25%,#242424 0 50%,#000 0 75%,#242424 0) 0 0/2px 2px; color:transparent; -webkit-background-clip:text; background-clip:text; }
     .gallery-copy p { margin:0 0 .8em; }.gallery-copy p:last-child { margin-bottom:0; }.gallery-copy strong { font-weight:700; }.gallery-copy em { font-style:italic; }
     .card h2 { margin:12px 0 2px; font-size:13px; font-weight:500; letter-spacing:.08em; }
     .card a { color:var(--ink); text-decoration:none; }
@@ -33,7 +33,7 @@
     <p class="intro">Coded animation postcards: small worlds where something keeps moving.</p>
     <section class="grid" id="gallery" aria-label="Postcards"></section>
   </main>
-  <script>
+  <script type="module">
     const POSTCARDS = [
       { title:'Windmill', description:'procedural 1-bit postcard', src:'postcards/windmill/index.html', metadata:'postcards/windmill/values.json', select: values => values.postcard },
       { title:'Coffee', description:'procedural 1-bit postcard', src:'postcards/coffee/index.html', metadata:'postcards/coffee/gallery.json' },
@@ -72,9 +72,13 @@
       card.className = 'card';
       const preview = document.createElement('div'); preview.className = 'preview';
       const frame = document.createElement('iframe'); frame.title = `${postcard.title} preview`; frame.src = postcard.src; frame.loading = 'lazy'; frame.tabIndex = -1;
-      const overlay = document.createElement('a'); overlay.className = 'gallery-overlay'; overlay.href = postcard.src; overlay.setAttribute('aria-label', `Open ${postcard.title}`);
-      const copy = document.createElement('div'); copy.className = 'gallery-copy'; copy.innerHTML = safeGalleryText(metadata.galleryText);
-      overlay.append(copy); preview.append(frame, overlay);
+      preview.append(frame);
+      const galleryText = safeGalleryText(metadata.galleryText).replace(/<[^>]+>/g, '').trim();
+      if (galleryText) {
+        const overlay = document.createElement('a'); overlay.className = 'gallery-overlay'; overlay.href = postcard.src; overlay.setAttribute('aria-label', `Open ${postcard.title}`);
+        const copy = document.createElement('div'); copy.className = 'gallery-copy'; copy.innerHTML = safeGalleryText(metadata.galleryText);
+        overlay.append(copy); preview.append(overlay);
+      }
       const heading = document.createElement('h2'), title = document.createElement('a'); title.href = postcard.src; title.textContent = postcard.title; heading.append(title);
       const description = document.createElement('p'); description.append(document.createTextNode(`${postcard.description} · `)); const open = document.createElement('a'); open.href = postcard.src; open.textContent = 'open animation'; description.append(open);
       card.append(preview, heading, description);
