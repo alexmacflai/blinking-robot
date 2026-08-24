@@ -10,7 +10,10 @@ Reusable browser code used by two or more postcard authoring surfaces.
 
 - [controls.js](controls.js) — component-first authoring-panel builder,
   canonical sidebar shell, shared controls, update contract, action bar,
-  copying, and values downloads.
+  copying, and values downloads. Its controls tokens define the monochrome
+  palette, `#C5E714` accent, spacing, borders, scrollbar, and Fira type stack.
+- [fonts/](fonts/README.md) — local Fira Sans and Fira Mono files used by the
+  controls, without a remote font dependency.
 
 ## Local rules
 
