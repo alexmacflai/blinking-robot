@@ -1,4 +1,4 @@
-window.COFFEE_VALUES = {
+{
   "gridK": 26,
   "fit": "fill",
   "ink": "#0d1424",
@@ -108,5 +108,4 @@ window.COFFEE_VALUES = {
     "dripEvery": 0.5,
     "dripSpeed": 110
   }
-};
-
+}

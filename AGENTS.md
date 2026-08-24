@@ -99,7 +99,10 @@ would go in it is overhead with no payoff until something actually needs it.
     live controls that let the human author meaningfully tune the scene without
     editing code. Start from the Windmill controls page as the interaction
     benchmark, adapting its UI and controls to the scene rather than copying its
-    implementation blindly.
+    implementation blindly. Use `gallery/shared/controls.js` directly: the
+    shared builder owns the shell, Postcard Basics, Gallery writing and publish
+    controls, component behaviour, and action sheet; the postcard’s
+    `authoring.js` declares only its scene-specific sections.
 13. Each controls page must include these generic controls: pixel settings
     (authoring grid/resolution and display fit where relevant), a monochrome
     color palette (at least darkest and brightest tones), **Save PNG**, and

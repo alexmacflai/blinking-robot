@@ -10,6 +10,7 @@ A coded animation postcard of people passing a floor-level camera.
 
 - [`index.html`](index.html) — public postcard
 - [`controls.html`](controls.html) — maker-facing controls
+- [`authoring.js`](authoring.js) — Passing Legs’ shared-component controls declaration
 - [`gallery.json`](gallery.json) — gallery publish state and hover writing
 - [`brief.md`](brief.md) — scene intent
 - [`references/README.md`](references/README.md) — supplied source material

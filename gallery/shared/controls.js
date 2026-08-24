@@ -41,6 +41,30 @@ export function downloadJson(name, value) {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
+export function saveCanvasPng(canvas, name = 'postcard-frame.png') {
+  const output = document.createElement('canvas'); output.width = 2160; output.height = 3840;
+  const context = output.getContext('2d'); context.imageSmoothingEnabled = false;
+  context.drawImage(canvas, 0, 0, output.width, output.height);
+  output.toBlob(blob => { const url = URL.createObjectURL(blob); const link = Object.assign(document.createElement('a'), { href: url, download: name }); link.click(); setTimeout(() => URL.revokeObjectURL(url), 0); }, 'image/png');
+}
+
+export async function saveCanvasVideo(canvas, { mp4Url = '/__blinking-robot/export/mp4', duration = 30, onProgress = () => {} } = {}) {
+  if (!canvas.captureStream || !window.MediaRecorder) throw new Error('Video export is unavailable in this browser.');
+  const output = document.createElement('canvas'); output.width = 1080; output.height = 1920;
+  const outputContext = output.getContext('2d'); outputContext.imageSmoothingEnabled = false;
+  let painting = true; const paint = () => { outputContext.drawImage(canvas, 0, 0, output.width, output.height); if (painting) requestAnimationFrame(paint); }; paint();
+  const stream = output.captureStream(30);
+  const type = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+  const recorder = new MediaRecorder(stream, { mimeType: type }); const chunks = [];
+  recorder.addEventListener('dataavailable', event => { if (event.data.size) chunks.push(event.data); });
+  const result = new Promise((resolve, reject) => { recorder.addEventListener('stop', resolve, { once:true }); recorder.addEventListener('error', () => reject(new Error('Video recording failed.')), { once:true }); });
+  const started = performance.now(); const timer = setInterval(() => { const remaining = Math.max(0, duration - (performance.now() - started) / 1000); onProgress(`recording video · ${Math.ceil(remaining)}s`); }, 250);
+  recorder.start(250); await new Promise(resolve => setTimeout(resolve, duration * 1000)); recorder.stop(); await result; painting=false; clearInterval(timer); onProgress('encoding MP4…');
+  const response = await fetch(mp4Url, { method:'POST', headers:{ 'Content-Type':'video/webm' }, body:new Blob(chunks, { type:'video/webm' }) }).catch(() => { throw new Error('MP4 export needs the authoring server: python3 gallery/export-server.py'); });
+  if (!response.ok) throw new Error('MP4 export needs the authoring server: python3 gallery/export-server.py');
+  const url = URL.createObjectURL(await response.blob()); const link = Object.assign(document.createElement('a'), { href:url, download:'postcard-video-1080x1920-30s.mp4' }); link.click(); setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 function installStyles() {
   if (!document.getElementById('postcard-controls-theme')) {
     const theme = document.createElement('link');
@@ -125,7 +149,7 @@ export async function createGalleryMetadataControls({ mount, metadataUrl = './ga
   return metadata;
 }
 
-export function createPostcardControls({ panel, title, description, scene, config, valuesFile = 'values.json', gridValues = [] }) {
+export function createPostcardControls({ panel, title, description, scene, config, valuesFile = 'values.json', gridValues = [], galleryConfig = null, galleryFile = null }) {
   installStyles();
   panel.className = 'postcard-panel';
   panel.replaceChildren();
@@ -252,13 +276,14 @@ export function createPostcardControls({ panel, title, description, scene, confi
   basics.color({ label: 'darkest', path: 'ink', update: 'refresh' }); basics.color({ label: 'brightest', path: 'paper', update: 'refresh' });
   basics.action('SWAP TONES', () => { [config.ink, config.paper] = [config.paper, config.ink]; }, 'refresh');
 
-  config.postcard ??= { published: false, galleryText: '' };
-  config.postcard.published ??= false;
-  config.postcard.galleryText ??= '';
+  const galleryValues = galleryConfig || (config.postcard ??= { published: false, galleryText: '' });
+  galleryValues.published ??= false;
+  galleryValues.galleryText ??= '';
   const gallery = section('GALLERY');
-  gallery.toggle({ label: 'published', path: 'postcard.published', update: 'none' });
-  gallery.richText({ label: 'hover text', path: 'postcard.galleryText', update: 'none', placeholder: 'Write the text that appears over this postcard in the gallery.' });
-  gallery.note('Use Enter for a new paragraph. Select text, then use B or I. Save values downloads this writing and publish state with the postcard configuration.');
+  gallery.toggle({ label: 'published', get: () => galleryValues.published, set: value => { galleryValues.published = value; }, update: 'none' });
+  gallery.richText({ label: 'hover text', get: () => galleryValues.galleryText, set: value => { galleryValues.galleryText = value; }, update: 'none', placeholder: 'Write the text that appears over this postcard in the gallery.' });
+  gallery.note(galleryFile ? 'Use Enter for a new paragraph. Select text, then use B or I. Save gallery details downloads the file used by the gallery.' : 'Use Enter for a new paragraph. Select text, then use B or I. Save values downloads this writing and publish state with the postcard configuration.');
+  if (galleryFile) gallery.action('SAVE GALLERY DETAILS', () => downloadJson(galleryFile, galleryValues));
 
   const actions = document.createElement('nav'); actions.className = 'postcard-actions'; actions.setAttribute('aria-label', 'Postcard actions');
   actions.append(button('play / pause', () => scene.togglePaused()), button('reset', () => location.reload()), button('save frame', () => scene.savePng()), button('save video', () => {

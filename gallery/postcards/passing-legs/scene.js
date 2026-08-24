@@ -610,7 +610,8 @@ function renderFrame(){
    DRIVER
    ==================================================================== */
 const DT=1/60;
-let acc=0,last=0,galleryPaused=false,driverActive=false,rafSeen=false;
+let acc=0,last=0,galleryPaused=false,manualPaused=false,driverActive=false,rafSeen=false,driverGeneration=0;
+const isPaused=()=>galleryPaused||manualPaused;
 const loadEl=document.getElementById('load');
 
 /* There is no cycle to seek to, so the opening frame is simply the traffic
@@ -643,7 +644,7 @@ function fitCanvas(){
 }
 
 function tick(now){
-  if(galleryPaused) return;
+  if(isPaused()) return;
   fitCanvas();
   const n=(now===undefined)?performance.now():now;
   let dtr=(n-last)/1000; last=n;
@@ -651,21 +652,23 @@ function tick(now){
   acc+=dtr; while(acc>=DT){ stepWorld(DT); acc-=DT; }
   renderFrame();
 }
-function rafLoop(now){
-  if(galleryPaused){ driverActive=false; return; }
-  rafSeen=true; tick(now); requestAnimationFrame(rafLoop);
+function rafLoop(now,generation){
+  if(generation!==driverGeneration) return;
+  if(isPaused()){ driverActive=false; return; }
+  rafSeen=true; tick(now); requestAnimationFrame(next=>rafLoop(next,generation));
 }
 function startDriver(){
-  if(driverActive||galleryPaused) return;
+  if(driverActive||isPaused()) return;
   driverActive=true; last=performance.now();
-  requestAnimationFrame(rafLoop);
+  const generation=++driverGeneration;
+  requestAnimationFrame(now=>rafLoop(now,generation));
   setTimeout(()=>{ if(!rafSeen) setInterval(()=>tick(),16); },400);
 }
 addEventListener('message',e=>{
   const d=e.data;
   if(!d||d.type!=='blinking-robot:preview-pause') return;
   galleryPaused=Boolean(d.paused);
-  if(!galleryPaused) startDriver();
+  if(!isPaused()) startDriver();
 });
 addEventListener('resize',fitCanvas);
 /* A plain resize listener is not enough. The stage can still have zero height
@@ -682,10 +685,18 @@ startDriver();
 
 /* Console handle. `run(sec)` advances the traffic without drawing, which is
    how you look for a crossing rather than waiting for one. */
+function rebuild(){ build(); warmup(); fitCanvas(); renderFrame(); }
+function png(){ const a=document.createElement('a'); a.download='passing-legs-'+W+'x'+H+'.png'; a.href=cv.toDataURL('image/png'); a.click(); }
 window.__legs={ CFG:CFG,
+  fit:fitCanvas, render:renderFrame, refresh:rebuild, update:renderFrame, rebuild, png,
+  toggle:function(){
+    manualPaused=!manualPaused;
+    if(!manualPaused) startDriver(); else { driverActive=false; driverGeneration++; }
+    return manualPaused;
+  },
   run:function(sec){ for(let i=0;i<Math.round(sec*60);i++) stepWorld(DT); renderFrame(); },
-  pause:function(){ galleryPaused=true; driverActive=false; },
-  play:function(){ galleryPaused=false; startDriver(); },
+  pause:function(){ manualPaused=true; driverActive=false; driverGeneration++; },
+  play:function(){ manualPaused=false; startDriver(); },
   state:function(){ return ranks.map(R=>({d:R.d,tone:R.tone,n:R.walkers.length,
                                           x:R.walkers.map(w=>+w.x.toFixed(2))})); } };
 })();
