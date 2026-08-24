@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import socket
 import shutil
 import subprocess
 import tempfile
+import threading
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -67,16 +69,35 @@ class GalleryHandler(SimpleHTTPRequestHandler):
         self.wfile.write(movie)
 
 
+class IPv6ThreadingHTTPServer(ThreadingHTTPServer):
+    address_family = socket.AF_INET6
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run the Blinking Robot authoring and MP4 export server.")
-    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--host", default="loopback", help="loopback (default), 127.0.0.1, or ::1")
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
     if not shutil.which("ffmpeg"):
         raise SystemExit("FFmpeg is required. Install it with: brew install ffmpeg")
-    server = ThreadingHTTPServer((args.host, args.port), GalleryHandler)
-    print(f"Blinking Robot authoring server: http://{args.host}:{args.port}/gallery/index.html")
-    server.serve_forever()
+    if args.host == "loopback":
+        servers = [
+            (ThreadingHTTPServer(("127.0.0.1", args.port), GalleryHandler), "http://127.0.0.1"),
+            (IPv6ThreadingHTTPServer(("::1", args.port), GalleryHandler), "http://[::1]"),
+        ]
+    elif args.host == "::1":
+        servers = [(IPv6ThreadingHTTPServer((args.host, args.port), GalleryHandler), f"http://[{args.host}]")]
+    else:
+        servers = [(ThreadingHTTPServer((args.host, args.port), GalleryHandler), f"http://{args.host}")]
+    for server, _ in servers:
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+    print(f"Blinking Robot authoring server: {servers[0][1]}:{args.port}/gallery/index.html")
+    try:
+        threading.Event().wait()
+    except KeyboardInterrupt:
+        for server, _ in servers:
+            server.shutdown()
+            server.server_close()
 
 
 if __name__ == "__main__":

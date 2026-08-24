@@ -1037,7 +1037,7 @@ function savePng(){
   a.download='windmill-frame-2160x3840.png';a.href=out.toDataURL('image/png');
   document.body.append(a);a.click();a.remove();
 }
-function saveVideo({mp4Url=null}={}){
+function saveVideo({mp4Url=null,onProgress=()=>{}}={}){
   if(videoExport) return Promise.reject(new Error('A video export is already running.'));
   if(!cv.captureStream||!window.MediaRecorder) return Promise.reject(new Error('WebM export is not supported in this browser.'));
   const mimeType=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
@@ -1050,14 +1050,20 @@ function saveVideo({mp4Url=null}={}){
     try{recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:12_000_000});}
     catch(error){stream.getTracks().forEach(track=>track.stop());reject(error);return;}
     const finish=()=>{videoExport=null;stream.getTracks().forEach(track=>track.stop());};
+    const endsAt=performance.now()+30_000;
+    const report=()=>onProgress(`recording video · ${Math.max(0,Math.ceil((endsAt-performance.now())/1000))}s`);
+    const countdown=setInterval(report,250);report();
     recorder.addEventListener('dataavailable',event=>{if(event.data.size)chunks.push(event.data);});
-    recorder.addEventListener('error',event=>{finish();reject(event.error||new Error('Video export failed.'));});
+    recorder.addEventListener('error',event=>{clearInterval(countdown);finish();reject(event.error||new Error('Video export failed.'));});
     recorder.addEventListener('stop',async()=>{
-      finish();
+      clearInterval(countdown);finish();
       try{
         let movie=new Blob(chunks,{type:mimeType}),name='windmill-video-1080x1920-30s.webm';
         if(mp4Url){
-          const response=await fetch(mp4Url,{method:'POST',headers:{'Content-Type':mimeType},body:movie});
+          onProgress('encoding MP4…');
+          let response;
+          try{response=await fetch(mp4Url,{method:'POST',headers:{'Content-Type':mimeType},body:movie});}
+          catch(_){throw new Error('MP4 export needs the authoring server: python3 gallery/export-server.py');}
           if(!response.ok) throw new Error('MP4 export needs the authoring server: python3 gallery/export-server.py');
           movie=await response.blob();name='windmill-video-1080x1920-30s.mp4';
         }
