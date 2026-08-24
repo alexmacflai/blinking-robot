@@ -187,9 +187,11 @@ const CFG = {
      hip has not yet risen. Peak extension there is 99.3% against a clamp at
      99.5%; that is the number that breaks first if you lengthen the stride. */
   gait  : { speed:0.78, step:0.554, duty:0.62,
+            leadReach:0, trailReach:0,
             flat:0.14, heelOff:0.62,
             heelUp:0.35, toeDown:0.62,
-            clear:0.015, tuck:0.05, bob:0.038, vary:0.13 },
+            clear:0.015, tuck:0.05, leadBend:0, trailBend:0,
+            bob:0.038, vary:0.13 },
 
   /* No contact shadow. Every rank's shoes land within about nine pixels of
      each other, so the shared contact line is what fastens them to the floor;
@@ -431,12 +433,16 @@ function spawn(R){
   const dir = rnd()<R.right ? 1 : -1;
   const hs  = 1+f.vary*(rnd()*2-1);
   const sp  = g.speed*(1+g.vary*(rnd()*2-1))*hs;
+  const lead=(g.step*g.duty+g.leadReach)*hs;
+  const trail=(g.step*g.duty+g.trailReach)*hs;
   R.walkers.push({
     x   : -dir*(R.halfW+0.55),
     dir : dir,
     hs  : hs,
     speed: sp,
-    step : g.step*hs,
+    lead : lead,
+    trail : trail,
+    stride : (lead+trail)/g.duty,
     p   : rnd()
   });
 }
@@ -451,7 +457,7 @@ function stepWorld(dt){
       /* One full cycle is two steps. Deriving the period from speed and step
          rather than setting it directly is what keeps the planted foot planted
          instead of skating along the floor. */
-      w.p=(w.p+dt*w.speed/(2*w.step))%1;
+      w.p=(w.p+dt*w.speed/w.stride)%1;
       if(Math.abs(w.x)>R.halfW+0.7) R.walkers.splice(i,1);
     }
   }
@@ -472,7 +478,7 @@ function stepWorld(dt){
    ==================================================================== */
 function rot(x,z,a){ const c=Math.cos(a), s=Math.sin(a); return [x*c-z*s, x*s+z*c]; }
 
-function plant(w,u){ return w.x - w.dir*(u-0.5)*2*w.step*CFG.gait.duty; }
+function plant(w,u){ return w.x-w.dir*u*(w.lead+w.trail)+w.dir*w.lead; }
 
 /* The foot as a rigid body: three points in its own frame, measured from the
    sole under the ankle. Heel and toe are SOLE points, which is what the roll
@@ -494,7 +500,7 @@ function footFrame(w){
    Returns { x, z, th } in world metres and radians, th>0 = toe up. */
 function ankleAt(w,p){
   const g=CFG.gait, F=footFrame(w), dir=w.dir;
-  const stride=2*w.step*g.duty;
+  const pushTilt=g.toeDown+g.trailBend;
 
   if(p<g.duty){
     const u=p/g.duty, A=plant(w,u);
@@ -519,7 +525,7 @@ function ankleAt(w,p){
          What stays down in front of the ball is drawn, not simulated: the
          toe cap counter-rotates by exactly this `th` in drawLeg, so it
          lies flat on z=0 from the ball to the tip. */
-      th=-g.toeDown*smooth((u-g.heelOff)/(1-g.heelOff));
+      th=-pushTilt*smooth((u-g.heelOff)/(1-g.heelOff));
       px_=A+dir*F.bl; pz_=0; lx=-dir*F.bl; lz=F.ah;
     }
     const r=rot(lx,lz,dir*th);
@@ -530,10 +536,10 @@ function ankleAt(w,p){
      cannot slip on landing or take off. Their world positions come from the
      stance algebra, not from where the foot happens to be. */
   const s=(p-g.duty)/(1-g.duty);
-  const Aprev=w.x - dir*2*w.step*(p-g.duty) - dir*w.step*g.duty;
-  const Anext=w.x + dir*2*w.step*(1-p)     + dir*w.step*g.duty;
+  const Aprev=w.x-dir*w.stride*(p-g.duty)-dir*w.trail;
+  const Anext=w.x+dir*w.stride*(1-p)+dir*w.lead;
 
-  let r=rot(-dir*F.bl,F.ah,dir*(-g.toeDown));
+  let r=rot(-dir*F.bl,F.ah,dir*(-pushTilt));
   const x0=Aprev+dir*F.bl+r[0], z0=r[1];
   r=rot(dir*F.hb,F.ah,dir*(g.heelUp));
   const x1=Anext-dir*F.hb+r[0], z1=r[1];
@@ -541,8 +547,9 @@ function ankleAt(w,p){
   const e=smooth(s);
   return { x:x0+(x1-x0)*e,
            z:z0+(z1-z0)*e + g.clear*w.hs*Math.sin(Math.PI*Math.pow(s,0.72)),
-           th:-g.toeDown+(g.heelUp+g.toeDown)*smooth(Math.min(1,s/0.6)),
-           tuck:g.tuck*Math.sin(Math.PI*Math.pow(s,0.6)) };
+           th:-pushTilt+(g.heelUp+pushTilt)*smooth(Math.min(1,s/0.6)),
+           tuck:g.tuck*Math.sin(Math.PI*Math.pow(s,0.6)),
+           leadBend:g.leadBend*Math.sin(Math.PI*Math.pow(s,1.7)) };
 }
 
 /* ======================================================================
@@ -571,13 +578,14 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
   const A=ankleAt(w,p);
 
   let ax=A.x, az=A.z;
-  if(A.tuck){
+  if(A.tuck || A.leadBend){
     /* Pull the ankle toward the hip early in swing. It is zero at both ends,
        so the contact poses stay exact, and in between it forces the knee to
        flex hard just after toe-off — the beat that reads as walking rather
        than as a leg swinging on a hinge. */
-    ax=w.x+(ax-w.x)*(1-A.tuck);
-    az=hipZ+(az-hipZ)*(1-A.tuck);
+    const bend=clamp(A.tuck+A.leadBend,0,0.45);
+    ax=w.x+(ax-w.x)*(1-bend);
+    az=hipZ+(az-hipZ)*(1-bend);
   }
 
   const K=knee(w.x,hipZ,ax,az,f.thigh*hs,f.shin*hs,dir);
@@ -994,9 +1002,11 @@ function readout(){
   const L=f.thigh+f.shin;
   let out='rank   px/m  stride  cross    hip y\n';
   let bad=false;
+  const lead=g.step*g.duty+g.leadReach;
+  const trail=g.step*g.duty+g.trailReach;
   CFG.ranks.forEach((r,i)=>{
     const sc=CFG.cam.focal*S/r.d;
-    const stride=2*g.step*g.duty*sc;
+    const stride=(lead+trail)*sc;
     const cross=(W/sc+0.5)/g.speed;
     /* the SHORTEST walker in the rank is the one that can show a waist */
     const hipY=HOR-sc*(f.hip*(1-f.vary)-CFG.cam.height);
@@ -1006,7 +1016,7 @@ function readout(){
   });
   /* The gait's own invariant: past the IK clamp the foot is dragged, not
      planted, and the walk starts to skate. */
-  const hipHS=f.hip-g.bob, dx=g.step*g.duty-0.0305*(f.shoeL/0.27);
+  const hipHS=f.hip-g.bob, dx=lead-0.0305*(f.shoeL/0.27);
   const ext=Math.hypot(dx,hipHS-0.098)/L*100;
   out+='\nleg extension at heel strike  '+ext.toFixed(1)+'%'+(ext>99.5?'  <-- SLIPPING':'');
   out+='\nmid-stance extension          '+((f.hip-f.ankle)/L*100).toFixed(1)+'%';
@@ -1032,10 +1042,13 @@ function readout(){
 
 /* ---------- gait ------------------------------------------------------ */
 {
-  const s=section('GAIT','The foot is planted in the world and the hip walks past it. Speed and step fix the cadence — one cycle is 2·step/speed seconds — so a planted foot stays planted. Hip height and step are solved together against leg length: watch the two extension figures above, and keep heel strike under 99.5% or the IK clamp starts dragging the foot instead of planting it.');
+  const s=section('GAIT','The foot is planted in the world and the hip walks past it. Lead and trailing reach set each contact pose independently; their sum sets the stride, so the planted foot still cannot skate. Hip height and reach are solved together against leg length: watch the two extension figures above, and keep heel strike under 99.5% or the IK clamp starts dragging the foot instead of planting it.');
   reg(ctl(s,'speed (m/s)',()=>CFG.gait.speed,v=>CFG.gait.speed=v,0.15,1.80,0.01,'render'));
-  reg(ctl(s,'step (m)',()=>{return CFG.gait.step;},v=>{CFG.gait.step=v;readout();},0.20,0.80,0.005,'render'));
-  reg(ctl(s,'stance fraction',()=>CFG.gait.duty,v=>{CFG.gait.duty=v;readout();},0.50,0.75,0.01,'render'));
+  reg(ctl(s,'step base (m)',()=>{return CFG.gait.step;},v=>{CFG.gait.step=v;readout();},0.20,0.80,0.005,'rebuild'));
+  reg(ctl(s,'stance fraction',()=>CFG.gait.duty,v=>{CFG.gait.duty=v;readout();},0.50,0.75,0.01,'rebuild'));
+  const reach=document.createElement('h3'); reach.textContent='CONTACT REACH'; s.appendChild(reach);
+  reg(ctl(s,'upcoming foot reach (m)',()=>CFG.gait.leadReach,v=>{CFG.gait.leadReach=v;readout();},-0.16,0.16,0.002,'rebuild'));
+  reg(ctl(s,'pushing-off foot reach (m)',()=>CFG.gait.trailReach,v=>{CFG.gait.trailReach=v;readout();},-0.16,0.16,0.002,'rebuild'));
   reg(ctl(s,'hip drop (m)',()=>CFG.gait.bob,v=>{CFG.gait.bob=v;readout();},0,0.10,0.002,'render'));
   const h=document.createElement('h3'); h.textContent='FOOT ROLL'; s.appendChild(h);
   reg(ctl(s,'flat at',()=>CFG.gait.flat,v=>CFG.gait.flat=v,0.02,0.45,0.01,'render'));
@@ -1045,6 +1058,9 @@ function readout(){
   const h2=document.createElement('h3'); h2.textContent='SWING'; s.appendChild(h2);
   reg(ctl(s,'clearance (m)',()=>CFG.gait.clear,v=>CFG.gait.clear=v,0,0.12,0.002,'render'));
   reg(ctl(s,'knee tuck',()=>CFG.gait.tuck,v=>CFG.gait.tuck=v,0,0.25,0.005,'render'));
+  const kneeShape=document.createElement('h3'); kneeShape.textContent='KNEE SHAPE'; s.appendChild(kneeShape);
+  reg(ctl(s,'upcoming-leg bend (m)',()=>CFG.gait.leadBend,v=>CFG.gait.leadBend=v,0,0.20,0.002,'render'));
+  reg(ctl(s,'push-off-leg bend (rad)',()=>CFG.gait.trailBend,v=>CFG.gait.trailBend=v,0,0.45,0.01,'render'));
   reg(ctl(s,'speed variation',()=>CFG.gait.vary,v=>CFG.gait.vary=v,0,0.5,0.01,'refresh'));
 }
 
