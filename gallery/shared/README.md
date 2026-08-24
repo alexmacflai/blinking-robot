@@ -14,6 +14,9 @@ Reusable browser code used by two or more postcard authoring surfaces.
   palette, `#C5E714` accent, spacing, borders, scrollbar, and Fira type stack.
 - [fonts/](fonts/README.md) — local Fira Sans and Fira Mono files used by the
   controls, without a remote font dependency.
+- [controls-theme.css](controls-theme.css) — the static controls tokens, fonts,
+  and loading state. Every controls page links this in its `<head>` so the
+  loading view is styled before its authoring module starts.
 
 ## Local rules
 

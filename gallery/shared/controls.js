@@ -41,19 +41,16 @@ export function downloadJson(name, value) {
 }
 
 function installStyles() {
+  if (!document.getElementById('postcard-controls-theme')) {
+    const theme = document.createElement('link');
+    theme.id = 'postcard-controls-theme'; theme.rel = 'stylesheet'; theme.href = new URL('./controls-theme.css', import.meta.url).href;
+    document.head.append(theme);
+  }
   if (document.getElementById('postcard-controls-style')) return;
   const style = document.createElement('style');
   style.id = 'postcard-controls-style';
   style.textContent = `
-    @font-face{font-family:"Fira Mono";font-style:normal;font-weight:400;font-display:swap;src:url("/gallery/shared/fonts/fira-mono-regular.ttf") format("truetype")}@font-face{font-family:"Fira Mono";font-style:normal;font-weight:500;font-display:swap;src:url("/gallery/shared/fonts/fira-mono-medium.ttf") format("truetype")}@font-face{font-family:"Fira Mono";font-style:normal;font-weight:700;font-display:swap;src:url("/gallery/shared/fonts/fira-mono-bold.ttf") format("truetype")}@font-face{font-family:"Fira Sans";font-style:normal;font-weight:400;font-display:swap;src:url("/gallery/shared/fonts/fira-sans-regular.ttf") format("truetype")}@font-face{font-family:"Fira Sans";font-style:normal;font-weight:500;font-display:swap;src:url("/gallery/shared/fonts/fira-sans-medium.ttf") format("truetype")}
-    :root{
-      --pc-black:#000;--pc-white:#fff;--pc-white-80:rgba(255,255,255,.8);--pc-white-50:rgba(255,255,255,.5);--pc-white-15:rgba(255,255,255,.15);--pc-white-08:rgba(255,255,255,.08);
-      --pc-accent:#c5e714;--pc-border:1px;--pc-scrollbar:8px;
-      --pc-space-1:4px;--pc-space-2:8px;--pc-space-3:12px;--pc-space-4:16px;
-      --pc-font-sans:"Fira Sans",Arial,sans-serif;--pc-font-mono:"Fira Mono","SFMono-Regular",monospace;
-      --pc-panel-width:300px;
-    }
-    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:var(--pc-black);color:var(--pc-white);font:12px/1.35 var(--pc-font-sans)}
+    *{box-sizing:border-box}
     body.postcard-authoring{display:flex;overflow:hidden}.postcard-stage{flex:1;min-width:0;position:relative;display:flex;align-items:center;justify-content:center}.postcard-stage canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
     .postcard-panel{width:var(--pc-panel-width);height:100vh;flex:none;display:flex;flex-direction:column;overflow:hidden;background:var(--pc-black);border-left:var(--pc-border) solid var(--pc-white-15)}
     .postcard-panel-content{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}.postcard-panel-scrollable{height:100%;overflow-y:auto;scrollbar-width:none}.postcard-panel-scrollable::-webkit-scrollbar{display:none}.postcard-scrollbar{position:absolute;top:0;right:0;bottom:0;width:var(--pc-scrollbar);pointer-events:none}.postcard-scrollbar-thumb{position:absolute;right:2px;width:4px;min-height:var(--pc-scrollbar);background:var(--pc-accent);pointer-events:auto;cursor:grab}.postcard-scrollbar-thumb:active{cursor:grabbing}
@@ -63,7 +60,7 @@ function installStyles() {
     .postcard-value{min-width:64px;padding:2px var(--pc-space-1);border:var(--pc-border) solid var(--pc-white-15);background:var(--pc-white-08);color:var(--pc-accent);font:400 12px/1.3 var(--pc-font-mono);font-variant-numeric:tabular-nums}.postcard-range-value{margin:0;width:64px;appearance:textfield}.postcard-range-value::-webkit-inner-spin-button,.postcard-range-value::-webkit-outer-spin-button{appearance:none;margin:0}.postcard-row input[type=color]{margin-left:auto;width:46px;height:24px;padding:2px;border:var(--pc-border) solid var(--pc-white-15);background:var(--pc-white-08);cursor:pointer;border-radius:0}.postcard-row input[type=number],.postcard-row select{margin-left:auto;width:92px;background:var(--pc-white-08);border:var(--pc-border) solid var(--pc-white-15);color:var(--pc-accent);padding:3px var(--pc-space-1);font:400 12px/1.3 var(--pc-font-mono);border-radius:0}
     .postcard-choice-label{display:block;margin:var(--pc-space-2) 0 0;color:var(--pc-white-50);font:400 12px/1.25 var(--pc-font-sans)}.postcard-choice{display:flex;flex-wrap:wrap;gap:var(--pc-space-1);margin:var(--pc-space-2) 0}.postcard-chip,.postcard-button{border:var(--pc-border) solid var(--pc-white);background:transparent;color:var(--pc-white);border-radius:0;font:500 12px/1.2 var(--pc-font-sans);text-transform:uppercase;cursor:pointer}.postcard-chip{padding:6px var(--pc-space-2);font-family:var(--pc-font-mono);text-transform:none}.postcard-chip:hover,.postcard-button:hover{border-color:var(--pc-accent);color:var(--pc-accent)}.postcard-chip[aria-pressed=true]{background:var(--pc-accent);border-color:var(--pc-accent);color:var(--pc-black)}
     .postcard-button{width:100%;padding:8px;letter-spacing:.01em;margin-top:var(--pc-space-2)}.postcard-diagnostic{margin:var(--pc-space-2) 0 0;padding:var(--pc-space-2);background:var(--pc-white-08);border:var(--pc-border) solid var(--pc-white-15);color:var(--pc-white-50);font:400 11px/1.4 var(--pc-font-mono);white-space:pre-wrap}.postcard-actions{flex:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--pc-space-1);padding:var(--pc-space-3) var(--pc-space-4);background:var(--pc-black);border-top:var(--pc-border) solid var(--pc-white-15)}.postcard-actions .postcard-button{margin:0;padding:8px}.postcard-actions .postcard-button:first-child,.postcard-actions .postcard-button:nth-child(4),.postcard-actions .postcard-button:last-child{grid-column:span 2}.postcard-actions .primary{background:var(--pc-accent);border-color:var(--pc-accent);color:var(--pc-black)}
-    .postcard-toast{position:fixed;right:calc(var(--pc-panel-width) + var(--pc-space-2));bottom:var(--pc-space-2);z-index:40;background:var(--pc-black);border:var(--pc-border) solid var(--pc-accent);color:var(--pc-accent);padding:var(--pc-space-2);font:12px var(--pc-font-mono);opacity:0;transition:opacity .2s;pointer-events:none}.postcard-toast.on{opacity:1}.postcard-hud{position:absolute;left:10px;bottom:8px;opacity:.5;pointer-events:none;white-space:pre;font-family:var(--pc-font-mono)}.postcard-load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--pc-black);color:var(--pc-white-50);font:12px var(--pc-font-mono);letter-spacing:.1em;z-index:20}
+    .postcard-toast{position:fixed;right:calc(var(--pc-panel-width) + var(--pc-space-2));bottom:var(--pc-space-2);z-index:40;background:var(--pc-black);border:var(--pc-border) solid var(--pc-accent);color:var(--pc-accent);padding:var(--pc-space-2);font:12px var(--pc-font-mono);opacity:0;transition:opacity .2s;pointer-events:none}.postcard-toast.on{opacity:1}.postcard-hud{position:absolute;left:10px;bottom:8px;opacity:.5;pointer-events:none;white-space:pre;font-family:var(--pc-font-mono)}
   `;
   document.head.append(style);
 }
