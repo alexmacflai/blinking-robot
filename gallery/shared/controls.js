@@ -10,6 +10,7 @@ const setPath = (object, path, value) => {
 };
 
 export function applySceneUpdate(scene, kind = 'update') {
+  if (kind === 'none') return;
   if (kind === 'fit') return scene.fit();
   if (kind === 'render') return scene.render();
   if (kind === 'refresh') return scene.refresh();
@@ -56,10 +57,10 @@ function installStyles() {
     .postcard-panel-content{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}.postcard-panel-scrollable{height:100%;overflow-y:auto;scrollbar-width:none}.postcard-panel-scrollable::-webkit-scrollbar{display:none}.postcard-scrollbar{position:absolute;top:0;right:0;bottom:0;width:var(--pc-scrollbar);pointer-events:none}.postcard-scrollbar-thumb{position:absolute;right:2px;width:4px;min-height:var(--pc-scrollbar);background:var(--pc-accent);pointer-events:auto;cursor:grab}.postcard-scrollbar-thumb:active{cursor:grabbing}
     .postcard-controls-head{padding:var(--pc-space-3) var(--pc-space-4);border-bottom:var(--pc-border) solid var(--pc-white-15)}.postcard-controls-head h1{margin:0;color:var(--pc-white);font:700 14px/1.2 var(--pc-font-mono);letter-spacing:.04em;text-transform:uppercase}.postcard-controls-head p{margin:4px 0 0;color:var(--pc-white-50);font:400 14px/1.3 var(--pc-font-sans)}
     .postcard-section{padding:var(--pc-space-3) var(--pc-space-4);border-bottom:var(--pc-border) solid var(--pc-white-15)}.postcard-section h2{margin:0 0 var(--pc-space-3);color:var(--pc-accent);font:400 12px/1.2 var(--pc-font-mono);letter-spacing:.04em;text-transform:uppercase}.postcard-section .note{margin:var(--pc-space-2) 0 0;color:var(--pc-white-50);font:400 12px/1.35 var(--pc-font-sans)}
-    .postcard-row{display:flex;align-items:center;gap:var(--pc-space-2);margin:var(--pc-space-2) 0}.postcard-row label{color:var(--pc-white);font:400 12px/1.25 var(--pc-font-sans)}.postcard-range{display:block}.postcard-range label{display:block;margin-bottom:var(--pc-space-1)}.postcard-range-field{display:flex;align-items:center;gap:var(--pc-space-4)}.postcard-row input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:14px;background:linear-gradient(to right,var(--pc-accent) 0 var(--pc-progress),var(--pc-white-50) var(--pc-progress) 100%) center/100% 2px no-repeat;outline:0}.postcard-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:4px;height:14px;border-radius:0;background:var(--pc-accent);cursor:pointer}.postcard-row input[type=range]::-moz-range-thumb{width:4px;height:14px;border:0;border-radius:0;background:var(--pc-accent);cursor:pointer}
+    .postcard-row{display:flex;align-items:center;gap:var(--pc-space-2);margin:var(--pc-space-2) 0}.postcard-row label{color:var(--pc-white);font:400 12px/1.25 var(--pc-font-sans)}.postcard-row input[type=checkbox]{margin-left:auto;appearance:none;width:28px;height:14px;border:var(--pc-border) solid var(--pc-white-50);background:var(--pc-black);cursor:pointer}.postcard-row input[type=checkbox]::after{content:'';display:block;width:12px;height:12px;background:var(--pc-white-50);transition:transform .12s}.postcard-row input[type=checkbox]:checked{border-color:var(--pc-accent)}.postcard-row input[type=checkbox]:checked::after{background:var(--pc-accent);transform:translateX(14px)}.postcard-range{display:block}.postcard-range label{display:block;margin-bottom:var(--pc-space-1)}.postcard-range-field{display:flex;align-items:center;gap:var(--pc-space-4)}.postcard-row input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:14px;background:linear-gradient(to right,var(--pc-accent) 0 var(--pc-progress),var(--pc-white-50) var(--pc-progress) 100%) center/100% 2px no-repeat;outline:0}.postcard-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:4px;height:14px;border-radius:0;background:var(--pc-accent);cursor:pointer}.postcard-row input[type=range]::-moz-range-thumb{width:4px;height:14px;border:0;border-radius:0;background:var(--pc-accent);cursor:pointer}
     .postcard-value{min-width:64px;padding:2px var(--pc-space-1);border:var(--pc-border) solid var(--pc-white-15);background:var(--pc-white-08);color:var(--pc-accent);font:400 12px/1.3 var(--pc-font-mono);font-variant-numeric:tabular-nums}.postcard-range-value{margin:0;width:64px;appearance:textfield}.postcard-range-value::-webkit-inner-spin-button,.postcard-range-value::-webkit-outer-spin-button{appearance:none;margin:0}.postcard-row input[type=color]{margin-left:auto;width:46px;height:24px;padding:2px;border:var(--pc-border) solid var(--pc-white-15);background:var(--pc-white-08);cursor:pointer;border-radius:0}.postcard-row input[type=number],.postcard-row select{margin-left:auto;width:92px;background:var(--pc-white-08);border:var(--pc-border) solid var(--pc-white-15);color:var(--pc-accent);padding:3px var(--pc-space-1);font:400 12px/1.3 var(--pc-font-mono);border-radius:0}
     .postcard-choice-label{display:block;margin:var(--pc-space-2) 0 0;color:var(--pc-white-50);font:400 12px/1.25 var(--pc-font-sans)}.postcard-choice{display:flex;flex-wrap:wrap;gap:var(--pc-space-1);margin:var(--pc-space-2) 0}.postcard-chip,.postcard-button{border:var(--pc-border) solid var(--pc-white);background:transparent;color:var(--pc-white);border-radius:0;font:500 12px/1.2 var(--pc-font-sans);text-transform:uppercase;cursor:pointer}.postcard-chip{padding:6px var(--pc-space-2);font-family:var(--pc-font-mono);text-transform:none}.postcard-chip:hover,.postcard-button:hover{border-color:var(--pc-accent);color:var(--pc-accent)}.postcard-chip[aria-pressed=true]{background:var(--pc-accent);border-color:var(--pc-accent);color:var(--pc-black)}
-    .postcard-button{width:100%;padding:8px;letter-spacing:.01em;margin-top:var(--pc-space-2)}.postcard-diagnostic{margin:var(--pc-space-2) 0 0;padding:var(--pc-space-2);background:var(--pc-white-08);border:var(--pc-border) solid var(--pc-white-15);color:var(--pc-white-50);font:400 11px/1.4 var(--pc-font-mono);white-space:pre-wrap}.postcard-actions{flex:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--pc-space-1);padding:var(--pc-space-3) var(--pc-space-4);background:var(--pc-black);border-top:var(--pc-border) solid var(--pc-white-15)}.postcard-actions .postcard-button{margin:0;padding:8px}.postcard-actions .primary{background:var(--pc-accent);border-color:var(--pc-accent);color:var(--pc-black)}
+    .postcard-button{width:100%;padding:8px;letter-spacing:.01em;margin-top:var(--pc-space-2)}.postcard-editor-label{display:block;margin:var(--pc-space-2) 0 var(--pc-space-1);color:var(--pc-white);font:400 12px/1.25 var(--pc-font-sans)}.postcard-editor-tools{display:flex;gap:var(--pc-space-1);margin-bottom:var(--pc-space-1)}.postcard-editor-tool{width:28px;height:24px;padding:0;border:var(--pc-border) solid var(--pc-white-50);background:var(--pc-black);color:var(--pc-white);font:700 12px/1 var(--pc-font-mono);cursor:pointer}.postcard-editor-tool:last-child{font-family:var(--pc-font-mono);font-style:italic}.postcard-editor-tool:hover,.postcard-editor-tool:focus-visible{border-color:var(--pc-accent);color:var(--pc-accent)}.postcard-rich-text{min-height:96px;max-height:320px;resize:vertical;overflow:auto;padding:var(--pc-space-2);border:var(--pc-border) solid var(--pc-white-50);background:var(--pc-white-08);color:var(--pc-white);font:400 12px/1.45 var(--pc-font-mono);white-space:pre-wrap;outline:0}.postcard-rich-text:focus{border-color:var(--pc-accent)}.postcard-rich-text:empty::before{content:attr(data-placeholder);color:var(--pc-white-50);pointer-events:none}.postcard-rich-text p{margin:0 0 .7em}.postcard-rich-text p:last-child{margin-bottom:0}.postcard-diagnostic{margin:var(--pc-space-2) 0 0;padding:var(--pc-space-2);background:var(--pc-white-08);border:var(--pc-border) solid var(--pc-white-15);color:var(--pc-white-50);font:400 11px/1.4 var(--pc-font-mono);white-space:pre-wrap}.postcard-actions{flex:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--pc-space-1);padding:var(--pc-space-3) var(--pc-space-4);background:var(--pc-black);border-top:var(--pc-border) solid var(--pc-white-15)}.postcard-actions .postcard-button{margin:0;padding:8px}.postcard-actions .primary{background:var(--pc-accent);border-color:var(--pc-accent);color:var(--pc-black)}
     .postcard-toast{position:fixed;right:calc(var(--pc-panel-width) + var(--pc-space-2));bottom:var(--pc-space-2);z-index:40;background:var(--pc-black);border:var(--pc-border) solid var(--pc-accent);color:var(--pc-accent);padding:var(--pc-space-2);font:12px var(--pc-font-mono);opacity:0;transition:opacity .2s;pointer-events:none}.postcard-toast.on{opacity:1}.postcard-hud{position:absolute;left:10px;bottom:8px;opacity:.5;pointer-events:none;white-space:pre;font-family:var(--pc-font-mono)}
   `;
   document.head.append(style);
@@ -67,6 +68,61 @@ function installStyles() {
 
 function note(text) { const element = document.createElement('p'); element.className = 'note'; element.textContent = text; return element; }
 function button(label, callback, className = '') { const element = document.createElement('button'); element.type = 'button'; element.className = `postcard-button ${className}`.trim(); element.textContent = label; element.addEventListener('click', callback); return element; }
+
+// Gallery writing is intentionally a tiny format, not arbitrary HTML. It keeps
+// saved values portable and lets the gallery safely render paragraphs, line
+// breaks, bold, and italics without accepting markup from the wider page.
+function cleanGalleryText(value = '') {
+  if (!String(value).trim()) return '';
+  const template = document.createElement('template');
+  template.innerHTML = String(value);
+  const escape = text => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  const cleanChildren = node => [...node.childNodes].map(clean).join('');
+  const clean = node => {
+    if (node.nodeType === Node.TEXT_NODE) return escape(node.textContent);
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+    const tag = node.tagName.toLowerCase();
+    const children = cleanChildren(node);
+    if (tag === 'br') return '<br>';
+    if (tag === 'strong' || tag === 'b') return `<strong>${children}</strong>`;
+    if (tag === 'em' || tag === 'i') return `<em>${children}</em>`;
+    if (tag === 'p' || tag === 'div') return `<p>${children}</p>`;
+    return children;
+  };
+  const output = cleanChildren(template.content).replace(/<p>\s*<\/p>/g, '<p><br></p>');
+  return /<p|<br/.test(output) ? output : `<p>${output}</p>`;
+}
+
+// Legacy postcard panels use this while they remain on their older scene
+// controls. It gives every existing postcard the same saved gallery contract
+// without forcing a second, partial migration of those panels.
+export async function createGalleryMetadataControls({ mount, metadataUrl = './gallery.json' }) {
+  installStyles();
+  let metadata = { published: false, galleryText: '' };
+  try {
+    const response = await fetch(metadataUrl, { cache: 'no-store' });
+    if (!response.ok) throw new Error('metadata unavailable');
+    metadata = { ...metadata, ...await response.json() };
+  } catch (_) { /* A download can restore a missing metadata file. */ }
+  const section = document.createElement('section'); section.className = 'postcard-section';
+  section.append(Object.assign(document.createElement('h2'), { textContent: 'GALLERY' }));
+  const row = document.createElement('div'); row.className = 'postcard-row';
+  const label = document.createElement('label'); label.textContent = 'published';
+  const toggle = document.createElement('input'); toggle.type = 'checkbox'; toggle.checked = Boolean(metadata.published); toggle.setAttribute('aria-label', 'Published');
+  toggle.addEventListener('input', () => { metadata.published = toggle.checked; }); row.append(label, toggle);
+  const editorLabel = document.createElement('label'); editorLabel.className = 'postcard-editor-label'; editorLabel.textContent = 'hover text';
+  const tools = document.createElement('div'); tools.className = 'postcard-editor-tools';
+  const editor = document.createElement('div'); editor.className = 'postcard-rich-text'; editor.contentEditable = 'true'; editor.spellcheck = true; editor.setAttribute('role', 'textbox'); editor.setAttribute('aria-multiline', 'true'); editor.setAttribute('aria-label', 'Hover text'); editor.dataset.placeholder = 'Write the text that appears over this postcard in the gallery.'; editor.innerHTML = cleanGalleryText(metadata.galleryText);
+  const saveText = () => { metadata.galleryText = cleanGalleryText(editor.innerHTML); };
+  for (const [command, labelText] of [['bold', 'B'], ['italic', 'I']]) {
+    const tool = document.createElement('button'); tool.type = 'button'; tool.className = 'postcard-editor-tool'; tool.textContent = labelText;
+    tool.addEventListener('mousedown', event => event.preventDefault()); tool.addEventListener('click', () => { editor.focus(); document.execCommand(command); saveText(); }); tools.append(tool);
+  }
+  editor.addEventListener('input', saveText); editor.addEventListener('blur', () => { saveText(); editor.innerHTML = cleanGalleryText(metadata.galleryText); });
+  section.append(row, editorLabel, tools, editor, note('Use Enter for a new paragraph. Select text, then use B or I.'), button('SAVE GALLERY DETAILS', () => { saveText(); downloadJson('gallery.json', metadata); }));
+  mount.append(section);
+  return metadata;
+}
 
 export function createPostcardControls({ panel, title, description, scene, config, valuesFile = 'values.json', gridValues = [] }) {
   installStyles();
@@ -163,6 +219,23 @@ export function createPostcardControls({ panel, title, description, scene, confi
         row.className = 'postcard-row'; input.type = 'checkbox'; input.dataset.update = options.update || 'render'; labelInput(label, input, options.label); const show = () => { input.checked = Boolean(get()); };
         input.addEventListener('input', () => { set(input.checked); update(options.update || 'render'); }); row.append(label, input); element.append(row); syncers.push(show); show(); return api;
       },
+      richText(options) {
+        const get = resolve(options), set = assign(options), label = document.createElement('label'), toolbar = document.createElement('div'), editor = document.createElement('div');
+        label.className = 'postcard-editor-label'; label.textContent = options.label;
+        toolbar.className = 'postcard-editor-tools'; toolbar.setAttribute('aria-label', `${options.label} formatting`);
+        editor.className = 'postcard-rich-text'; editor.contentEditable = 'true'; editor.spellcheck = true; editor.dataset.update = options.update || 'none'; editor.setAttribute('role', 'textbox'); editor.setAttribute('aria-multiline', 'true'); editor.setAttribute('aria-label', options.label); editor.dataset.placeholder = options.placeholder || '';
+        const format = (command, label) => {
+          const control = document.createElement('button'); control.type = 'button'; control.className = 'postcard-editor-tool'; control.textContent = label; control.setAttribute('aria-label', command === 'bold' ? 'Bold selected text' : 'Italicize selected text');
+          control.addEventListener('mousedown', event => event.preventDefault());
+          control.addEventListener('click', () => { editor.focus(); document.execCommand(command); editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'format' })); });
+          toolbar.append(control);
+        };
+        format('bold', 'B'); format('italic', 'I');
+        const show = () => { if (document.activeElement !== editor) editor.innerHTML = cleanGalleryText(get()); };
+        const save = () => { set(cleanGalleryText(editor.innerHTML)); applySceneUpdate(scene, options.update || 'none'); };
+        editor.addEventListener('input', save); editor.addEventListener('blur', () => { save(); editor.innerHTML = cleanGalleryText(get()); sync(); });
+        element.append(label, toolbar, editor); syncers.push(show); show(); return api;
+      },
       action(label, callback, updateKind = null) { const control = button(label, () => { callback(); if (updateKind) update(updateKind); else sync(); }); if (updateKind) control.dataset.update = updateKind; element.append(control); return api; },
       diagnostic(render) { const output = document.createElement('pre'); output.className = 'postcard-diagnostic'; const refresh = () => { output.textContent = render(); }; diagnostics.push(refresh); refresh(); element.append(output); return api; }
     };
@@ -176,6 +249,14 @@ export function createPostcardControls({ panel, title, description, scene, confi
   basics.choice({ label: 'display fit', values: [{ value: 'fill', label: 'FILL' }, { value: 'crisp', label: 'CRISP' }], path: 'fit', update: 'fit' });
   basics.color({ label: 'darkest', path: 'ink', update: 'refresh' }); basics.color({ label: 'brightest', path: 'paper', update: 'refresh' });
   basics.action('SWAP TONES', () => { [config.ink, config.paper] = [config.paper, config.ink]; }, 'refresh');
+
+  config.postcard ??= { published: false, galleryText: '' };
+  config.postcard.published ??= false;
+  config.postcard.galleryText ??= '';
+  const gallery = section('GALLERY');
+  gallery.toggle({ label: 'published', path: 'postcard.published', update: 'none' });
+  gallery.richText({ label: 'hover text', path: 'postcard.galleryText', update: 'none', placeholder: 'Write the text that appears over this postcard in the gallery.' });
+  gallery.note('Use Enter for a new paragraph. Select text, then use B or I. Save values downloads this writing and publish state with the postcard configuration.');
 
   const actions = document.createElement('nav'); actions.className = 'postcard-actions'; actions.setAttribute('aria-label', 'Postcard actions');
   actions.append(button('play / pause', () => scene.togglePaused()), button('reset', () => location.reload()), button('save frame', () => scene.savePng()), button('save video', () => {

@@ -13,6 +13,7 @@ A coded animation postcard of a windmill.
 - [`authoring.js`](authoring.js) — Windmill’s component-first controls declaration
 - [`scene.js`](scene.js) — shared Windmill renderer
 - [`values.json`](values.json) — the single saved configuration for both pages
+  (including gallery publish state and hover writing)
 - [`brief.md`](brief.md) — scene intent
 - [`references/README.md`](references/README.md) — supplied source material
 
@@ -20,6 +21,8 @@ A coded animation postcard of a windmill.
 
 Run this postcard through the repository's local preview server. Save values
 downloads a replacement `values.json`; that one file supplies both surfaces.
+The **Gallery** section decides whether the postcard appears in the gallery and
+stores the hover writing, with paragraphs, bold, and italics.
 Save Frame exports the currently rendered Windmill frame as a 2160×3840 PNG.
 It fills the portrait frame directly with smoothing disabled, preserving the
 postcard's hard pixel grid.

@@ -43,7 +43,7 @@
 </style>
 </head>
 <body>
-<div id="panel"><h1>PASSING LEGS — CONTROLS</h1></div>
+<div id="panel"><h1>PASSING LEGS — CONTROLS</h1><div id="galleryMetadata"></div></div>
 <div id="stage"><canvas id="c"></canvas></div>
 <div id="load">WAITING ON THE FLOOR…</div>
 <script src="./values.js"></script><script src="./scene.js"></script><script>(function(){
@@ -312,6 +312,5 @@ function readout(){
 readout();
 })();
 
-</script></body></html>
-
+</script><script type="module">import { createGalleryMetadataControls } from '../../shared/controls.js';createGalleryMetadataControls({ mount: document.getElementById('galleryMetadata') });</script></body></html>
 
