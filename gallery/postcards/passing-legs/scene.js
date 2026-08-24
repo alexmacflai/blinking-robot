@@ -467,23 +467,19 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
      blunt, not a point, so this stays a quad like the other two.
 
      ARTICULATION: this piece hinges at (seam2X,soleZ) — its back-bottom
-     corner, the ball of the foot, the SAME point ankleAt now rolls the
-     forefoot rocker about (F.bl). The toes do not lift; the toes are what
-     stays on the floor. The hinge angle is exactly MINUS the body's roll
-     `th`, so the two cancel and the toe cap's world angle is zero: it lies
-     flat on the ground from ball to tip while the rest of the shoe rotates
-     up and away from it. `toeHingeAmt` is the amount of that cancellation
-     and 1.0 means exact — lower it only to deliberately under-flex.
-
-     That is the real mechanism, and it is why nothing here is gated on a
-     phase. `max(0,-A.th)` is zero whenever the foot is not toe-down, which
-     is precisely heel-strike and flat stance — the phases where a real
-     foot is rigid and does not bend at all. It rises only through heel-off,
-     peaks at toe-off, and is continuous into swing (A.th is the same value
-     on both sides of the boundary), decaying to zero on its own about a
-     third of the way through the swing as the joint returns to neutral. No
-     bend in mid-air, no seam to snap across. */
-  const hingeAng=dir*f.toeHingeAmt*Math.max(0,-A.th), hx=seam2X, hz=soleZ;
+     corner, the ball of the foot, the SAME point ankleAt rolls the forefoot
+     about. Its recovery is a contact constraint, not a phase curve: while
+     the unbent toe would penetrate the floor, take the most neutral angle
+     that keeps the tip exactly on it. As the ball rises, the tip releases
+     immediately at the maximum rate the floor permits; once the neutral toe
+     clears, the cap is already straight. `toeHingeAmt` scales that exact
+     contact bend (1.0 is full resistance). */
+  const ballZ=K.az+rot(seam2X,soleZ,th)[1];
+  const toeDX=toeX-seam2X;
+  const toeRestZ=K.az+rot(toeX,soleZ,th)[1];
+  const toeFloorAng=Math.asin(clamp(-ballZ/toeDX,-1,1));
+  const toeWorldAng=toeRestZ>=0 ? th : toeFloorAng;
+  const hingeAng=(toeWorldAng-th)*f.toeHingeAmt, hx=seam2X, hz=soleZ;
   const pth=(lx,lz)=>{ const r=rot(lx-hx,lz-hz,hingeAng); return pt(hx+r[0],hz+r[1]); };
   quad([pth(seam2C,soleZ),pth(seam2C,midZ),pth(toeX,tipZ),pth(toeX,soleZ)], tone, only);
 
@@ -693,4 +689,3 @@ window.__legs={ CFG:CFG,
   state:function(){ return ranks.map(R=>({d:R.d,tone:R.tone,n:R.walkers.length,
                                           x:R.walkers.map(w=>+w.x.toFixed(2))})); } };
 })();
-
