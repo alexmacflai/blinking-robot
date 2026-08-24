@@ -137,8 +137,9 @@ runtime assets.
 
 ## Verifying a change
 
-Start a local preview server from the repository root with
-`python3 -m http.server`, then open the relevant public `index.html` URL and
-confirm the animation runs. Open `controls.html` to exercise its controls,
-including PNG and values export.
+Start the local authoring server from the repository root with
+`python3 gallery/export-server.py`, then open the relevant public `index.html`
+URL and confirm the animation runs. Open `controls.html` to exercise its
+controls, including PNG, MP4, and values export. `python3 -m http.server`
+remains suitable for preview-only work.
 There are no automated tests.

@@ -37,6 +37,7 @@ visual medium or format.
 `[coded-animation]` `[procedural-rendering]` `[reference]` `[static-site]`
 `[browser]` `[performance]` `[scene]` `[vignette]`
 `[animation-controls]` `[art-direction]` `[motion]` `[rendering]`
+`[authoring]` `[video-export]`
 
 ## Postcard elements and behaviours
 

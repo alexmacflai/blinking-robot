@@ -180,7 +180,7 @@ export function createPostcardControls({ panel, title, description, scene, confi
   const actions = document.createElement('nav'); actions.className = 'postcard-actions'; actions.setAttribute('aria-label', 'Postcard actions');
   actions.append(button('play / pause', () => scene.togglePaused()), button('reset', () => location.reload()), button('save frame', () => scene.savePng()), button('save video', () => {
     if(!scene.saveVideo){notify('video export is unavailable');return;}
-    notify('recording 30s video');scene.saveVideo().then(()=>notify('video downloaded')).catch(error=>notify(error.message));
+    notify('recording 30s video');scene.saveVideo({mp4Url:'/__blinking-robot/export/mp4'}).then(()=>notify('MP4 downloaded')).catch(error=>notify(error.message));
   }), button('copy values', () => copyText(JSON.stringify(config, null, 2)).then(() => notify('values copied')).catch(() => notify('copy unavailable'))), button('save values', () => { downloadJson(valuesFile, config); notify('values downloaded'); }, 'primary'));
   panel.append(actions); syncScrollbar();
   return { section, sync, update, notify };

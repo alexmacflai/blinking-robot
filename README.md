@@ -26,9 +26,11 @@ go straight to one:
 Each postcard folder also has a maker-facing `controls.html`; its README routes
 to both surfaces and its supplied source material.
 
-Authoring postcards use a tiny local preview server—no install or build step.
-From the repository root, run `python3 -m http.server`, then open
-`http://localhost:8000/gallery/index.html`. Older postcards can still be opened
+Authoring postcards use a small local server. From the repository root, run
+`python3 gallery/export-server.py`, then open
+`http://localhost:8000/gallery/index.html`. This also enables MP4 video export;
+it requires the locally installed `ffmpeg` command (`brew install ffmpeg`). For preview-only work,
+`python3 -m http.server` still works. Older postcards can still be opened
 directly; migrated postcards use nearby scene and values files.
 
 ## Repository

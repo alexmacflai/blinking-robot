@@ -24,7 +24,9 @@ Save Frame exports the currently rendered Windmill frame as a 2160×3840 PNG.
 It fills the portrait frame directly with smoothing disabled, preserving the
 postcard's hard pixel grid.
 Save Video records the current Windmill animation into a 30-second,
-1080×1920 WebM at 30fps; it leaves the live preview at its normal size.
+1080×1920 WebM at 30fps, then the local authoring server transcodes it to H.264
+MP4. Start that server with `python3 gallery/export-server.py`; it leaves the
+live preview at its normal size.
 
 Postcard surface, controls, and reference-material requirements live in
 [`AGENTS.md`](../../../AGENTS.md).

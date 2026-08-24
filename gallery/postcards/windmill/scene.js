@@ -1037,7 +1037,7 @@ function savePng(){
   a.download='windmill-frame-2160x3840.png';a.href=out.toDataURL('image/png');
   document.body.append(a);a.click();a.remove();
 }
-function saveVideo(){
+function saveVideo({mp4Url=null}={}){
   if(videoExport) return Promise.reject(new Error('A video export is already running.'));
   if(!cv.captureStream||!window.MediaRecorder) return Promise.reject(new Error('WebM export is not supported in this browser.'));
   const mimeType=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
@@ -1052,11 +1052,19 @@ function saveVideo(){
     const finish=()=>{videoExport=null;stream.getTracks().forEach(track=>track.stop());};
     recorder.addEventListener('dataavailable',event=>{if(event.data.size)chunks.push(event.data);});
     recorder.addEventListener('error',event=>{finish();reject(event.error||new Error('Video export failed.'));});
-    recorder.addEventListener('stop',()=>{
+    recorder.addEventListener('stop',async()=>{
       finish();
-      const url=URL.createObjectURL(new Blob(chunks,{type:mimeType})),a=document.createElement('a');
-      a.download='windmill-video-1080x1920-30s.webm';a.href=url;document.body.append(a);a.click();a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url),1000);resolve();
+      try{
+        let movie=new Blob(chunks,{type:mimeType}),name='windmill-video-1080x1920-30s.webm';
+        if(mp4Url){
+          const response=await fetch(mp4Url,{method:'POST',headers:{'Content-Type':mimeType},body:movie});
+          if(!response.ok) throw new Error('MP4 export needs the authoring server: python3 gallery/export-server.py');
+          movie=await response.blob();name='windmill-video-1080x1920-30s.mp4';
+        }
+        const url=URL.createObjectURL(movie),a=document.createElement('a');
+        a.download=name;a.href=url;document.body.append(a);a.click();a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),1000);resolve();
+      }catch(error){reject(error);}
     });
     videoExport={canvas:out,ctx:outCtx};
     recorder.start(1000);renderFrame(t);setTimeout(()=>recorder.stop(),30_000);

@@ -17,6 +17,8 @@ an individual animation.
 ## Handbook
 
 - [`index.html`](index.html) — `[entry-point] [runnable]`
+- [`export-server.py`](export-server.py) — `[authoring] [video-export]` — serves
+  the gallery and converts recorded WebM exports to MP4 with local FFmpeg
 - [`postcards/README.md`](postcards/README.md) — `[index] [routing]`
 
 ## Local rules
