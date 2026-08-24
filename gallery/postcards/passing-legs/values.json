@@ -5,7 +5,7 @@
   "paper": "#e9e6dd",
   "cam": {
     "horizon": 240,
-    "focal": 550,
+    "focal": 350,
     "height": 0.15
   },
   "legTones": {
@@ -13,8 +13,8 @@
     "max": 0.6
   },
   "rankDepth": {
-    "min": 1.2,
-    "max": 4
+    "min": 1.32,
+    "max": 2.7
   },
   "ranks": [
     {
@@ -86,12 +86,12 @@
     "vary": 0.25
   },
   "bg": {
-    "top": 0.95,
-    "bottom": 0.84,
+    "top": 0.86,
+    "bottom": 0.975,
     "grain": 0
   },
   "ground": {
-    "tone": 0.95,
+    "tone": 1,
     "grain": 0.12
   },
   "sep": 0.6,
