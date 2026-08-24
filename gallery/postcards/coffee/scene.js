@@ -681,4 +681,3 @@ function rebuild(keepTime){
 function boot(){build();t=0;resetCycle();warmup();fitCanvas();renderFrame();if(loadEl)loadEl.remove();startDriver();}
 window.__coffee={CFG,rebuild,fit:fitCanvas,render:renderFrame,boot,png(){const a=document.createElement('a');a.download='coffee-'+W+'x'+H+'.png';a.href=cv.toDataURL('image/png');a.click();},seek(sec){manualPaused=true;t=0;waveAmp=0;wavePhase=0;pool=0;drips=[];drops=[];resetCycle();for(let i=0;i<Math.round(sec*60);i++)step(DT);renderFrame();},toggle(){manualPaused=!manualPaused;return manualPaused;}};
 })();
-
