@@ -254,13 +254,22 @@ function spawn(R){
   const g=CFG.gait, f=CFG.fig;
   const dir = rnd()<R.right ? 1 : -1;
   const hs  = 1+f.vary*(rnd()*2-1);
-  const sp  = g.speed*(1+g.vary*(rnd()*2-1))*hs;
+  const phaseSpeed=g.speed*(1+g.vary*(rnd()*2-1));
+  /* Each reach owns its own contact pose. Keep the beat fixed and let the
+     walker cover the resulting stride at the appropriate horizontal speed. */
+  const lead=(g.step*g.duty+g.leadReach)*hs;
+  const trail=(g.step*g.duty+g.trailReach)*hs;
+  const stride=(lead+trail)/g.duty;
   R.walkers.push({
     x   : -dir*(R.halfW+0.55),
     dir : dir,
     hs  : hs,
-    speed: sp,
+    speed: stride*phaseSpeed/(2*g.step),
+    phaseSpeed: phaseSpeed,
     step : g.step*hs,
+    lead : lead,
+    trail : trail,
+    stride : stride,
     p   : rnd()
   });
 }
@@ -275,7 +284,7 @@ function stepWorld(dt){
       /* One full cycle is two steps. Deriving the period from speed and step
          rather than setting it directly is what keeps the planted foot planted
          instead of skating along the floor. */
-      w.p=(w.p+dt*w.speed/(2*w.step))%1;
+      w.p=(w.p+dt*w.phaseSpeed/(2*CFG.gait.step))%1;
       if(Math.abs(w.x)>R.halfW+0.7) R.walkers.splice(i,1);
     }
   }
@@ -296,7 +305,7 @@ function stepWorld(dt){
    ==================================================================== */
 function rot(x,z,a){ const c=Math.cos(a), s=Math.sin(a); return [x*c-z*s, x*s+z*c]; }
 
-function plant(w,u){ return w.x - w.dir*(u-0.5)*2*w.step*CFG.gait.duty; }
+function plant(w,u){ return w.x-w.dir*u*(w.lead+w.trail)+w.dir*w.lead; }
 
 /* The foot as a rigid body: three points in its own frame, measured from the
    sole under the ankle. Heel and toe are SOLE points, which is what the roll
@@ -318,7 +327,7 @@ function footFrame(w){
    Returns { x, z, th } in world metres and radians, th>0 = toe up. */
 function ankleAt(w,p){
   const g=CFG.gait, F=footFrame(w), dir=w.dir;
-  const stride=2*w.step*g.duty;
+  const pushTilt=g.toeDown+g.trailBend;
 
   if(p<g.duty){
     const u=p/g.duty, A=plant(w,u);
@@ -343,7 +352,7 @@ function ankleAt(w,p){
          What stays down in front of the ball is drawn, not simulated: the
          toe cap counter-rotates by exactly this `th` in drawLeg, so it
          lies flat on z=0 from the ball to the tip. */
-      th=-g.toeDown*smooth((u-g.heelOff)/(1-g.heelOff));
+      th=-pushTilt*smooth((u-g.heelOff)/(1-g.heelOff));
       px_=A+dir*F.bl; pz_=0; lx=-dir*F.bl; lz=F.ah;
     }
     const r=rot(lx,lz,dir*th);
@@ -354,10 +363,10 @@ function ankleAt(w,p){
      cannot slip on landing or take off. Their world positions come from the
      stance algebra, not from where the foot happens to be. */
   const s=(p-g.duty)/(1-g.duty);
-  const Aprev=w.x - dir*2*w.step*(p-g.duty) - dir*w.step*g.duty;
-  const Anext=w.x + dir*2*w.step*(1-p)     + dir*w.step*g.duty;
+  const Aprev=w.x-dir*w.stride*(p-g.duty)-dir*w.trail;
+  const Anext=w.x+dir*w.stride*(1-p)+dir*w.lead;
 
-  let r=rot(-dir*F.bl,F.ah,dir*(-g.toeDown));
+  let r=rot(-dir*F.bl,F.ah,dir*(-pushTilt));
   const x0=Aprev+dir*F.bl+r[0], z0=r[1];
   r=rot(dir*F.hb,F.ah,dir*(g.heelUp));
   const x1=Anext-dir*F.hb+r[0], z1=r[1];
@@ -365,8 +374,9 @@ function ankleAt(w,p){
   const e=smooth(s);
   return { x:x0+(x1-x0)*e,
            z:z0+(z1-z0)*e + g.clear*w.hs*Math.sin(Math.PI*Math.pow(s,0.72)),
-           th:-g.toeDown+(g.heelUp+g.toeDown)*smooth(Math.min(1,s/0.6)),
-           tuck:g.tuck*Math.sin(Math.PI*Math.pow(s,0.6)) };
+           th:-pushTilt+(g.heelUp+pushTilt)*smooth(Math.min(1,s/0.6)),
+           tuck:g.tuck*Math.sin(Math.PI*Math.pow(s,0.6)),
+           leadBend:g.leadBend*Math.sin(Math.PI*Math.pow(s,1.7)) };
 }
 
 /* ======================================================================
@@ -395,13 +405,14 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
   const A=ankleAt(w,p);
 
   let ax=A.x, az=A.z;
-  if(A.tuck){
+  if(A.tuck || A.leadBend){
     /* Pull the ankle toward the hip early in swing. It is zero at both ends,
        so the contact poses stay exact, and in between it forces the knee to
        flex hard just after toe-off — the beat that reads as walking rather
        than as a leg swinging on a hinge. */
-    ax=w.x+(ax-w.x)*(1-A.tuck);
-    az=hipZ+(az-hipZ)*(1-A.tuck);
+    const bend=clamp(A.tuck+A.leadBend,0,0.45);
+    ax=w.x+(ax-w.x)*(1-bend);
+    az=hipZ+(az-hipZ)*(1-bend);
   }
 
   const K=knee(w.x,hipZ,ax,az,f.thigh*hs,f.shin*hs,dir);
