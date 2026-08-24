@@ -924,12 +924,13 @@ function renderFrame(t){
      and drawEmit re-tests sail ink regardless. */
   if(!EMIT_OFF) drawEmit(t);
   dither();
+  if(videoExport) videoExport.ctx.drawImage(cv,0,0,videoExport.canvas.width,videoExport.canvas.height);
 }
 
 /* ======================================================================
    DRIVER
    ==================================================================== */
-let t=0, acc=0, last=0, paused=false, galleryPaused=false;
+let t=0, acc=0, last=0, paused=false, galleryPaused=false, videoExport=null;
 
 /* The 5th cloud must reach EQUILIBRIUM here, not on screen. Warming up without
    resolveEmit leaves a pristine, fully packed medium at t=0, so the first few
@@ -998,11 +999,11 @@ function refresh(){
 }
 
 function tick(now){
-  if(galleryPaused) return;
+  if(galleryPaused&&!videoExport) return;
   const n=(now===undefined)?performance.now():now;
   let dtr=(n-last)/1000; last=n;
   if(dtr>0.25) dtr=0.25;
-  if(!paused){ acc+=dtr; while(acc>=DT){ stepDeck(DT,t); t+=DT; acc-=DT; } }
+  if(!paused||videoExport){ acc+=dtr; while(acc>=DT){ stepDeck(DT,t); t+=DT; acc-=DT; } }
   renderFrame(t);
   if(hud) hud.textContent=t.toFixed(1)+'s  '+W+'x'+H+'  '+eN+'p '+eLit+' lit';
 }
@@ -1036,6 +1037,31 @@ function savePng(){
   a.download='windmill-frame-2160x3840.png';a.href=out.toDataURL('image/png');
   document.body.append(a);a.click();a.remove();
 }
+function saveVideo(){
+  if(videoExport) return Promise.reject(new Error('A video export is already running.'));
+  if(!cv.captureStream||!window.MediaRecorder) return Promise.reject(new Error('WebM export is not supported in this browser.'));
+  const mimeType=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+  if(!MediaRecorder.isTypeSupported(mimeType)) return Promise.reject(new Error('WebM export is not supported in this browser.'));
+  const out=document.createElement('canvas');out.width=1080;out.height=1920;
+  const outCtx=out.getContext('2d');outCtx.imageSmoothingEnabled=false;
+  const stream=out.captureStream(30),chunks=[];
+  return new Promise((resolve,reject)=>{
+    let recorder;
+    try{recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:12_000_000});}
+    catch(error){stream.getTracks().forEach(track=>track.stop());reject(error);return;}
+    const finish=()=>{videoExport=null;stream.getTracks().forEach(track=>track.stop());};
+    recorder.addEventListener('dataavailable',event=>{if(event.data.size)chunks.push(event.data);});
+    recorder.addEventListener('error',event=>{finish();reject(event.error||new Error('Video export failed.'));});
+    recorder.addEventListener('stop',()=>{
+      finish();
+      const url=URL.createObjectURL(new Blob(chunks,{type:mimeType})),a=document.createElement('a');
+      a.download='windmill-video-1080x1920-30s.webm';a.href=url;document.body.append(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);resolve();
+    });
+    videoExport={canvas:out,ctx:outCtx};
+    recorder.start(1000);renderFrame(t);setTimeout(()=>recorder.stop(),30_000);
+  });
+}
 function info(){return {W,H,particles:eN,lit:eLit,emitRate:Math.round(EMIT_RATE),layerSpeeds:[0,1,2,3].map(layerSpeed),config:CFG};}
 function setGalleryPaused(next){
   galleryPaused=Boolean(next);
@@ -1043,5 +1069,5 @@ function setGalleryPaused(next){
 }
 setGalleryPaused(false);
 addEventListener('message',e=>{if(e.data?.type==='blinking-robot:preview-pause')setGalleryPaused(e.data.paused);});
-return {start,config:CFG,render:()=>renderFrame(t),refresh,update,rebuild,fit:fitCanvas,reset,savePng,info,triggerStar(){SS.next=t;},togglePaused(){paused=!paused;return paused;}};
+return {start,config:CFG,render:()=>renderFrame(t),refresh,update,rebuild,fit:fitCanvas,reset,savePng,saveVideo,info,triggerStar(){SS.next=t;},togglePaused(){paused=!paused;return paused;}};
 }
