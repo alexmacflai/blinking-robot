@@ -50,10 +50,6 @@
     color:var(--acc);padding:7px 11px;border-radius:2px;opacity:0;transition:opacity .2s;
     pointer-events:none}
   #toast.on{opacity:1}
-  #dump{position:fixed;inset:8%;background:#0d0d10;border:1px solid var(--acc);color:var(--ink);
-    padding:14px;display:none;z-index:9}
-  #dump textarea{width:100%;height:calc(100% - 34px);background:#141519;color:var(--ink);
-    border:1px solid var(--line);font:inherit;padding:8px;resize:none}
   #load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
     background:var(--bg);letter-spacing:.2em;z-index:20;color:var(--dim)}
 </style>
@@ -65,7 +61,7 @@
   <h1>WINDMILL</h1>
   <p class="sub">procedural 1-bit · no assets</p>
 
-  <fieldset><legend>CANVAS</legend>
+  <fieldset><legend>POSTCARD BASICS</legend>
     <div class="row"><label>grid</label><span class="val" id="vGrid">—</span></div>
     <div class="chips" id="gridChips"></div>
     <p class="note">Only 9:16 grids (9k × 16k) tile into whole internal pixels.</p>
@@ -97,9 +93,6 @@
     <input type="range" id="rSunX" min="0" max="234" step="1">
     <div class="row"><label>sun y</label><span class="val" id="vSunY"></span></div>
     <input type="range" id="rSunY" min="60" max="380" step="1">
-    <div class="row"><label>star every</label><span class="val" id="vStar"></span></div>
-    <input type="range" id="rStar" min="3" max="45" step="1">
-    <button class="btn" id="bStarNow">TRIGGER STAR</button>
   </fieldset>
 
   <fieldset><legend>MILL</legend>
@@ -123,6 +116,29 @@
     <div class="row"><label>fastest (front)</label><span class="val" id="vSpMax"></span></div>
     <input type="range" id="rSpMax" min="5" max="140" step="1">
     <p class="note" id="nLadder"></p>
+  </fieldset>
+
+  <fieldset><legend>BIRDS</legend>
+    <div class="row"><label>travel span</label><span class="val" id="vBirdSpan"></span></div>
+    <input type="range" id="rBirdSpan" min="120" max="620" step="5">
+    <div class="row"><label>high flock speed</label><span class="val" id="vBird0"></span></div>
+    <input type="range" id="rBird0" min="2" max="70" step="1">
+    <div class="row"><label>middle flock speed</label><span class="val" id="vBird1"></span></div>
+    <input type="range" id="rBird1" min="2" max="70" step="1">
+    <div class="row"><label>low flock speed</label><span class="val" id="vBird2"></span></div>
+    <input type="range" id="rBird2" min="2" max="70" step="1">
+    <p class="note">Flocks share the wind direction but retain separate speeds,
+       so the sky never reads as a single moving stamp.</p>
+  </fieldset>
+
+  <fieldset><legend>STAR</legend>
+    <div class="row"><label>every</label><span class="val" id="vStar"></span></div>
+    <input type="range" id="rStar" min="3" max="45" step="1">
+    <div class="row"><label>timing variation</label><span class="val" id="vStarVary"></span></div>
+    <input type="range" id="rStarVary" min="0" max="45" step="1">
+    <div class="row"><label>tail</label><span class="val" id="vStarTail"></span></div>
+    <input type="range" id="rStarTail" min="4" max="100" step="1">
+    <button class="btn" id="bStarNow">TRIGGER STAR</button>
   </fieldset>
 
   <fieldset><legend>LAYER HEIGHT</legend>
@@ -168,6 +184,10 @@
        only over-feeds the incoming edge.</p>
     <div class="row" style="margin-top:12px"><label>launch</label><span class="val" id="vEFling"></span></div>
     <input type="range" id="rEFling" min="0" max="2.5" step="0.05">
+    <div class="row"><label>drag</label><span class="val" id="vEDrag"></span></div>
+    <input type="range" id="rEDrag" min="0" max="6" step="0.1">
+    <div class="row"><label>sink</label><span class="val" id="vESink"></span></div>
+    <input type="range" id="rESink" min="-40" max="80" step="1">
     <div class="row"><label>fade</label><span class="val" id="vELife"></span></div>
     <input type="range" id="rELife" min="0.3" max="8" step="0.1">
     <p class="note">Launch is the kick off the blade face; fade is how long a
@@ -180,31 +200,34 @@
        a blade at any clearance.</p>
   </fieldset>
 
-  <fieldset><legend>OUTPUT</legend>
-    <button class="btn primary" id="bCopy">COPY VALUES</button>
-    <button class="btn" id="bValues">SAVE VALUES</button>
-    <button class="btn" id="bPng">SAVE PNG</button>
-    <button class="btn" id="bReset">RESET ALL</button>
-    <p class="note">Save values downloads the single <code>values.json</code> file used by both pages.
-       Replace that file to keep your changes. Space pauses · H toggles readout.</p>
-  </fieldset>
 </aside>
 
 <div id="toast"></div>
-<div id="dump"><textarea spellcheck="false"></textarea>
-  <button class="btn" onclick="document.getElementById('dump').style.display='none'">CLOSE</button></div>
 <div id="load">SETTLING THE AIR…</div>
 
 <script type="module">
 import {createWindmillScene} from './scene.js';
-import {bindRange,buildChips,copyText,downloadJson,toast} from '../../shared/controls.js';
-const values=await fetch('./values.json').then(r=>r.json());
+import {applySceneUpdate,bindRange,buildChips,copyText,downloadJson,makeAction,makeColor,makeDiagnostic,makeNumber,makeRange,makeSection,mountActionBar,mountPanelFrame,standardizePanel,toast} from '../../shared/controls.js';
+const values=await fetch('./values.json',{cache:'no-store'}).then(r=>r.json());
 const scene=createWindmillScene({canvas:document.querySelector('#c'),stage:document.querySelector('#stage'),hud:document.querySelector('#hud'),loadEl:document.querySelector('#load'),config:values});
-const cfg=scene.config,$=id=>document.getElementById(id),say=m=>toast($('toast'),m);const read=p=>p.split('.').reduce((o,k)=>o[k],cfg);const put=(p,v)=>{let o=cfg,a=p.split('.');for(let i=0;i<a.length-1;i++)o=o[a[i]];o[a.at(-1)]=v;};
+const cfg=scene.config,$=id=>document.getElementById(id),panel=document.querySelector('#panel'),say=m=>toast($('toast'),m);const read=p=>p.split('.').reduce((o,k)=>o[k],cfg);const put=(p,v)=>{let o=cfg,a=p.split('.');for(let i=0;i<a.length-1;i++)o=o[a[i]];o[a.at(-1)]=v;};
+/* The HTML provides a readable fallback map of the Windmill controls. At run
+   time every visible control is replaced by the shared component that future
+   postcards will use too. */
+function mountSharedComponents(){
+  panel.querySelectorAll('fieldset').forEach(fieldset=>{const title=fieldset.querySelector('legend').textContent;const section=makeSection(title);section.append(...[...fieldset.children].filter(child=>child.tagName!=='LEGEND'));fieldset.replaceWith(section);});
+  panel.querySelectorAll('input[type=range]').forEach(old=>{const row=old.previousElementSibling,label=row.querySelector('label').textContent,readout=row.querySelector('.val'),control=makeRange({label,value:0,min:old.min,max:old.max,step:old.step,onInput:()=>{}}),input=control.element.querySelector('input'),value=control.element.querySelector('.val');input.id=old.id;if(readout)value.id=readout.id;row.replaceWith(control.element);old.remove();});
+  panel.querySelectorAll('input[type=color]').forEach(old=>{const row=old.parentElement,label=row.querySelector('label').textContent,control=makeColor({label,value:'#000000',onInput:()=>{}}),input=control.element.querySelector('input');input.id=old.id;row.replaceWith(control.element);});
+  const seed=$('nSeed');if(seed){const row=seed.parentElement,label=row.querySelector('label').textContent,control=makeNumber({label,value:0,step:seed.step,onInput:()=>{}}),input=control.element.querySelector('input');input.id='nSeed';row.replaceWith(control.element);}
+  ['bSwap','bReroll','bStarNow'].forEach(id=>{const old=$(id);if(!old)return;const button=makeAction(old.textContent,()=>{});button.id=id;old.replaceWith(button);});
+  const ladder=$('nLadder');if(ladder){const diagnostic=makeDiagnostic();diagnostic.id='nLadder';ladder.replaceWith(diagnostic);}
+}
+mountSharedComponents();
 function sync(){const i=scene.info(),c=cfg,spin=c.rotor.spin; $('vGrid').textContent=i.W+'x'+i.H;$('vLift').textContent=c.lift;$('vWind').textContent=c.wind.toFixed(2)+'x';$('vSpin').textContent=Math.abs(spin)<.004?'stopped':(1/Math.abs(spin)).toFixed(1)+'s '+(spin<0?'↺':'↻');$('vYaw').textContent=c.rotor.yawDeg.toFixed(1)+'°';$('vTone').textContent=(c.deck.toneBias>0?'+':'')+c.deck.toneBias.toFixed(3);$('vShade').textContent=c.deck.shade.toFixed(3);$('vSoft').textContent=c.deck.soft.toFixed(1);$('vEDens').textContent=c.emit.density.toFixed(1)+'/px²';$('vEOut').textContent=c.emit.output.toFixed(1)+'x';$('vERate').textContent=i.emitRate+'/s';$('vECount').textContent=i.particles+' · '+i.lit+' lit';$('vEFling').textContent=c.emit.fling.toFixed(2);$('vELife').textContent=c.emit.life[1].toFixed(1)+'s';$('vEPad').textContent=c.emit.pad.toFixed(1)+'px';$('vStar').textContent=c.star.every+'-'+(c.star.every+c.star.vary)+'s';$('vSkyT').textContent=c.sky.top.toFixed(2);$('vSkyH').textContent=c.sky.horizon.toFixed(2);$('vSkyC').textContent=c.sky.curve.toFixed(2);$('vSunX').textContent=c.sun.x;$('vSunY').textContent=c.sun.y;$('vMillY').textContent=(c.mill.offY>0?'+':'')+c.mill.offY;$('vSpMin').textContent=c.speedMin.toFixed(1);$('vSpMax').textContent=c.speedMax.toFixed(0);$('nLadder').textContent='ladder '+i.layerSpeeds.map(v=>v.toFixed(0)).join(' · ')+' px/s';[0,1,2,3].forEach(n=>{const v=n===2?c.deck.offY:c.banks[[0,1,3].indexOf(n)].offY;$('vY'+n).textContent=(v>0?'+':'')+v;});}
-const refresh=()=>{scene.rebuild(true);sync();};function range(id,path){bindRange($(id),()=>path==='emit.life.1'?cfg.emit.life[1]:read(path),v=>{path==='emit.life.1'?cfg.emit.life=[v*.45,v]:put(path,v);refresh();});}
-buildChips($('gridChips'),[11,13,16,20,26,32,40,48],()=>cfg.gridK,v=>{cfg.gridK=v;refresh();},v=>(9*v)+'×'+(16*v));buildChips($('fitChips'),['fill','crisp'],()=>cfg.fit,v=>{cfg.fit=v;scene.fit();},v=>v.toUpperCase());
-$('cInk').value=cfg.ink;$('cPap').value=cfg.paper;$('cInk').oninput=e=>{cfg.ink=e.target.value;refresh();};$('cPap').oninput=e=>{cfg.paper=e.target.value;refresh();};$('bSwap').onclick=()=>{[cfg.ink,cfg.paper]=[cfg.paper,cfg.ink];$('cInk').value=cfg.ink;$('cPap').value=cfg.paper;refresh();};
-[['rLift','lift'],['rSkyT','sky.top'],['rSkyH','sky.horizon'],['rSkyC','sky.curve'],['rSunX','sun.x'],['rSunY','sun.y'],['rStar','star.every'],['rMillY','mill.offY'],['rSpin','rotor.spin'],['rYaw','rotor.yawDeg'],['rWind','wind'],['rSpMin','speedMin'],['rSpMax','speedMax'],['rTone','deck.toneBias'],['rShade','deck.shade'],['rSoft','deck.soft'],['rEDens','emit.density'],['rEOut','emit.output'],['rEFling','emit.fling'],['rELife','emit.life.1'],['rEPad','emit.pad']].forEach(x=>range(...x));[0,1,2,3].forEach(n=>range('rY'+n,n===2?'deck.offY':'banks.'+[0,1,3].indexOf(n)+'.offY'));
-$('nSeed').value=cfg.deck.surfSeed;$('nSeed').onchange=e=>{cfg.deck.surfSeed=parseInt(e.target.value,10)||1;refresh();};$('bReroll').onclick=()=>{const s=(Math.random()*1e6)|0;cfg.deck.surfSeed=s;cfg.banks.forEach((b,i)=>b.seed=(s*(i+3)+101)|0);$('nSeed').value=s;refresh();say('reshaped');};$('bStarNow').onclick=()=>scene.triggerStar();$('bCopy').onclick=()=>copyText(JSON.stringify(cfg,null,2)).then(()=>say('values copied')).catch(()=>say('copy unavailable'));$('bValues').onclick=()=>{downloadJson('values.json',cfg);say('values downloaded');};$('bPng').onclick=()=>scene.savePng();$('bReset').onclick=()=>{scene.reset();location.reload();};scene.start();sync();setInterval(sync,500);
+function syncExtras(){$('vBirdSpan').textContent=cfg.birds.span;$('vBird0').textContent=cfg.birds.flocks[0].speed;$('vBird1').textContent=cfg.birds.flocks[1].speed;$('vBird2').textContent=cfg.birds.flocks[2].speed;$('vStarVary').textContent=cfg.star.vary+'s';$('vStarTail').textContent=cfg.star.tail;$('vEDrag').textContent=cfg.emit.drag.toFixed(1);$('vESink').textContent=cfg.emit.sink;}
+const update=kind=>{applySceneUpdate(scene,kind);sync();syncExtras();};function range(id,path,kind='rebuild'){bindRange($(id),()=>path==='emit.life.1'?cfg.emit.life[1]:read(path),v=>{path==='emit.life.1'?cfg.emit.life=[v*.45,v]:put(path,v);update(kind);},{apply:kind});}
+buildChips($('gridChips'),[11,13,16,20,26,32,40,48],()=>cfg.gridK,v=>{cfg.gridK=v;update('rebuild');},v=>(9*v)+'×'+(16*v),{apply:'rebuild'});buildChips($('fitChips'),['fill','crisp'],()=>cfg.fit,v=>{cfg.fit=v;update('fit');},v=>v.toUpperCase(),{apply:'fit'});
+$('cInk').value=cfg.ink;$('cPap').value=cfg.paper;$('cInk').dataset.update='refresh';$('cPap').dataset.update='refresh';$('cInk').oninput=e=>{cfg.ink=e.target.value;update('refresh');};$('cPap').oninput=e=>{cfg.paper=e.target.value;update('refresh');};$('bSwap').onclick=()=>{[cfg.ink,cfg.paper]=[cfg.paper,cfg.ink];$('cInk').value=cfg.ink;$('cPap').value=cfg.paper;update('refresh');};
+[['rLift','lift'],['rSkyT','sky.top'],['rSkyH','sky.horizon'],['rSkyC','sky.curve'],['rSunX','sun.x'],['rSunY','sun.y'],['rStar','star.every'],['rStarVary','star.vary'],['rStarTail','star.tail'],['rMillY','mill.offY'],['rSpin','rotor.spin'],['rYaw','rotor.yawDeg'],['rWind','wind'],['rSpMin','speedMin'],['rSpMax','speedMax'],['rBirdSpan','birds.span'],['rBird0','birds.flocks.0.speed'],['rBird1','birds.flocks.1.speed'],['rBird2','birds.flocks.2.speed'],['rTone','deck.toneBias'],['rShade','deck.shade'],['rSoft','deck.soft'],['rEDens','emit.density'],['rEOut','emit.output'],['rEFling','emit.fling'],['rEDrag','emit.drag'],['rESink','emit.sink'],['rELife','emit.life.1'],['rEPad','emit.pad']].forEach(x=>range(...x));[0,1,2,3].forEach(n=>range('rY'+n,n===2?'deck.offY':'banks.'+[0,1,3].indexOf(n)+'.offY'));
+$('nSeed').value=cfg.deck.surfSeed;$('nSeed').onchange=e=>{cfg.deck.surfSeed=parseInt(e.target.value,10)||1;update('rebuild');};$('bReroll').onclick=()=>{const s=(Math.random()*1e6)|0;cfg.deck.surfSeed=s;cfg.banks.forEach((b,i)=>b.seed=(s*(i+3)+101)|0);$('nSeed').value=s;update('rebuild');say('reshaped');};$('bStarNow').dataset.update='render';$('bStarNow').onclick=()=>{scene.triggerStar();update('render');};mountPanelFrame({panel,title:'WINDMILL',description:'A mill turning through stacked cloud banks.'});document.querySelector('#panel > h1')?.remove();document.querySelector('#panel > .sub')?.remove();standardizePanel({panel,basicsSelector:'section:first-of-type'});mountActionBar({panel,onToggle:()=>scene.togglePaused(),onSavePng:()=>scene.savePng(),onSaveValues:()=>{downloadJson('values.json',cfg);say('values downloaded');},onCopy:()=>copyText(JSON.stringify(cfg,null,2)).then(()=>say('values copied')).catch(()=>say('copy unavailable')),onReset:()=>location.reload()});scene.start();sync();syncExtras();setInterval(()=>{sync();syncExtras();},500);
 </script></body></html>

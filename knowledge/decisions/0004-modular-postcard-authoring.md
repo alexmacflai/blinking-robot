@@ -12,8 +12,8 @@ manual reconciliation across source copies.
 
 ## Decision
 
-Migrated postcards use one local scene module and one JSON values file. Both
-their public and controls pages load those files through a local preview server.
+Migrated postcards use one local scene module and one values file. Both their
+public and controls pages load those files through a local preview server.
 Controls may change values live and download a replacement values file. Shared
 controls primitives belong in `gallery/shared/` once used by more than one
 postcard.

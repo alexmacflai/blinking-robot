@@ -8,9 +8,9 @@ Reusable browser code used by two or more postcard authoring surfaces.
 
 ## What is here
 
-- [controls.js](controls.js) — common controls-panel primitives.
+- [controls.js](controls.js) — shared panel frame, control components, action
+  bar, copying, and values downloads.
 
 ## Local rules
 
 Keep scene-specific rendering and controls in each postcard folder.
-

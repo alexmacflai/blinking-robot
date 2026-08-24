@@ -984,6 +984,14 @@ function rebuild(keepTime){
   renderFrame(t);
 }
 
+/* Palette changes only affect the final dither colours. They do not need to
+   rebuild the grid, cloud geometry, or the warmed particle state. */
+function refresh(){
+  CINK=packColor(CFG.ink);
+  CPAP=packColor(CFG.paper);
+  renderFrame(t);
+}
+
 function tick(now){
   if(galleryPaused) return;
   const n=(now===undefined)?performance.now():now;
@@ -1015,7 +1023,11 @@ function start(){build();warmup();fitCanvas();renderFrame(t);if(loadEl)loadEl.st
 function reset(){CFG=clone(DEFAULT_CFG);rebuild(false);return CFG;}
 function savePng(){const a=document.createElement('a');a.download='windmill-'+W+'x'+H+'.png';a.href=cv.toDataURL('image/png');a.click();}
 function info(){return {W,H,particles:eN,lit:eLit,emitRate:Math.round(EMIT_RATE),layerSpeeds:[0,1,2,3].map(layerSpeed),config:CFG};}
-addEventListener('message',e=>{if(e.data?.type==='blinking-robot:preview-pause')galleryPaused=Boolean(e.data.paused);});
-return {start,config:CFG,rebuild,fit:fitCanvas,reset,savePng,info,triggerStar(){SS.next=t;},togglePaused(){paused=!paused;return paused;}};
+function setGalleryPaused(next){
+  galleryPaused=Boolean(next);
+  cv.dataset.galleryPaused=String(galleryPaused);
 }
-
+setGalleryPaused(false);
+addEventListener('message',e=>{if(e.data?.type==='blinking-robot:preview-pause')setGalleryPaused(e.data.paused);});
+return {start,config:CFG,render:()=>renderFrame(t),refresh,rebuild,fit:fitCanvas,reset,savePng,info,triggerStar(){SS.next=t;},togglePaused(){paused=!paused;return paused;}};
+}
