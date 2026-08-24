@@ -20,6 +20,9 @@ A coded animation postcard of a windmill.
 
 Run this postcard through the repository's local preview server. Save values
 downloads a replacement `values.json`; that one file supplies both surfaces.
+Save Frame exports the currently rendered Windmill frame as a 2160×3840 PNG.
+It fills the portrait frame directly with smoothing disabled, preserving the
+postcard's hard pixel grid.
 
 Postcard surface, controls, and reference-material requirements live in
 [`AGENTS.md`](../../../AGENTS.md).

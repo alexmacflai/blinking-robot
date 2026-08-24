@@ -1026,7 +1026,16 @@ addEventListener('resize',fitCanvas);
 
 function start(){build();warmup();fitCanvas();renderFrame(t);if(loadEl)loadEl.style.display='none';startDriver();}
 function reset(){CFG=clone(DEFAULT_CFG);rebuild(false);return CFG;}
-function savePng(){const a=document.createElement('a');a.download='windmill-'+W+'x'+H+'.png';a.href=cv.toDataURL('image/png');a.click();}
+function savePng(){
+  const out=document.createElement('canvas');
+  out.width=2160;out.height=3840;
+  const ctx=out.getContext('2d');
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(cv,0,0,out.width,out.height);
+  const a=document.createElement('a');
+  a.download='windmill-frame-2160x3840.png';a.href=out.toDataURL('image/png');
+  document.body.append(a);a.click();a.remove();
+}
 function info(){return {W,H,particles:eN,lit:eLit,emitRate:Math.round(EMIT_RATE),layerSpeeds:[0,1,2,3].map(layerSpeed),config:CFG};}
 function setGalleryPaused(next){
   galleryPaused=Boolean(next);
