@@ -2,7 +2,8 @@
 
 `[decision]` `[decision-record]` `[gallery]` `[animation-controls]`
 
-**Status:** accepted · applies to [`gallery/`](../../gallery/)
+**Status:** superseded for migrated postcards by
+[0004 — Modular postcard authoring](0004-modular-postcard-authoring.md)
 
 ## Context
 

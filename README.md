@@ -26,8 +26,10 @@ go straight to one:
 Each postcard folder also has a maker-facing `controls.html`; its README routes
 to both surfaces and its supplied source material.
 
-Every postcard surface is directly runnable HTML. Open it in a browser;
-nothing else to install.
+Authoring postcards use a tiny local preview server—no install or build step.
+From the repository root, run `python3 -m http.server`, then open
+`http://localhost:8000/gallery/index.html`. Older postcards can still be opened
+directly; migrated postcards use nearby scene and values files.
 
 ## Repository
 

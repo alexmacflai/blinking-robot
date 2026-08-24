@@ -10,11 +10,15 @@ A coded animation postcard of a windmill.
 
 - [`index.html`](index.html) — public postcard
 - [`controls.html`](controls.html) — maker-facing controls
+- [`scene.js`](scene.js) — shared Windmill renderer
+- [`values.json`](values.json) — the single saved configuration for both pages
 - [`brief.md`](brief.md) — scene intent
 - [`references/README.md`](references/README.md) — supplied source material
 
 ## Local rules
 
+Run this postcard through the repository's local preview server. Save values
+downloads a replacement `values.json`; that one file supplies both surfaces.
+
 Postcard surface, controls, and reference-material requirements live in
-[`AGENTS.md`](../../../AGENTS.md). Preserve the controls page's configuration
-export when changing this postcard.
+[`AGENTS.md`](../../../AGENTS.md).
