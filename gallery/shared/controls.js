@@ -1,55 +1,26 @@
-/* Shared building blocks for postcard authoring panels. Scene-specific
-   controls stay in the postcard; this file owns their common shell. */
+/* Shared authoring-panel foundation. A postcard declares controls through this
+   module; the module owns their markup, binding, sync, shell, and footer. */
 
-export function toast(element, message) {
-  element.textContent = message;
-  element.classList.add('on');
-  clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => element.classList.remove('on'), 1400);
-}
+const getPath = (object, path) => path.split('.').reduce((value, key) => value[key], object);
+const setPath = (object, path, value) => {
+  const keys = path.split('.');
+  const last = keys.pop();
+  const target = keys.reduce((item, key) => item[key], object);
+  target[last] = value;
+};
 
-export function buildChips(host, values, get, set, label, { apply = 'rebuild' } = {}) {
-  host.replaceChildren(...values.map(value => {
-    const button = document.createElement('button');
-    button.className = 'chip postcard-choice';
-    button.type = 'button';
-    button.textContent = label(value);
-    button.dataset.update = apply;
-    button.setAttribute('aria-pressed', String(get() === value));
-    button.onclick = () => {
-      set(value);
-      [...host.children].forEach(child => child.setAttribute('aria-pressed', 'false'));
-      button.setAttribute('aria-pressed', 'true');
-    };
-    return button;
-  }));
-}
-
-export function bindRange(input, get, set, { apply = 'rebuild' } = {}) {
-  input.value = get();
-  input.dataset.update = apply;
-  input.oninput = event => set(Number(event.target.value));
-}
-
-/* Every panel uses the same small vocabulary for applying a creative change.
-   A renderer may implement only the operations it can make cheaper; the
-   fallback remains a safe retained-time rebuild. */
-export function applySceneUpdate(scene, kind = 'rebuild') {
+export function applySceneUpdate(scene, kind = 'update') {
   if (kind === 'fit') return scene.fit();
-  if (kind === 'render' && scene.render) return scene.render();
-  if (kind === 'refresh' && scene.refresh) return scene.refresh();
-  if (kind === 'update' && scene.update) return scene.update();
+  if (kind === 'render') return scene.render();
+  if (kind === 'refresh') return scene.refresh();
+  if (kind === 'update') return scene.update();
   return scene.rebuild(true);
 }
 
 export async function copyText(text) {
   if (navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return;
-    } catch (_) {
-      /* Local preview servers can deny Clipboard permission. Fall through. */
-    }
+    try { await navigator.clipboard.writeText(text); return; }
+    catch (_) { /* Local preview servers can deny clipboard permission. */ }
   }
   const textarea = document.createElement('textarea');
   textarea.value = text;
@@ -62,216 +33,113 @@ export async function copyText(text) {
   if (!copied) throw new Error('Copy is unavailable in this browser.');
 }
 
-function download(name, text, type) {
-  const blob = new Blob([text], { type });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = name;
+export function downloadJson(name, value) {
+  const url = URL.createObjectURL(new Blob([`${JSON.stringify(value, null, 2)}\n`], { type: 'application/json' }));
+  const link = Object.assign(document.createElement('a'), { href: url, download: name });
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-export function downloadJson(name, value) {
-  download(name, `${JSON.stringify(value, null, 2)}\n`, 'application/json');
-}
-
-export function downloadValuesModule(name, globalName, value) {
-  download(name, `window.${globalName} = ${JSON.stringify(value, null, 2)};\n`, 'text/javascript');
-}
-
-export function makeSection(title, note = '') {
-  const section = document.createElement('section');
-  section.className = 'postcard-control-section';
-  section.innerHTML = `<h2>${title}</h2>${note ? `<p class="note">${note}</p>` : ''}`;
-  return section;
-}
-
-export function makeRange({ label, value, min, max, step, onInput, format = item => String(item), apply = 'rebuild' }) {
-  const row = document.createElement('div');
-  row.className = 'row postcard-range-control';
-  const input = document.createElement('input');
-  const readout = document.createElement('span');
-  input.type = 'range';
-  input.min = min;
-  input.max = max;
-  input.step = step;
-  input.dataset.update = apply;
-  readout.className = 'val';
-  const sync = nextValue => {
-    input.value = nextValue;
-    readout.textContent = format(nextValue);
-  };
-  sync(value);
-  input.oninput = () => {
-    const nextValue = Number(input.value);
-    onInput(nextValue);
-    sync(nextValue);
-  };
-  row.append(Object.assign(document.createElement('label'), { textContent: label }), input, readout);
-  return { element: row, sync };
-}
-
-export function makeColor({ label, value, onInput, apply = 'rebuild' }) {
-  const row = document.createElement('div');
-  row.className = 'row postcard-color-control';
-  const input = document.createElement('input');
-  input.type = 'color';
-  input.value = value;
-  input.dataset.update = apply;
-  input.oninput = () => onInput(input.value);
-  row.append(Object.assign(document.createElement('label'), { textContent: label }), input);
-  return { element: row, sync: nextValue => { input.value = nextValue; } };
-}
-
-export function makeChoice({ label, values, value, onInput, apply = 'rebuild' }) {
-  const row = document.createElement('div');
-  row.className = 'row postcard-choice-control';
-  const host = document.createElement('div');
-  host.className = 'chips';
-  const choices = values.map(item => typeof item === 'object' ? item : { label: item, value: item });
-  const sync = nextValue => {
-    [...host.children].forEach((button, index) => button.setAttribute('aria-pressed', String(choices[index].value === nextValue)));
-  };
-  choices.forEach(item => {
-    const button = document.createElement('button');
-    button.className = 'chip postcard-choice';
-    button.type = 'button';
-    button.textContent = item.label;
-    button.dataset.update = apply;
-    button.onclick = () => {
-      onInput(item.value);
-      sync(item.value);
-    };
-    host.append(button);
-  });
-  sync(value);
-  row.append(Object.assign(document.createElement('label'), { textContent: label }), host);
-  return { element: row, sync };
-}
-
-export function makeNumber({ label, value, onInput, step = 1, apply = 'rebuild' }) {
-  const row = document.createElement('div');
-  row.className = 'row postcard-number-control';
-  const input = document.createElement('input');
-  input.type = 'number';
-  input.step = step;
-  input.value = value;
-  input.dataset.update = apply;
-  input.oninput = () => onInput(Number(input.value));
-  row.append(Object.assign(document.createElement('label'), { textContent: label }), input);
-  return { element: row, sync: nextValue => { input.value = nextValue; } };
-}
-
-export function makeToggle({ label, value, onInput, apply = 'render' }) {
-  const row = document.createElement('div');
-  row.className = 'row postcard-toggle-control';
-  const input = document.createElement('input');
-  input.type = 'checkbox';
-  input.checked = value;
-  input.dataset.update = apply;
-  input.oninput = () => onInput(input.checked);
-  row.append(Object.assign(document.createElement('label'), { textContent: label }), input);
-  return { element: row, sync: nextValue => { input.checked = nextValue; } };
-}
-
-export function makeAction(label, onClick) {
-  const button = document.createElement('button');
-  button.className = 'btn postcard-action';
-  button.type = 'button';
-  button.textContent = label;
-  button.onclick = onClick;
-  return button;
-}
-
-export function makeDiagnostic(text = '') {
-  const element = document.createElement('pre');
-  element.className = 'readout postcard-diagnostic';
-  element.textContent = text;
-  return element;
-}
-
-function ensureSharedStyles() {
-  if (document.getElementById('shared-controls-style')) return;
+function installStyles() {
+  if (document.getElementById('postcard-controls-style')) return;
   const style = document.createElement('style');
-  style.id = 'shared-controls-style';
+  style.id = 'postcard-controls-style';
   style.textContent = `
-    #panel[data-shared-controls=true]{--postcard-panel-width:280px;padding-bottom:104px}
-    .postcard-controls-head{border-bottom:1px solid var(--line);margin:0 0 4px;padding:0 0 14px}
-    .postcard-controls-head h1{color:var(--ink);font-size:11px;letter-spacing:.2em;margin:0;font-weight:600}
-    .postcard-controls-head p{font-size:10px;color:var(--dim);margin:3px 0 0}
-    #panel[data-shared-controls=true] fieldset:first-of-type legend,
-    #panel[data-shared-controls=true] section:first-of-type h2{color:var(--acc,var(--accent))}
-    .postcard-control-section{border-top:1px solid var(--line);padding:14px 0 12px}
-    .postcard-control-section h2{margin:0 0 6px;color:var(--ink);font-size:9.5px;letter-spacing:.2em;font-weight:500}
-    .postcard-control-section .note{margin:6px 0;color:var(--dim);font-size:9.5px}
-    .postcard-range-control input[type=range]{flex:1;min-width:0}
-    .postcard-choice-control .chips{margin:0}
-    .postcard-number-control input{width:74px}
-    .postcard-toggle-control input{accent-color:var(--acc,var(--accent))}
-    .postcard-diagnostic{white-space:pre-wrap}
-    .postcard-actions{position:fixed;right:0;bottom:0;z-index:30;width:var(--postcard-panel-width,280px);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px 16px;background:#0d0d10;border-top:1px solid #22232a;box-shadow:0 -8px 24px #0008}
-    .postcard-actions button{border:1px solid #22232a;background:#141519;color:#e8e6df;padding:7px 6px;font:10px ui-monospace,monospace;cursor:pointer}
-    .postcard-actions button[data-primary=true]{background:#c8b98a;border-color:#c8b98a;color:#15140f}
-    .postcard-actions button:hover{filter:brightness(1.14)}
-    .postcard-actions button:first-child{grid-column:span 2}
+    :root{--pc-bg:#0a0a0c;--pc-panel:#0d0d10;--pc-ink:#e8e6df;--pc-dim:#6f6d66;--pc-line:#22232a;--pc-accent:#c8b98a}
+    *{box-sizing:border-box} html,body{margin:0;width:100%;height:100%;background:var(--pc-bg);color:var(--pc-dim);font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+    body.postcard-authoring{display:flex;overflow:hidden}.postcard-stage{flex:1;min-width:0;position:relative;display:flex;align-items:center;justify-content:center}.postcard-stage canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+    .postcard-panel{--pc-panel-width:280px;width:var(--pc-panel-width);height:100vh;flex:none;overflow-y:auto;background:var(--pc-panel);border-left:1px solid var(--pc-line);padding:16px 16px 108px}
+    .postcard-controls-head{border-bottom:1px solid var(--pc-line);padding-bottom:14px}.postcard-controls-head h1{margin:0;color:var(--pc-ink);font-size:11px;letter-spacing:.2em;font-weight:600}.postcard-controls-head p{margin:3px 0 0;color:#4b4a45;font-size:10px}
+    .postcard-section{border-top:1px solid var(--pc-line);padding:14px 0 12px}.postcard-controls-head+.postcard-section{border-top:0}.postcard-section h2{margin:0 0 6px;color:var(--pc-ink);font-size:9.5px;letter-spacing:.2em;font-weight:500}.postcard-section .note{margin:6px 0;color:#5c5a54;font-size:9.5px;line-height:1.45}
+    .postcard-row{display:flex;align-items:center;gap:8px;margin:9px 0}.postcard-row label{color:var(--pc-dim);flex:none}.postcard-row input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:2px;background:#2a2b33;outline:0}.postcard-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--pc-accent);cursor:pointer}.postcard-row input[type=range]::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;background:var(--pc-accent);cursor:pointer}
+    .postcard-value{color:var(--pc-accent);font-variant-numeric:tabular-nums;min-width:52px;text-align:right}.postcard-row input[type=color]{margin-left:auto;width:46px;height:22px;padding:2px;border:1px solid var(--pc-line);background:none;cursor:pointer;border-radius:2px}.postcard-row input[type=number],.postcard-row select{margin-left:auto;width:92px;background:#141519;border:1px solid var(--pc-line);color:var(--pc-ink);padding:3px 6px;font:inherit;border-radius:2px}
+    .postcard-choice{display:flex;flex-wrap:wrap;gap:4px;margin:7px 0}.postcard-chip,.postcard-button{border:1px solid var(--pc-line);background:#141519;color:var(--pc-dim);border-radius:2px;font:inherit;cursor:pointer}.postcard-chip{padding:4px 7px}.postcard-chip:hover,.postcard-button:hover{border-color:var(--pc-accent);color:var(--pc-accent)}.postcard-chip[aria-pressed=true]{background:var(--pc-accent);border-color:var(--pc-accent);color:#15140f}
+    .postcard-button{width:100%;padding:8px;letter-spacing:.1em;margin-top:8px}.postcard-diagnostic{margin:8px 0 0;padding:8px;background:#08080a;border:1px solid var(--pc-line);color:var(--pc-dim);font:10px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap}.postcard-actions{position:fixed;right:0;bottom:0;z-index:30;width:var(--pc-panel-width,280px);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px 16px;background:var(--pc-panel);border-top:1px solid var(--pc-line);box-shadow:0 -8px 24px #0008}.postcard-actions .postcard-button{margin:0;padding:7px 6px}.postcard-actions .postcard-button:first-child{grid-column:span 2}.postcard-actions .primary{background:var(--pc-accent);border-color:var(--pc-accent);color:#15140f}
+    .postcard-toast{position:fixed;right:296px;bottom:18px;z-index:40;background:#141519;border:1px solid var(--pc-accent);color:var(--pc-accent);padding:7px 11px;border-radius:2px;opacity:0;transition:opacity .2s;pointer-events:none}.postcard-toast.on{opacity:1}.postcard-hud{position:absolute;left:10px;bottom:8px;opacity:.4;pointer-events:none;white-space:pre}.postcard-load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--pc-bg);letter-spacing:.2em;z-index:20;color:var(--pc-dim)}
   `;
   document.head.append(style);
 }
 
-export function mountPanelFrame({ panel, title, description }) {
-  ensureSharedStyles();
-  panel.dataset.sharedControls = 'true';
-  let head = panel.querySelector('.postcard-controls-head');
-  if (!head) {
-    head = document.createElement('header');
-    head.className = 'postcard-controls-head';
-    panel.prepend(head);
-  }
-  head.replaceChildren(
-    Object.assign(document.createElement('h1'), { textContent: title }),
-    Object.assign(document.createElement('p'), { textContent: description })
-  );
-  return head;
-}
+function note(text) { const element = document.createElement('p'); element.className = 'note'; element.textContent = text; return element; }
+function button(label, callback, className = '') { const element = document.createElement('button'); element.type = 'button'; element.className = `postcard-button ${className}`.trim(); element.textContent = label; element.addEventListener('click', callback); return element; }
 
-export function mountActionBar({ panel, onSavePng, onSaveValues, onCopy, onReset, onToggle } = {}) {
-  ensureSharedStyles();
-  const bar = document.createElement('nav');
-  bar.className = 'postcard-actions';
-  bar.setAttribute('aria-label', 'Postcard actions');
-  const add = (label, callback, primary = false) => {
-    if (!callback) return;
-    const button = makeAction(label, callback);
-    if (primary) button.dataset.primary = 'true';
-    bar.append(button);
+export function createPostcardControls({ panel, title, description, scene, config, valuesFile = 'values.json', gridValues = [] }) {
+  installStyles();
+  panel.className = 'postcard-panel';
+  panel.replaceChildren();
+  const header = document.createElement('header');
+  header.className = 'postcard-controls-head';
+  header.append(Object.assign(document.createElement('h1'), { textContent: title }), Object.assign(document.createElement('p'), { textContent: description }));
+  panel.append(header);
+
+  const toast = document.createElement('div'); toast.className = 'postcard-toast'; document.body.append(toast);
+  const notify = message => { toast.textContent = message; toast.classList.add('on'); clearTimeout(notify.timer); notify.timer = setTimeout(() => toast.classList.remove('on'), 1400); };
+  const syncers = [], diagnostics = [];
+  const sync = () => { syncers.forEach(syncer => syncer()); diagnostics.forEach(refresh => refresh()); };
+  const update = kind => { applySceneUpdate(scene, kind); sync(); };
+  const resolve = ({ path, get }) => get || (() => getPath(config, path));
+  const assign = ({ path, set }) => set || (value => setPath(config, path, value));
+  let controlId = 0;
+  const labelInput = (label, input, text) => {
+    const id = `postcard-control-${++controlId}`;
+    input.id = id;
+    label.htmlFor = id;
+    label.textContent = text;
   };
-  add('play / pause', onToggle);
-  add('save PNG', onSavePng);
-  add('save values', onSaveValues, true);
-  add('copy values', onCopy);
-  add('reset', onReset);
-  (panel ?? document.body).append(bar);
-  return bar;
-}
 
-export function standardizePanel({ panel, basicsSelector }) {
-  const basics = panel.querySelector(basicsSelector);
-  if (basics) {
-    const legend = basics.querySelector('legend');
-    const heading = basics.querySelector('h2');
-    if (legend) legend.textContent = 'POSTCARD BASICS';
-    if (heading) heading.textContent = 'POSTCARD BASICS';
-    basics.dataset.controlRole = 'basics';
+  function section(title, description = '') {
+    const element = document.createElement('section'); element.className = 'postcard-section';
+    element.append(Object.assign(document.createElement('h2'), { textContent: title })); if (description) element.append(note(description)); panel.append(element);
+    const api = {
+      note(text) { element.append(note(text)); return api; },
+      range(options) {
+        const get = resolve(options), set = assign(options), row = document.createElement('div'), label = document.createElement('label'), input = document.createElement('input'), value = document.createElement('span');
+        row.className = 'postcard-row'; input.type = 'range'; input.min = options.min; input.max = options.max; input.step = options.step; input.dataset.update = options.update || 'update'; labelInput(label, input, options.label); value.className = 'postcard-value';
+        const show = () => { input.value = get(); value.textContent = (options.format || (item => String(item)))(get()); };
+        input.addEventListener('input', () => { set(Number(input.value)); update(options.update || 'update'); }); row.append(label, input, value); element.append(row); syncers.push(show); show(); return api;
+      },
+      color(options) {
+        const get = resolve(options), set = assign(options), row = document.createElement('div'), label = document.createElement('label'), input = document.createElement('input');
+        row.className = 'postcard-row'; input.type = 'color'; input.dataset.update = options.update || 'refresh'; labelInput(label, input, options.label); const show = () => { input.value = get(); };
+        input.addEventListener('input', () => { set(input.value); update(options.update || 'refresh'); }); row.append(label, input); element.append(row); syncers.push(show); show(); return api;
+      },
+      number(options) {
+        const get = resolve(options), set = assign(options), row = document.createElement('div'), label = document.createElement('label'), input = document.createElement('input');
+        row.className = 'postcard-row'; input.type = 'number'; input.step = options.step || 1; input.dataset.update = options.update || 'rebuild'; labelInput(label, input, options.label); const show = () => { input.value = get(); };
+        input.addEventListener('change', () => { set(Number(input.value)); update(options.update || 'rebuild'); }); row.append(label, input); element.append(row); syncers.push(show); show(); return api;
+      },
+      choice(options) {
+        const get = resolve(options), set = assign(options), host = document.createElement('div'); host.className = 'postcard-choice';
+        const choices = options.values.map(value => typeof value === 'object' ? value : { value, label: String(value) });
+        const buttons = choices.map(choice => { const control = document.createElement('button'); control.type = 'button'; control.className = 'postcard-chip'; control.textContent = choice.label; control.dataset.update = options.update || 'update'; control.addEventListener('click', () => { set(choice.value); update(options.update || 'update'); }); host.append(control); return control; });
+        const show = () => buttons.forEach((control, index) => control.setAttribute('aria-pressed', String(choices[index].value === get()))); element.append(host); syncers.push(show); show(); return api;
+      },
+      select(options) {
+        const get = resolve(options), set = assign(options), row = document.createElement('div'), label = document.createElement('label'), input = document.createElement('select');
+        row.className = 'postcard-row'; input.dataset.update = options.update || 'update'; labelInput(label, input, options.label); options.values.forEach(value => input.append(Object.assign(document.createElement('option'), { value: typeof value === 'object' ? value.value : value, textContent: typeof value === 'object' ? value.label : value })));
+        const show = () => { input.value = get(); }; input.addEventListener('change', () => { set(input.value); update(options.update || 'update'); }); row.append(label, input); element.append(row); syncers.push(show); show(); return api;
+      },
+      toggle(options) {
+        const get = resolve(options), set = assign(options), row = document.createElement('div'), label = document.createElement('label'), input = document.createElement('input');
+        row.className = 'postcard-row'; input.type = 'checkbox'; input.dataset.update = options.update || 'render'; labelInput(label, input, options.label); const show = () => { input.checked = Boolean(get()); };
+        input.addEventListener('input', () => { set(input.checked); update(options.update || 'render'); }); row.append(label, input); element.append(row); syncers.push(show); show(); return api;
+      },
+      action(label, callback, updateKind = null) { const control = button(label, () => { callback(); if (updateKind) update(updateKind); else sync(); }); if (updateKind) control.dataset.update = updateKind; element.append(control); return api; },
+      diagnostic(render) { const output = document.createElement('pre'); output.className = 'postcard-diagnostic'; const refresh = () => { output.textContent = render(); }; diagnostics.push(refresh); refresh(); element.append(output); return api; }
+    };
+    return api;
   }
-  panel.querySelectorAll('input[type=range]').forEach(input => {
-    input.classList.add('postcard-range');
-    if (!input.dataset.update) input.dataset.update = 'rebuild';
-  });
-  panel.querySelectorAll('input[type=color]').forEach(input => {
-    input.classList.add('postcard-color');
-    if (!input.dataset.update) input.dataset.update = 'rebuild';
-  });
-  panel.querySelectorAll('button').forEach(button => button.classList.add('postcard-action'));
-  return basics;
+
+  const basics = section('POSTCARD BASICS');
+  basics.choice({ values: gridValues.map(value => ({ value, label: `${9 * value}×${16 * value}` })), path: 'gridK', update: 'rebuild' });
+  basics.diagnostic(() => { const info = scene.info(); return `grid  ${info.W}×${info.H}`; });
+  basics.note('Only 9:16 grids (9k × 16k) tile into whole internal pixels.');
+  basics.choice({ values: [{ value: 'fill', label: 'FILL' }, { value: 'crisp', label: 'CRISP' }], path: 'fit', update: 'fit' });
+  basics.color({ label: 'darkest', path: 'ink', update: 'refresh' }); basics.color({ label: 'brightest', path: 'paper', update: 'refresh' });
+  basics.action('SWAP TONES', () => { [config.ink, config.paper] = [config.paper, config.ink]; }, 'refresh');
+
+  const actions = document.createElement('nav'); actions.className = 'postcard-actions'; actions.setAttribute('aria-label', 'Postcard actions');
+  actions.append(button('play / pause', () => scene.togglePaused()), button('save PNG', () => scene.savePng()), button('save values', () => { downloadJson(valuesFile, config); notify('values downloaded'); }, 'primary'), button('copy values', () => copyText(JSON.stringify(config, null, 2)).then(() => notify('values copied')).catch(() => notify('copy unavailable'))), button('reset', () => location.reload()));
+  panel.append(actions);
+  return { section, sync, update, notify };
 }

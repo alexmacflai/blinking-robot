@@ -10,6 +10,7 @@ A coded animation postcard of a windmill.
 
 - [`index.html`](index.html) — public postcard
 - [`controls.html`](controls.html) — maker-facing controls
+- [`authoring.js`](authoring.js) — Windmill’s component-first controls declaration
 - [`scene.js`](scene.js) — shared Windmill renderer
 - [`values.json`](values.json) — the single saved configuration for both pages
 - [`brief.md`](brief.md) — scene intent
