@@ -38,6 +38,7 @@ export function applySceneUpdate(scene, kind = 'rebuild') {
   if (kind === 'fit') return scene.fit();
   if (kind === 'render' && scene.render) return scene.render();
   if (kind === 'refresh' && scene.refresh) return scene.refresh();
+  if (kind === 'update' && scene.update) return scene.update();
   return scene.rebuild(true);
 }
 

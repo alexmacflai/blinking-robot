@@ -976,13 +976,18 @@ function fitCanvas(){
   return cell;
 }
 
-function rebuild(keepTime){
+function rebuild(keepTime,warm=true){
   const t0=keepTime?t:0;
   build(); t=t0; acc=0;
-  warmup();
+  if(warm) warmup();
   fitCanvas();
   renderFrame(t);
 }
+
+/* Most authoring changes need fresh geometry but not a 260-step particle
+   simulation. Keeping that warmup for grid and seed changes makes normal
+   sliders respond while they are being dragged. */
+function update(){ rebuild(true,false); }
 
 /* Palette changes only affect the final dither colours. They do not need to
    rebuild the grid, cloud geometry, or the warmed particle state. */
@@ -1029,5 +1034,5 @@ function setGalleryPaused(next){
 }
 setGalleryPaused(false);
 addEventListener('message',e=>{if(e.data?.type==='blinking-robot:preview-pause')setGalleryPaused(e.data.paused);});
-return {start,config:CFG,render:()=>renderFrame(t),refresh,rebuild,fit:fitCanvas,reset,savePng,info,triggerStar(){SS.next=t;},togglePaused(){paused=!paused;return paused;}};
+return {start,config:CFG,render:()=>renderFrame(t),refresh,update,rebuild,fit:fitCanvas,reset,savePng,info,triggerStar(){SS.next=t;},togglePaused(){paused=!paused;return paused;}};
 }
