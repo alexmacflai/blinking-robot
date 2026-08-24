@@ -977,10 +977,22 @@ function fitCanvas(){
   return cell;
 }
 
-function rebuild(keepTime,warm=true){
+function rebuild(keepTime=true,warm=false){
+  const live=keepTime ? {
+    eX:eX?.slice(), eY:eY?.slice(), eVX:eVX?.slice(), eVY:eVY?.slice(),
+    eLife:eLife?.slice(), eVis:eVis?.slice(), eN, eSpawnAcc, eRevealed,
+    SS, SS_RND
+  } : null;
   const t0=keepTime?t:0;
   build(); t=t0; acc=0;
   if(warm) warmup();
+  if(live){
+    const copy=(target,source)=>{ if(!target||!source)return; target.set(source.subarray(0,target.length)); };
+    copy(eX,live.eX); copy(eY,live.eY); copy(eVX,live.eVX); copy(eVY,live.eVY);
+    copy(eLife,live.eLife); copy(eVis,live.eVis);
+    eN=Math.min(live.eN,eMax); eSpawnAcc=live.eSpawnAcc; eRevealed=live.eRevealed;
+    SS=live.SS; SS_RND=live.SS_RND;
+  }
   fitCanvas();
   renderFrame(t);
 }

@@ -112,7 +112,7 @@ let ranks=[];            // { d, tone, sepTone, sc, halfW, gap, right, walkers, 
 const cv=document.getElementById('c');
 const ctx=cv.getContext('2d',{alpha:false});
 
-function build(){
+function build(previousRanks=[]){
   const K=CFG.gridK;
   W=9*K; H=16*K; S=W/BASE_W;
 
@@ -125,13 +125,14 @@ function build(){
   HOR=CFG.cam.horizon*S;
   SEPW=CFG.sepW*S;
 
-  ranks=CFG.ranks.map(r=>{
+  ranks=CFG.ranks.map((r,index)=>{
+    const previous=previousRanks[index];
     const sc=CFG.cam.focal*S/r.d;      // pixels per metre at this depth
     return { d:r.d, tone:r.tone,
              sepTone:Math.min(0.92, r.tone+CFG.sep),
              sc:sc, halfW:(W*0.5)/sc,
              gap:r.gap, right:r.right,
-             walkers:[], tNext:rrange(0,r.gap[1]) };
+             walkers:previous?.walkers||[], tNext:previous?.tNext??rrange(0,r.gap[1]) };
   });
 
   /* The floor band starts at the NEAREST rank's contact line, not the
@@ -698,10 +699,15 @@ startDriver();
 
 /* Console handle. `run(sec)` advances the traffic without drawing, which is
    how you look for a crossing rather than waiting for one. */
-function rebuild(){ build(); warmup(); fitCanvas(); renderFrame(); }
+function rebuild(keepTime=true){
+  const previousRanks=keepTime?ranks:[];
+  build(previousRanks);
+  if(!keepTime) warmup();
+  fitCanvas(); renderFrame();
+}
 function png(){ const a=document.createElement('a'); a.download='passing-legs-'+W+'x'+H+'.png'; a.href=cv.toDataURL('image/png'); a.click(); }
 window.__legs={ CFG:CFG,
-  fit:fitCanvas, render:renderFrame, refresh:rebuild, update:renderFrame, rebuild, png,
+  fit:fitCanvas, render:renderFrame, refresh:rebuild, update:rebuild, rebuild, png,
   toggle:function(){
     const shouldRun=playback.toggleManual();
     if(shouldRun) startDriver(); else driverActive=false;

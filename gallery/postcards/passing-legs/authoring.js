@@ -1,7 +1,7 @@
 import { createPostcardControls, saveCanvasPng, saveCanvasVideo } from '../../shared/controls.js';
 const engine=window.__legs, cfg=engine.CFG;
 const galleryConfig=await fetch('./gallery.json',{cache:'no-store'}).then(response=>response.json());
-const scene={fit:()=>engine.fit(),render:()=>engine.render(),refresh:()=>engine.refresh(),update:()=>engine.update(),rebuild:()=>engine.rebuild(),togglePaused:()=>engine.toggle(),savePng:()=>saveCanvasPng(document.querySelector('#c'),'passing-legs-frame-2160x3840.png'),saveVideo:options=>{engine.play();return saveCanvasVideo(document.querySelector('#c'),options);},info:()=>({W:cfg.gridK*9,H:cfg.gridK*16})};
+const scene={fit:()=>engine.fit(),render:()=>engine.render(),refresh:()=>engine.refresh(true),update:()=>engine.update(true),rebuild:()=>engine.rebuild(true),togglePaused:()=>engine.toggle(),savePng:()=>saveCanvasPng(document.querySelector('#c'),'passing-legs-frame-2160x3840.png'),saveVideo:options=>{engine.play();return saveCanvasVideo(document.querySelector('#c'),options);},info:()=>({W:cfg.gridK*9,H:cfg.gridK*16})};
 const controls=createPostcardControls({panel:document.querySelector('#panel'),title:'PASSING LEGS',description:'Traffic passing at pavement level.',scene,config:cfg,valuesFile:'values.json',gridValues:[11,13,16,20,26,32,40,48],galleryConfig,galleryFile:'gallery.json'});
 const r=(s,label,path,min,max,step,update='rebuild')=>s.range({label,path,min,max,step,update});
 const camera=controls.section('CAMERA');r(camera,'horizon','cam.horizon',60,300,1);r(camera,'focal','cam.focal',180,900,1);r(camera,'camera height','cam.height',.01,.4,.005);camera.diagnostic(()=>`portrait grid  ${cfg.gridK*9}×${cfg.gridK*16}\nhorizon       ${cfg.cam.horizon}px\nfocal         ${cfg.cam.focal}px·m`);
