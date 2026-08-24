@@ -26,6 +26,10 @@ are.
   — `[decision-record] [windmill]`
 - [`0003-three-render-surfaces.md`](0003-three-render-surfaces.md) —
   `[decision-record] [rendering]`
+- [`0004-modular-postcard-authoring.md`](0004-modular-postcard-authoring.md) —
+  `[decision-record] [rendering] [animation-controls]`
+- [`0005-local-mp4-export.md`](0005-local-mp4-export.md) — `[decision-record]
+  [rendering] [video-export]`
 
 ## Local rules
 

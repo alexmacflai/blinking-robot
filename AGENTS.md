@@ -42,7 +42,7 @@ knowledge/   durable project knowledge: design, engineering, decisions, vocabula
 | Requirements and acceptance criteria | `knowledge/specs/` | create on first use |
 | Reusable agent skills | `workflows/skills/` | create on first use |
 | Prompts orchestrating several skills | `workflows/prompts/` | create on first use |
-| Code shared by two or more postcards | `gallery/shared/` | create when a second postcard needs it |
+| Code shared by two or more postcards | `gallery/shared/` | live |
 
 "Create on first use" means the directory and its README are created together
 with the first real file that belongs there. Do not create the directory ahead
@@ -53,19 +53,20 @@ would go in it is overhead with no payoff until something actually needs it.
 
 1. Every directory **with content** has exactly one canonical `README.md`. No
    competing index files.
-2. Postcard surfaces are self-contained and asset-free at runtime: each public
-   `index.html` and required maker-facing `controls.html` is directly runnable,
-   with no build step, no dependencies, and no runtime-loaded source material.
-   Supplied material belongs in that postcard's `references/` folder and must
-   never become a runtime dependency.
+2. Postcards are authored as small, asset-free local modules: one scene renderer
+   and one values file serve both the public `index.html` and maker-facing
+   `controls.html`. They run from a local preview server, with no build step or
+   third-party dependencies. Legacy self-contained postcards remain runnable
+   until migrated. Supplied material belongs in `references/` and must never
+   become a runtime dependency.
 3. Every postcard is portrait 9:16, authored on a 9k x 16k pixel grid. This is
    the project's fixed frame — postcards are made to be watched the way a phone
    is held — and it is not a per-scene decision. A brief that seems to want a
    wider composition solves it inside the portrait frame, by cropping and by
    what it leaves out, rather than by changing the frame.
-4. Do not extract shared postcard runtime code merely because a public and
-   controls surface duplicate it. Extract only when a second postcard actually
-   needs the same implementation; then it goes in `gallery/shared/`.
+4. A postcard's renderer and values are shared by its public and controls
+   surfaces. The reusable controls toolkit lives in `gallery/shared/`; keep
+   scene rendering postcard-local.
 5. Repo-wide rules live on this page only. Link to it instead of restating it —
    duplicated guidance is what drifts out of sync with the tree.
 6. Make small, reversible changes. State assumptions when the project is silent
@@ -92,18 +93,24 @@ would go in it is overhead with no payoff until something actually needs it.
     When a postcard establishes a transferable pattern, record its effect,
     conditions, and limits in the visual-language catalogue. Keep implementation
     self-contained until a second postcard truly needs shared code.
-12. Every new postcard must include a maker-facing `controls.html` and a
-    `brief.md`, alongside its clean public `index.html`. The controls surface
+12. Every new postcard must include a maker-facing `controls.html`, `brief.md`,
+    scene module, and values file, alongside its clean public `index.html`. The controls surface
     must render the same postcard and expose
     live controls that let the human author meaningfully tune the scene without
     editing code. Start from the Windmill controls page as the interaction
     benchmark, adapting its UI and controls to the scene rather than copying its
-    implementation blindly.
-13. Each controls page must include these generic controls: pixel settings
-    (authoring grid/resolution and display fit where relevant), a monochrome
-    color palette (at least darkest and brightest tones), **Save PNG**, and
-    **Save values** (a copyable and/or downloadable complete configuration that
-    can be restored or pasted back into source). Its scene controls must expose
+    implementation blindly. Use `gallery/shared/controls.js` directly: the
+    shared builder owns the shell, Postcard Basics, Gallery writing and publish
+    controls, component behaviour, and action sheet; the postcard’s
+    `authoring.js` declares only its scene-specific sections.
+13. Each controls page must use the shared builder and include its generic
+    **Postcard Basics** and **Gallery** sections: pixel settings (authoring
+    grid/resolution and display fit where relevant), a monochrome color palette
+    (at least darkest and brightest tones), publish state, and hover writing.
+    Its shared action sheet supplies **Play/Pause**, **Reset**, **Save Frame**,
+    **Save Video**, **Copy values**, and **Save values**. Save Values must be a
+    complete downloadable replacement for the postcard's `values.json`. Its
+    scene controls must expose
     the parameters a human is most likely to need: motion speed and duration,
     element position (x/y/z or the scene's meaningful equivalent), tonal
     shades, and any brief-specific or requested behaviour. Exercise judgement:
@@ -136,7 +143,9 @@ runtime assets.
 
 ## Verifying a change
 
-Postcard surfaces open directly from the filesystem — no server required. After
-changing one, open its public `index.html`, confirm the animation runs, and open
-`controls.html` to exercise its controls, including PNG and values export.
+Start the local authoring server from the repository root with
+`python3 gallery/export-server.py`, then open the relevant public `index.html`
+URL and confirm the animation runs. Open `controls.html` to exercise its
+controls, including PNG, MP4, and values export. `python3 -m http.server`
+remains suitable for preview-only work.
 There are no automated tests.

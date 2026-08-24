@@ -4,17 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Blinking Robot — postcards</title>
+  <link rel="stylesheet" href="shared/controls-theme.css">
   <style>
-    :root { color-scheme:dark; --bg:#0a0a0c; --ink:#e8e6df; --dim:#77746c; --line:#292a30; --accent:#c8b98a; }
+    :root { color-scheme:dark; --bg:var(--pc-black); --ink:var(--pc-white); --dim:var(--pc-white-50); --line:var(--pc-white-15); --accent:var(--pc-accent); }
     * { box-sizing:border-box; }
-    body { margin:0; min-height:100vh; background:var(--bg); color:var(--dim); font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; padding:clamp(24px,6vw,80px); }
+    body { margin:0; min-height:100vh; background:var(--bg); color:var(--dim); font:13px/1.6 var(--pc-font-sans); padding:clamp(24px,6vw,80px); }
     main { max-width:1120px; margin:auto; }
-    h1 { color:var(--ink); font-size:clamp(18px,3vw,28px); letter-spacing:.16em; font-weight:500; margin:0; }
+    h1 { color:var(--ink); font:700 clamp(18px,3vw,28px)/1.1 var(--pc-font-mono); letter-spacing:.08em; margin:0; }
     .intro { max-width:620px; margin:8px 0 48px; }
     .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr)); gap:clamp(20px,3vw,36px); }
     .card { min-width:0; }
-    .preview { aspect-ratio:9 / 16; background:#111116; border:1px solid var(--line); overflow:hidden; }
+    .preview { position:relative; display:block; aspect-ratio:9 / 16; background:#111116; border:1px solid var(--line); overflow:hidden; }
     iframe { width:100%; height:100%; display:block; border:0; pointer-events:none; }
+    .gallery-overlay { position:absolute; inset:0; z-index:1; display:flex; align-items:flex-end; padding:clamp(16px,7%,28px); background:var(--pc-white); color:var(--pc-black); opacity:0; text-decoration:none; transition:opacity .12s linear; }
+    .preview:hover .gallery-overlay, .preview:focus-within .gallery-overlay { opacity:1; }
+    .gallery-copy { width:100%; font:400 clamp(14px,1.7vw,19px)/1.35 var(--pc-font-mono); letter-spacing:-.04em; white-space:pre-wrap; tab-size:2; background:conic-gradient(#000 25%,#242424 0 50%,#000 0 75%,#242424 0) 0 0/2px 2px; color:transparent; -webkit-background-clip:text; background-clip:text; }
+    .gallery-copy p { margin:0 0 .8em; }.gallery-copy p:last-child { margin-bottom:0; }.gallery-copy strong { font-weight:700; }.gallery-copy em { font-style:italic; }
     .card h2 { margin:12px 0 2px; font-size:13px; font-weight:500; letter-spacing:.08em; }
     .card a { color:var(--ink); text-decoration:none; }
     .card a:hover { color:var(--accent); }
@@ -28,17 +33,55 @@
     <p class="intro">Coded animation postcards: small worlds where something keeps moving.</p>
     <section class="grid" id="gallery" aria-label="Postcards"></section>
   </main>
-  <script>
+  <script type="module">
     const POSTCARDS = [
-      { title:'Windmill', description:'procedural 1-bit postcard', src:'postcards/windmill/index.html' },
-      { title:'Coffee', description:'procedural 1-bit postcard', src:'postcards/coffee/index.html' },
-      { title:'Passing legs', description:'procedural 1-bit postcard', src:'postcards/passing-legs/index.html' }
+      { title:'Windmill', description:'procedural 1-bit postcard', src:'postcards/windmill/index.html', metadata:'postcards/windmill/values.json', select: values => values.postcard },
+      { title:'Coffee', description:'procedural 1-bit postcard', src:'postcards/coffee/index.html', metadata:'postcards/coffee/gallery.json' },
+      { title:'Passing legs', description:'procedural 1-bit postcard', src:'postcards/passing-legs/index.html', metadata:'postcards/passing-legs/gallery.json' }
     ];
     const gallery = document.getElementById('gallery');
-    for (const postcard of POSTCARDS) {
+    const safeGalleryText = value => {
+      const template = document.createElement('template');
+      template.innerHTML = String(value || '');
+      const escape = text => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+      const children = node => [...node.childNodes].map(clean).join('');
+      const clean = node => {
+        if (node.nodeType === Node.TEXT_NODE) return escape(node.textContent);
+        if (node.nodeType !== Node.ELEMENT_NODE) return '';
+        const tag = node.tagName.toLowerCase(), content = children(node);
+        if (tag === 'br') return '<br>';
+        if (tag === 'strong' || tag === 'b') return `<strong>${content}</strong>`;
+        if (tag === 'em' || tag === 'i') return `<em>${content}</em>`;
+        if (tag === 'p' || tag === 'div') return `<p>${content}</p>`;
+        return content;
+      };
+      return children(template.content);
+    };
+    const records = await Promise.all(POSTCARDS.map(async postcard => {
+      try {
+        const values = await fetch(postcard.metadata, { cache:'no-store' }).then(response => {
+          if (!response.ok) throw new Error('metadata unavailable');
+          return response.json();
+        });
+        return { postcard, metadata: postcard.select ? postcard.select(values) : values };
+      } catch (_) { return { postcard, metadata: { published:false } }; }
+    }));
+    for (const { postcard, metadata } of records) {
+      if (!metadata?.published) continue;
       const card = document.createElement('article');
       card.className = 'card';
-      card.innerHTML = `<div class="preview"><iframe title="${postcard.title} preview" src="${postcard.src}" loading="lazy" tabindex="-1"></iframe></div><h2><a href="${postcard.src}">${postcard.title}</a></h2><p>${postcard.description} · <a href="${postcard.src}">open animation</a></p>`;
+      const preview = document.createElement('div'); preview.className = 'preview';
+      const frame = document.createElement('iframe'); frame.title = `${postcard.title} preview`; frame.src = postcard.src; frame.loading = 'lazy'; frame.tabIndex = -1;
+      preview.append(frame);
+      const galleryText = safeGalleryText(metadata.galleryText).replace(/<[^>]+>/g, '').trim();
+      if (galleryText) {
+        const overlay = document.createElement('a'); overlay.className = 'gallery-overlay'; overlay.href = postcard.src; overlay.setAttribute('aria-label', `Open ${postcard.title}`);
+        const copy = document.createElement('div'); copy.className = 'gallery-copy'; copy.innerHTML = safeGalleryText(metadata.galleryText);
+        overlay.append(copy); preview.append(overlay);
+      }
+      const heading = document.createElement('h2'), title = document.createElement('a'); title.href = postcard.src; title.textContent = postcard.title; heading.append(title);
+      const description = document.createElement('p'); description.append(document.createTextNode(`${postcard.description} · `)); const open = document.createElement('a'); open.href = postcard.src; open.textContent = 'open animation'; description.append(open);
+      card.append(preview, heading, description);
       gallery.appendChild(card);
     }
     const observer = new IntersectionObserver(entries => {

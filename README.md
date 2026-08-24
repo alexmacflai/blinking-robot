@@ -25,9 +25,17 @@ go straight to one:
 
 Each postcard folder also has a maker-facing `controls.html`; its README routes
 to both surfaces and its supplied source material.
+Published postcards appear in the gallery. Their saved gallery writing appears
+over the animation on hover.
 
-Every postcard surface is directly runnable HTML. Open it in a browser;
-nothing else to install.
+Authoring postcards use a small local server. From the repository root, run
+`python3 gallery/export-server.py`, then open
+`http://localhost:8000/gallery/index.html`. This also enables MP4 video export;
+it requires the locally installed `ffmpeg` command (`brew install ffmpeg`). For preview-only work,
+`python3 -m http.server` still works. Older postcards can still be opened
+directly; migrated postcards use nearby scene and values files.
+
+Run the playback regression check with `node --test test/playback.test.mjs`.
 
 ## Repository
 

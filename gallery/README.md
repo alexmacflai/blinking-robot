@@ -16,7 +16,12 @@ an individual animation.
 
 ## Handbook
 
-- [`index.html`](index.html) — `[entry-point] [runnable]`
+- [`index.html`](index.html) — `[entry-point] [runnable]` — shows only
+  postcards whose saved gallery metadata is published; their hover writing is
+  rendered over the preview
+- every postcard’s public and controls surfaces read its shared `values.json`
+- [`export-server.py`](export-server.py) — `[authoring] [video-export]` — serves
+  the gallery and converts recorded WebM exports to MP4 with local FFmpeg
 - [`postcards/README.md`](postcards/README.md) — `[index] [routing]`
 
 ## Local rules
