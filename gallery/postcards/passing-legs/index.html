@@ -604,22 +604,21 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
 
      ARTICULATION: this piece hinges at (seam2X,soleZ) — its back-bottom
      corner, the ball of the foot, the SAME point ankleAt now rolls the
-     forefoot rocker about (F.bl). The toes do not lift; the toes are what
-     stays on the floor. The hinge angle is exactly MINUS the body's roll
-     `th`, so the two cancel and the toe cap's world angle is zero: it lies
-     flat on the ground from ball to tip while the rest of the shoe rotates
-     up and away from it. `toeHingeAmt` is the amount of that cancellation
-     and 1.0 means exact — lower it only to deliberately under-flex.
+     forefoot rocker about (F.bl). It starts by cancelling the body's
+     toe-down roll, leaving the cap flat on the floor from ball to tip.
 
-     That is the real mechanism, and it is why nothing here is gated on a
-     phase. `max(0,-A.th)` is zero whenever the foot is not toe-down, which
-     is precisely heel-strike and flat stance — the phases where a real
-     foot is rigid and does not bend at all. It rises only through heel-off,
-     peaks at toe-off, and is continuous into swing (A.th is the same value
-     on both sides of the boundary), decaying to zero on its own about a
-     third of the way through the swing as the joint returns to neutral. No
-     bend in mid-air, no seam to snap across. */
-  const hingeAng=dir*f.toeHingeAmt*Math.max(0,-A.th), hx=seam2X, hz=soleZ;
+     Crucially, it does NOT recover on its own timetable after toe-off. While
+     the unbent tip would pass through the floor, the cap takes the most
+     neutral angle that keeps its tip ON the floor. As the shoe lifts this
+     releases immediately, at the maximum rate the contact allows; when the
+     natural toe has room, the cap is already straight. `toeHingeAmt` scales
+     that floor-constrained bend; 1.0 is exact contact. */
+  const ballZ=K.az+rot(seam2X,soleZ,th)[1];
+  const toeDX=toeX-seam2X;
+  const toeRestZ=K.az+rot(toeX,soleZ,th)[1];
+  const toeFloorAng=Math.asin(clamp(-ballZ/toeDX,-1,1));
+  const toeWorldAng=toeRestZ>=0 ? th : toeFloorAng;
+  const hingeAng=(toeWorldAng-th)*f.toeHingeAmt, hx=seam2X, hz=soleZ;
   const pth=(lx,lz)=>{ const r=rot(lx-hx,lz-hz,hingeAng); return pt(hx+r[0],hz+r[1]); };
   quad([pth(seam2C,soleZ),pth(seam2C,midZ),pth(toeX,tipZ),pth(toeX,soleZ)], tone, only);
 
