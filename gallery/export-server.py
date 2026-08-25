@@ -110,6 +110,11 @@ class GalleryHandler(SimpleHTTPRequestHandler):
                 elif request.get("action") == "default":
                     directory = self.settings_directory(request.get("postcard"))
                     target = directory / "values.json"
+                elif request.get("action") == "gallery":
+                    directory = self.settings_directory(request.get("postcard"))
+                    target = directory / "gallery.json"
+                    if not target.is_file():
+                        raise ValueError("This postcard has no gallery settings file.")
                 elif request.get("action") == "snapshot":
                     directory = self.settings_directory(request.get("postcard"))
                     snapshots = directory / "snapshots"

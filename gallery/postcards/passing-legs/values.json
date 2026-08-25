@@ -1,8 +1,8 @@
 {
   "gridK": 26,
   "fit": "fill",
-  "ink": "#101418",
-  "paper": "#e9e6dd",
+  "ink": "#374b6f",
+  "paper": "#efece2",
   "cam": {
     "horizon": 240,
     "focal": 350,
@@ -95,5 +95,16 @@
     "grain": 0.12
   },
   "sep": 0.6,
-  "sepW": 2
+  "sepW": 2,
+  "render": {
+    "paletteMode": "1-bit",
+    "dark": "#374b6f",
+    "middle": "#a9d3e7",
+    "light": "#efece2",
+    "accent": "#b8001f",
+    "globalSelection": {
+      "pixelPreset": "standard",
+      "palette": "paper-ink"
+    }
+  }
 }

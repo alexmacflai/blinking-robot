@@ -22,7 +22,8 @@ A coded animation postcard of an espresso machine and a full cup.
 The local authoring server can save the default directly to `values.json`, or
 save named alternatives in `snapshots/`; loading a snapshot does not overwrite
 the default. Download Values remains available for static preview. Gallery publish state and
-hover writing are saved separately in `gallery.json`. Save Frame exports a
+hover writing are saved separately in `gallery.json`, including from the
+Gallery controls when using the local authoring server. Save Frame exports a
 hard-pixel 2160×3840 PNG; Save Video uses the local authoring server for MP4.
 
 Postcard surface, controls, and reference-material requirements live in

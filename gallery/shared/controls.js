@@ -173,7 +173,12 @@ export async function createGalleryMetadataControls({ mount, metadataUrl = './ga
   }
   editor.addEventListener('keydown', event => event.stopPropagation());
   editor.addEventListener('input', saveText); editor.addEventListener('blur', () => { metadata.galleryText = cleanGalleryText(editor.innerHTML); editor.innerHTML = metadata.galleryText; });
-  section.append(row, editorLabel, tools, editor, note('Use Enter for a new paragraph. Select text, then use B or I.'), button('SAVE GALLERY DETAILS', () => { metadata.galleryText = cleanGalleryText(editor.innerHTML); downloadJson('gallery.json', metadata); }));
+  section.append(row, editorLabel, tools, editor, note('Use Enter for a new paragraph. Select text, then use B or I.'), button('SAVE GALLERY DETAILS', () => {
+    metadata.galleryText = cleanGalleryText(editor.innerHTML);
+    const postcard = localPostcardName();
+    if (!postcard) { downloadJson('gallery.json', metadata); return; }
+    localSettings(postcard, 'gallery', metadata).catch(() => downloadJson('gallery.json', metadata));
+  }));
   mount.append(section);
   return metadata;
 }
@@ -311,16 +316,22 @@ export function createPostcardControls({ panel, title, description, scene, confi
   basics.color({ label: 'accent', get: () => config.render?.accent ?? config.paper, set: value => { (config.render ??= {}).accent = value; }, visible: () => config.render?.paletteMode === '2-bit', update: 'refresh' });
   basics.action('SWAP TONES', () => { const dark=config.render?.dark ?? config.ink, light=config.render?.light ?? config.paper; config.ink=light; config.paper=dark; (config.render ??= {}).dark=light; config.render.light=dark; }, 'refresh');
 
+  const postcard = localPostcardName();
   const galleryValues = galleryConfig || (config.postcard ??= { published: false, galleryText: '' });
   galleryValues.published ??= false;
   galleryValues.galleryText ??= '';
   const gallery = section('GALLERY');
   gallery.toggle({ label: 'published', get: () => galleryValues.published, set: value => { galleryValues.published = value; }, update: 'none' });
   gallery.richText({ label: 'hover text', get: () => galleryValues.galleryText, set: value => { galleryValues.galleryText = value; }, update: 'none', placeholder: 'Write the text that appears over this postcard in the gallery.' });
-  gallery.note(galleryFile ? 'Use Enter for a new paragraph. Select text, then use B or I. Save gallery details downloads the file used by the gallery.' : 'Use Enter for a new paragraph. Select text, then use B or I. Save values downloads this writing and publish state with the postcard configuration.');
-  if (galleryFile) gallery.action('SAVE GALLERY DETAILS', () => downloadJson(galleryFile, galleryValues));
+  gallery.note(galleryFile ? 'Use Enter for a new paragraph. Select text, then use B or I. Save gallery details writes the gallery file through the local authoring server; static previews download it instead.' : 'Use Enter for a new paragraph. Select text, then use B or I. Save values downloads this writing and publish state with the postcard configuration.');
+  if (galleryFile) gallery.action('SAVE GALLERY DETAILS', () => {
+    galleryValues.galleryText = cleanGalleryText(galleryValues.galleryText);
+    if (!postcard) { downloadJson(galleryFile, galleryValues); notify('gallery details downloaded'); return; }
+    localSettings(postcard, 'gallery', galleryValues).then(() => notify('gallery details saved')).catch(error => {
+      notify(error.message === 'Unknown settings action.' ? 'restart authoring server to save gallery details' : error.message);
+    });
+  });
 
-  const postcard = localPostcardName();
   if (postcard) {
     const saved = section('SAVED SETTINGS', 'Available only through the loopback authoring server. The default updates values.json; snapshots keep named alternatives.');
     const row = document.createElement('div'); row.className = 'postcard-row';
