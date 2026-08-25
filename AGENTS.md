@@ -93,7 +93,18 @@ would go in it is overhead with no payoff until something actually needs it.
     When a postcard establishes a transferable pattern, record its effect,
     conditions, and limits in the visual-language catalogue. Keep implementation
     self-contained until a second postcard truly needs shared code.
-12. Every new postcard must include a maker-facing `controls.html`, `brief.md`,
+12. A postcard's `brief.md` must follow the
+    [`postcard-brief.md`](knowledge/design/postcard-brief.md) template and name
+    the specific design documents and principles it answers to — art
+    direction, motion, rendering — and any visual-language pattern it reuses
+    or deliberately declines. A read of `knowledge/design/` that leaves no
+    trace in the brief does not satisfy rule 9.
+13. Before writing a postcard's scene module, state in the brief or an
+    accompanying note how the scene answers art direction, motion, and
+    rendering, including which briefed or sketched elements are being dropped
+    and under which principle. Resolve this before implementation, not after —
+    it is where a wrong reading is cheap to correct.
+14. Every new postcard must include a maker-facing `controls.html`, `brief.md`,
     scene module, and values file, alongside its clean public `index.html`. The controls surface
     must render the same postcard and expose
     live controls that let the human author meaningfully tune the scene without
@@ -103,7 +114,7 @@ would go in it is overhead with no payoff until something actually needs it.
     shared builder owns the shell, Postcard Basics, Gallery writing and publish
     controls, component behaviour, and action sheet; the postcard’s
     `authoring.js` declares only its scene-specific sections.
-13. Each controls page must use the shared builder and include its generic
+15. Each controls page must use the shared builder and include its generic
     **Postcard Basics** and **Gallery** sections: pixel settings (authoring
     grid/resolution and display fit where relevant), a monochrome color palette
     (at least darkest and brightest tones), publish state, and hover writing.

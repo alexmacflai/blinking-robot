@@ -1,0 +1,54 @@
+{
+  "gridK": 26,
+  "fit": "fill",
+  "ink": "#101014",
+  "paper": "#efece2",
+  "bg": {
+    "tone": 0.92,
+    "grain": 0.015
+  },
+  "pool": {
+    "cx": 117,
+    "cy": 300,
+    "radius": 168,
+    "squashY": 0.52,
+    "arms": 3,
+    "rings": 2.4,
+    "rotSpeed": 0.05,
+    "edgeTone": 0.8,
+    "innerTone": 0.46,
+    "bandDepth": 0.16,
+    "farNearShade": 0.1,
+    "coreFade": 0.16,
+    "edgeSoft": 0.05,
+    "grain": 0.02
+  },
+  "sign": {
+    "cx": 117,
+    "topY": 56,
+    "size": 42,
+    "corner": 3,
+    "stroke": 4.5,
+    "tone": 0.06,
+    "faceTone": 0.94,
+    "pictogramTone": 0.08,
+    "pictogramScale": 0.6
+  },
+  "pole": {
+    "width": 3,
+    "tone": 0.1,
+    "swayAmp": 0,
+    "swaySpeed": 0.35
+  },
+  "render": {
+    "paletteMode": "1-bit",
+    "dark": "#101014",
+    "middle": "#a9a49a",
+    "light": "#efece2",
+    "accent": "#efece2",
+    "globalSelection": {
+      "pixelPreset": "standard",
+      "palette": "paper-ink"
+    }
+  }
+}
