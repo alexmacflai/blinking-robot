@@ -272,6 +272,9 @@ function drawLobe(L){
   const p=L.p;
   const rpx=L.r*p.k*S;
   if(rpx<0.35) return;                    // ran out of material: nothing to pop
+  /* How far apart two lobes' lane depths must be before they are treated
+     as genuinely different surfaces rather than the same local cluster. */
+  const CLAIM_TOL=Math.max(1,cl.thick*1.5);
 
   /* Depth tone: far material sits in a different band from near material,
      and material low in the funnel is darker than material at the rim. */
@@ -304,13 +307,32 @@ function drawLobe(L){
          turning into an outline. */
       const cov=smooth((1-Math.sqrt(d2))/Math.max(0.001,cl.edge));
       const i=o+x;
+
+      /* CLAIM GATE. Without this, every lobe alpha-blends into every pixel
+         its disc reaches, regardless of what already painted there — so a
+         lobe from a farther, unrelated part of the coil could lay its own
+         soft edge ring straight across a nearer lobe's already-opaque
+         interior. That ring is exactly what reads as "circles passing
+         through each other": the individual disc boundaries never actually
+         disappear, they are just painted over MOST of the time and show
+         through wherever draw order and geometry conspire against it.
+
+         The fix is a depth gate keyed to `laneDepth` (the smooth, unwobbled
+         cluster depth — see buildLobes), not this lobe's own noisy depth.
+         A lobe more than `tol` farther than the nearest cluster already
+         recorded at this pixel is skipped outright: it cannot bleed onto
+         territory a nearer cluster already owns. A lobe within `tol` is
+         treated as the SAME cluster and still blends softly, which is what
+         lets neighbouring lobes merge into one continuous silhouette
+         instead of a hard cutout. */
+      const clusterDepth=L.laneDepth;
+      if(clusterDepth>dep[i]+CLAIM_TOL) continue;
+
       lum[i]=lerp(lum[i],clamp(shade,0,1),cov);
       /* Clouds use a three-level gradient in 2-bit mode: dark, middle,
          light. Reserve slot 2 for explicit sign colour, never cloud tone. */
       twoBitSlot[i]=-2;
-      /* Record where the cloud is, and how far away, so the pole can be
-         occluded by material that is genuinely in front of it. */
-      if(cov>0.5&&p.depth<dep[i]) dep[i]=p.depth;
+      if(clusterDepth<dep[i]) dep[i]=clusterDepth;
     }
   }
 }
