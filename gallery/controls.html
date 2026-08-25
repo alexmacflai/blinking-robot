@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Blinking Robot — global rendering controls</title>
+  <link rel="stylesheet" href="shared/controls-theme.css">
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--pc-black);color:var(--pc-white);font:14px/1.4 var(--pc-font-sans)}main{display:grid;grid-template-columns:minmax(0,1fr) min(380px,38vw);min-height:100vh}.stage{padding:clamp(20px,4vw,64px);overflow:auto}.stage h1{margin:0 0 6px;font:700 20px/1.1 var(--pc-font-mono);letter-spacing:.06em}.stage p{margin:0 0 28px;color:var(--pc-white-50)}.previews{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:20px;align-items:start}.preview{aspect-ratio:9/16;background:#111;border:1px solid var(--pc-white-15)}iframe{width:100%;height:100%;border:0;display:block}.panel{padding:20px;border-left:1px solid var(--pc-white-15);overflow:auto}.panel h2{margin:24px 0 8px;color:var(--pc-accent);font:12px var(--pc-font-mono);letter-spacing:.05em}.panel h2:first-child{margin-top:0}.panel label{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:8px 0;color:var(--pc-white-50);font-size:12px}.panel input,.panel select{min-width:0;width:56%;color:var(--pc-accent);background:var(--pc-white-08);border:1px solid var(--pc-white-15);padding:5px;font:12px var(--pc-font-mono)}.panel input[type=checkbox]{width:20px}.actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:18px}.panel button{padding:8px;color:var(--pc-white);background:transparent;border:1px solid var(--pc-white-50);font:12px var(--pc-font-mono);cursor:pointer}.panel button:hover{color:var(--pc-accent);border-color:var(--pc-accent)}.panel .primary{grid-column:1/-1;background:var(--pc-accent);color:var(--pc-black);border-color:var(--pc-accent)}.note{color:var(--pc-white-50);font-size:12px}@media(max-width:760px){main{grid-template-columns:1fr}.panel{border-left:0;border-top:1px solid var(--pc-white-15)}}
+  </style>
+</head>
+<body><main><section class="stage"><h1>GLOBAL RENDERING</h1><p>Live postcards use this in-memory draft. Download the complete replacement file to make a change public.</p><div id="previews" class="previews" aria-label="Live postcard previews"></div></section><aside class="panel" id="panel" aria-label="Global rendering controls"></aside></main><script type="module" src="./global-controls.js"></script></body>
+</html>

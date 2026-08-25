@@ -103,7 +103,7 @@ function packColor(hex){
    DERIVED STATE — rebuilt by build()
    ==================================================================== */
 let W,H,S;
-let lum,img,buf32,CINK,CPAP;
+let lum,accent,img,buf32,CINK,CMID,CPAP,CACC;
 let HOR;                 // horizon, in grid pixels
 let FLOORY;               // y where the nearest rank's soles touch — top of the hard floor band
 let SEPW;                // separation width, in grid pixels
@@ -119,8 +119,9 @@ function build(previousRanks=[]){
   cv.width=W; cv.height=H;
   img=ctx.createImageData(W,H);
   buf32=new Uint32Array(img.data.buffer);
-  lum=new Float32Array(W*H);
-  CINK=packColor(CFG.ink); CPAP=packColor(CFG.paper);
+  lum=new Float32Array(W*H); accent=new Float32Array(W*H);
+  const palette=CFG.render||{paletteMode:'1-bit',dark:CFG.ink,middle:CFG.paper,light:CFG.paper,accent:CFG.paper};
+  CINK=packColor(palette.dark); CMID=packColor(palette.middle); CPAP=packColor(palette.light); CACC=packColor(palette.accent);
 
   HOR=CFG.cam.horizon*S;
   SEPW=CFG.sepW*S;
@@ -603,11 +604,15 @@ function drawFloor(){
    DITHER + BLIT
    ==================================================================== */
 function dither(){
+  const palette=CFG.render||{paletteMode:'1-bit'};
   for(let y=0;y<H;y++){
     const row=(y&7)<<3, o=y*W;
     for(let x=0;x<W;x++){
       const i=o+x;
-      buf32[i] = lum[i]*64 > BAYER[row|(x&7)]+0.5 ? CPAP : CINK;
+      const threshold=BAYER[row|(x&7)];
+      let colour=palette.paletteMode==='2-bit'?[CINK,CMID,CPAP][clamp(Math.floor(lum[i]*3+(threshold/64-.5)),0,2)]:lum[i]*64>threshold+.5?CPAP:CINK;
+      if(palette.paletteMode==='2-bit'&&accent[i]*64>threshold) colour=CACC;
+      buf32[i]=colour;
     }
   }
   ctx.putImageData(img,0,0);
@@ -618,12 +623,16 @@ function dither(){
    ==================================================================== */
 function renderFrame(){
   lum.fill(1.0);
+  accent.fill(0);
   drawBackground();
   drawGround();
   drawFloor();
   for(let i=ranks.length-1;i>=0;i--){
     const R=ranks[i];
     for(const w of R.walkers) drawWalker(w,R);
+    // Accent-bearing material: shoe/contact marks are local, repeated signals
+    // against the neutral traffic field. Coverage is authored from foot poses.
+    for(const w of R.walkers){ const a=ankleAt(w,w.p); const x=Math.round(pxOf(R.sc,a.x)), y=Math.round(pyOf(R.sc,a.z)); for(let yy=y-2;yy<=y+3;yy++) for(let xx=x-5;xx<=x+5;xx++) if(xx>=0&&xx<W&&yy>=0&&yy<H) accent[yy*W+xx]=.7; }
   }
   dither();
 }
@@ -715,7 +724,7 @@ function rebuild(keepTime=true){
 }
 function png(){ const a=document.createElement('a'); a.download='passing-legs-'+W+'x'+H+'.png'; a.href=cv.toDataURL('image/png'); a.click(); }
 window.__legs={ CFG:CFG,
-  fit:fitCanvas, render:renderFrame, refresh:rebuild, update:rebuild, rebuild, png,
+  fit:fitCanvas, render:renderFrame, refresh(){const p=CFG.render||{dark:CFG.ink,middle:CFG.paper,light:CFG.paper,accent:CFG.paper};CINK=packColor(p.dark);CMID=packColor(p.middle);CPAP=packColor(p.light);CACC=packColor(p.accent);renderFrame();}, update:rebuild, rebuild, png,
   toggle:function(){
     const shouldRun=playback.toggleManual();
     if(shouldRun) startDriver(); else driverActive=false;

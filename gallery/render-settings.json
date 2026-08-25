@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "pixelPresets": [
+    { "id": "standard", "name": "Standard", "gridK": 26, "visitorExposed": true },
+    { "id": "coarse", "name": "Coarse", "gridK": 16, "visitorExposed": true },
+    { "id": "fine", "name": "Fine", "gridK": 40, "visitorExposed": false }
+  ],
+  "palettes": [
+    { "id": "paper-ink", "name": "Paper / ink", "mode": "1-bit", "dark": "#101014", "light": "#efece2", "visitorExposed": true },
+    { "id": "night-signal", "name": "Night signal", "mode": "2-bit", "dark": "#101014", "middle": "#697077", "light": "#efece2", "accent": "#c5e714", "visitorExposed": true },
+    { "id": "oxide", "name": "Oxide", "mode": "2-bit", "dark": "#201517", "middle": "#956453", "light": "#f0e4cf", "accent": "#e03d1e", "visitorExposed": false }
+  ],
+  "defaults": { "pixelPreset": "standard", "palette": "paper-ink" }
+}

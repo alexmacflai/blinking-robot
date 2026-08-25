@@ -64,7 +64,7 @@ function packColor(hex){
    DERIVED STATE — rebuilt by build()
    ==================================================================== */
 let W,H,S;
-let lum,img,buf32,CINK,CPAP;
+let lum,accent,img,buf32,CINK,CMID,CPAP,CACC;
 let EX,EY,OX,OY;            // projection, in grid pixels
 let ELLX,ELLY;              // world radius -> ellipse radii
 let CUPX,RIMY,BASEY,RTOP,RBOT,SURFY;
@@ -85,8 +85,9 @@ function build(){
   cv.width=W; cv.height=H;
   img=ctx.createImageData(W,H);
   buf32=new Uint32Array(img.data.buffer);
-  lum=new Float32Array(W*H);
-  CINK=packColor(CFG.ink); CPAP=packColor(CFG.paper);
+  lum=new Float32Array(W*H); accent=new Float32Array(W*H);
+  const palette=CFG.render||{paletteMode:'1-bit',dark:CFG.ink,middle:CFG.paper,light:CFG.paper,accent:CFG.paper};
+  CINK=packColor(palette.dark); CMID=packColor(palette.middle); CPAP=packColor(palette.light); CACC=packColor(palette.accent);
 
   const p=CFG.proj;
   EX=p.ex*S; EY=p.ey*S; OX=p.ox*S; OY=p.oy*S;
@@ -585,11 +586,15 @@ function drawMachine(){
    DITHER + BLIT
    ==================================================================== */
 function dither(){
+  const palette=CFG.render||{paletteMode:'1-bit'};
   for(let y=0;y<H;y++){
     const row=(y&7)<<3, o=y*W;
     for(let x=0;x<W;x++){
       const i=o+x;
-      buf32[i] = lum[i]*64 > BAYER[row|(x&7)]+0.5 ? CPAP : CINK;
+      const threshold=BAYER[row|(x&7)];
+      let colour=palette.paletteMode==='2-bit'?[CINK,CMID,CPAP][clamp(Math.floor(lum[i]*3+(threshold/64-.5)),0,2)]:lum[i]*64>threshold+.5?CPAP:CINK;
+      if(palette.paletteMode==='2-bit'&&accent[i]*64>threshold) colour=CACC;
+      buf32[i]=colour;
     }
   }
   ctx.putImageData(img,0,0);
@@ -600,6 +605,7 @@ function dither(){
    ==================================================================== */
 function renderFrame(){
   lum.fill(0);
+  accent.fill(0);
   drawMachine();      // behind and above everything
   drawTray();
   drawPool();         // spill spreads on the tray, under the cup's silhouette
@@ -609,6 +615,11 @@ function renderFrame(){
   drawStream();       // lands on the coffee, in front of the far rim
   drawDrops();
   drawSpill();        // over the rim and down the front — nearest surface
+  // Accent-bearing material: coffee (surface, stream and overflow) is a local
+  // focus. This is geometry-led coverage, not a sampled source colour.
+  for(let y=Math.max(0,Math.floor(SURFY-2*S));y<Math.min(H,Math.ceil(BASEY+RBOT*ELLY+3*S));y++) for(let x=Math.max(0,Math.floor(CUPX-RTOP*ELLX));x<Math.min(W,Math.ceil(CUPX+RTOP*ELLX));x++){
+    const dx=(x-CUPX)/(RTOP*ELLX),dy=(y-SURFY)/(RTOP*ELLY); if(dx*dx+dy*dy<1||y>SURFY) accent[y*W+x]=.72;
+  }
   dither();
 }
 
@@ -679,5 +690,5 @@ function rebuild(keepTime){
 
 
 function boot(){build();t=0;resetCycle();warmup();fitCanvas();renderFrame();if(loadEl)loadEl.remove();startDriver();}
-window.__coffee={CFG,rebuild,fit:fitCanvas,render:renderFrame,boot,png(){const a=document.createElement('a');a.download='coffee-'+W+'x'+H+'.png';a.href=cv.toDataURL('image/png');a.click();},seek(sec){manualPaused=true;t=0;waveAmp=0;wavePhase=0;pool=0;drips=[];drops=[];resetCycle();for(let i=0;i<Math.round(sec*60);i++)step(DT);renderFrame();},toggle(){manualPaused=!manualPaused;return manualPaused;}};
+window.__coffee={CFG,rebuild,fit:fitCanvas,render:renderFrame,refresh(){const p=CFG.render||{dark:CFG.ink,middle:CFG.paper,light:CFG.paper,accent:CFG.paper};CINK=packColor(p.dark);CMID=packColor(p.middle);CPAP=packColor(p.light);CACC=packColor(p.accent);renderFrame();},boot,png(){const a=document.createElement('a');a.download='coffee-'+W+'x'+H+'.png';a.href=cv.toDataURL('image/png');a.click();},seek(sec){manualPaused=true;t=0;waveAmp=0;wavePhase=0;pool=0;drips=[];drops=[];resetCycle();for(let i=0;i<Math.round(sec*60);i++)step(DT);renderFrame();},toggle(){manualPaused=!manualPaused;return manualPaused;}};
 })();

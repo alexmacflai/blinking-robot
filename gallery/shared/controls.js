@@ -301,8 +301,8 @@ export function createPostcardControls({ panel, title, description, scene, confi
   basics.choice({ label: 'pixelation', values: gridValues.map(value => ({ value, label: `${9 * value}×${16 * value}` })), path: 'gridK', update: 'rebuild' });
   basics.note('Only 9:16 grids (9k × 16k) tile into whole internal pixels.');
   basics.choice({ label: 'display fit', values: [{ value: 'fill', label: 'FILL' }, { value: 'crisp', label: 'CRISP' }], path: 'fit', update: 'fit' });
-  basics.color({ label: 'darkest', path: 'ink', update: 'refresh' }); basics.color({ label: 'brightest', path: 'paper', update: 'refresh' });
-  basics.action('SWAP TONES', () => { [config.ink, config.paper] = [config.paper, config.ink]; }, 'refresh');
+  basics.color({ label: 'darkest', get: () => config.render?.dark ?? config.ink, set: value => { config.ink = value; (config.render ??= {}).dark = value; }, update: 'refresh' }); basics.color({ label: 'brightest', get: () => config.render?.light ?? config.paper, set: value => { config.paper = value; (config.render ??= {}).light = value; }, update: 'refresh' });
+  basics.action('SWAP TONES', () => { const dark=config.render?.dark ?? config.ink, light=config.render?.light ?? config.paper; config.ink=light; config.paper=dark; (config.render ??= {}).dark=light; config.render.light=dark; }, 'refresh');
 
   const galleryValues = galleryConfig || (config.postcard ??= { published: false, galleryText: '' });
   galleryValues.published ??= false;

@@ -11,7 +11,9 @@
     body { margin:0; min-height:100vh; background:var(--bg); color:var(--dim); font:13px/1.6 var(--pc-font-sans); padding:clamp(24px,6vw,80px); }
     main { max-width:1120px; margin:auto; }
     h1 { color:var(--ink); font:700 clamp(18px,3vw,28px)/1.1 var(--pc-font-mono); letter-spacing:.08em; margin:0; }
-    .intro { max-width:620px; margin:8px 0 48px; }
+    .intro { max-width:620px; margin:8px 0 22px; }
+    .render-picker { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:0 0 40px; color:var(--dim); font:11px var(--pc-font-mono); }
+    .render-picker label { display:flex; align-items:center; gap:7px; }.render-picker select { max-width:180px; color:var(--ink); border:1px solid var(--line); background:transparent; padding:6px; font:inherit; }.render-picker select:focus { outline:1px solid var(--accent); }
     .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr)); gap:clamp(20px,3vw,36px); }
     .card { min-width:0; }
     .preview { position:relative; display:block; aspect-ratio:9 / 16; background:#111116; border:1px solid var(--line); overflow:hidden; }
@@ -31,15 +33,32 @@
   <main>
     <h1>BLINKING ROBOT</h1>
     <p class="intro">Coded animation postcards: small worlds where something keeps moving.</p>
+    <form class="render-picker" aria-label="Preview rendering settings">
+      <label>PALETTE <select id="palette-picker"></select></label>
+      <label>PIXELS <select id="pixel-picker"></select></label>
+    </form>
     <section class="grid" id="gallery" aria-label="Postcards"></section>
   </main>
   <script type="module">
+    import { loadRenderSettings, selectedSettings, paletteLabel } from './shared/render-settings.js';
     const POSTCARDS = [
       { title:'Windmill', description:'procedural 1-bit postcard', src:'postcards/windmill/index.html', metadata:'postcards/windmill/values.json', select: values => values.postcard },
       { title:'Coffee', description:'procedural 1-bit postcard', src:'postcards/coffee/index.html', metadata:'postcards/coffee/gallery.json' },
       { title:'Passing legs', description:'procedural 1-bit postcard', src:'postcards/passing-legs/index.html', metadata:'postcards/passing-legs/gallery.json' }
     ];
     const gallery = document.getElementById('gallery');
+    const settings = await loadRenderSettings();
+    const palettePicker = document.getElementById('palette-picker');
+    const pixelPicker = document.getElementById('pixel-picker');
+    const visitorPalettes = settings.palettes.filter(palette => palette.visitorExposed);
+    const visitorPixels = settings.pixelPresets.filter(preset => preset.visitorExposed);
+    const selection = { ...selectedSettings(settings).selection };
+    for (const palette of visitorPalettes) palettePicker.append(Object.assign(document.createElement('option'), { value:palette.id, textContent:paletteLabel(palette) }));
+    for (const preset of visitorPixels) pixelPicker.append(Object.assign(document.createElement('option'), { value:preset.id, textContent:preset.name }));
+    palettePicker.value = selection.palette; pixelPicker.value = selection.pixelPreset;
+    const sendSelection = frame => frame.contentWindow?.postMessage({ type:'blinking-robot:render-settings', selection }, '*');
+    palettePicker.addEventListener('change', () => { selection.palette=palettePicker.value; document.querySelectorAll('.preview iframe').forEach(sendSelection); });
+    pixelPicker.addEventListener('change', () => { selection.pixelPreset=pixelPicker.value; document.querySelectorAll('.preview iframe').forEach(sendSelection); });
     const safeGalleryText = value => {
       const template = document.createElement('template');
       template.innerHTML = String(value || '');
@@ -72,7 +91,7 @@
       card.className = 'card';
       const preview = document.createElement('div'); preview.className = 'preview';
       const frame = document.createElement('iframe'); frame.title = `${postcard.title} preview`; frame.src = postcard.src; frame.loading = 'lazy'; frame.tabIndex = -1;
-      preview.append(frame);
+      frame.addEventListener('load', () => sendSelection(frame)); preview.append(frame);
       const galleryText = safeGalleryText(metadata.galleryText).replace(/<[^>]+>/g, '').trim();
       if (galleryText) {
         const overlay = document.createElement('a'); overlay.className = 'gallery-overlay'; overlay.href = postcard.src; overlay.setAttribute('aria-label', `Open ${postcard.title}`);

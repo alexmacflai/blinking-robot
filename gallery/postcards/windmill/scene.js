@@ -70,8 +70,8 @@ function packColor(hex){
    DERIVED STATE — everything below is rebuilt by build()
    ==================================================================== */
 let W,H,S;
-let bg,lum,dof,dens,bankA,pCol,iSCol;
-let CINK,CPAP,img,buf32;
+let bg,lum,accent,dof,dens,bankA,pCol,iSCol;
+let CINK,CMID,CPAP,CACC,img,buf32;
 let SUN,HUB,TOWER_X,MILL;
 let LA,LW,HW,INNER,CU,SLIT,FOC,YAW,CY_,SY_,OMEGA,ANG0;
 let BANKS,FLOCKS;
@@ -107,11 +107,12 @@ function build(){
   cv.width=W; cv.height=H;
   img=ctx.createImageData(W,H);
   buf32=new Uint32Array(img.data.buffer);
-  bg=new Float32Array(W*H); lum=new Float32Array(W*H);
+  bg=new Float32Array(W*H); lum=new Float32Array(W*H); accent=new Float32Array(W*H);
   dof=new Int16Array(W*H); dens=new Float32Array(W*H); bankA=new Float32Array(W*H);
   pCol=new Float32Array(W); iSCol=new Float32Array(W);
 
-  CINK=packColor(CFG.ink); CPAP=packColor(CFG.paper);
+  const palette=CFG.render||{paletteMode:'1-bit',dark:CFG.ink,middle:CFG.paper,light:CFG.paper,accent:CFG.paper};
+  CINK=packColor(palette.dark); CMID=packColor(palette.middle); CPAP=packColor(palette.light); CACC=packColor(palette.accent);
 
   SUN={x:gl(CFG.sun.x), y:gy(CFG.sun.y), r:gl(CFG.sun.r)};
 
@@ -883,11 +884,19 @@ function drawEmit(t){
    DITHER + BLIT
    ==================================================================== */
 function dither(){
+  const palette=CFG.render||{paletteMode:'1-bit'};
   for(let y=0;y<H;y++){
     const row=(y&7)<<3, o=y*W;
     for(let x=0;x<W;x++){
       const i=o+x;
-      buf32[i] = lum[i]*64 > BAYER[row|((x+dof[i])&7)]+0.5 ? CPAP : CINK;
+      const threshold=BAYER[row|((x+dof[i])&7)];
+      let colour;
+      if(palette.paletteMode==='2-bit') colour=[CINK,CMID,CPAP][clamp(Math.floor(lum[i]*3+(threshold/64-.5)),0,2)];
+      else colour=lum[i]*64>threshold+.5?CPAP:CINK;
+      // The deck is an explicit semantic mask, separate from luminance. Its
+      // fractional coverage is dithered at the final palette stage.
+      if(palette.paletteMode==='2-bit'&&accent[i]*64>threshold) colour=CACC;
+      buf32[i]=colour;
     }
   }
   ctx.putImageData(img,0,0);
@@ -898,6 +907,7 @@ function dither(){
    ==================================================================== */
 function renderFrame(t){
   lum.set(bg);
+  accent.fill(0);
   dof.fill(0);
   updateRotorCols();
   /* Enforce the no-overlap constraint HERE, against the exact blade angle this
@@ -911,6 +921,10 @@ function renderFrame(t){
   drawBank(BANKS[1],t);         // L3
   drawMill();                   // tower, so the deck can bury its base
   drawDeck(t);                  // L2
+  // Accent-bearing material: the cloud deck is an atmospheric field, never a
+  // colour inferred from its neutral tone. The moving band keeps hierarchy
+  // broad and leaves the mill as the interruption.
+  for(let y=Math.max(0,Math.floor(H*.49));y<Math.min(H,Math.ceil(H*.73));y++) for(let x=0;x<W;x++) accent[y*W+x]=.32+.28*Math.max(0,Math.sin((x/S+t*CFG.wind*8)/17));
   drawSails(t);                 // rotor rides ahead of the cap
   drawHub();
   drawBank(BANKS[2],t);         // L1 — in front of everything
@@ -1005,8 +1019,8 @@ function update(){ rebuild(true,false); }
 /* Palette changes only affect the final dither colours. They do not need to
    rebuild the grid, cloud geometry, or the warmed particle state. */
 function refresh(){
-  CINK=packColor(CFG.ink);
-  CPAP=packColor(CFG.paper);
+  const palette=CFG.render||{dark:CFG.ink,middle:CFG.paper,light:CFG.paper,accent:CFG.paper};
+  CINK=packColor(palette.dark); CMID=packColor(palette.middle); CPAP=packColor(palette.light); CACC=packColor(palette.accent);
   renderFrame(t);
 }
 

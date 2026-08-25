@@ -18,7 +18,13 @@ an individual animation.
 
 - [`index.html`](index.html) — `[entry-point] [runnable]` — shows only
   postcards whose saved gallery metadata is published; their hover writing is
-  rendered over the preview
+  rendered over the preview, and visitors can temporarily preview only exposed
+  global palette and pixel presets
+- [`controls.html`](controls.html) — `[authoring] [entry-point]` — global
+  rendering-preset authoring surface; it downloads a replacement for the
+  tracked settings source rather than silently changing it
+- [`render-settings.json`](render-settings.json) — versioned source of truth
+  for named global palettes, pixel presets, defaults, and visitor exposure
 - every postcard’s public and controls surfaces read its shared `values.json`
 - [`export-server.py`](export-server.py) — `[authoring] [video-export]` — serves
   the gallery, saves postcard defaults and named local snapshots only for
