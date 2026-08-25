@@ -48,20 +48,20 @@
   },
   "sign": {
     "topY": 60,
-    "size": 66,
-    "stroke": 6.5,
-    "tone": 0.05,
-    "faceTone": 0.97,
-    "pictogramTone": 0.05,
+    "size": 75,
+    "stroke": 10,
+    "tone": 0,
+    "faceTone": 1,
+    "pictogramTone": 0,
     "pictogramScale": 0.62,
     "footDepth": 0.72,
     "poleTop": 45
   },
   "pole": {
-    "width": 3,
-    "tone": 0.08,
+    "width": 4.25,
+    "tone": 0,
     "swayAmp": 3,
-    "swaySpeed": 0.57
+    "swaySpeed": 0.67
   },
   "render": {
     "paletteMode": "1-bit",

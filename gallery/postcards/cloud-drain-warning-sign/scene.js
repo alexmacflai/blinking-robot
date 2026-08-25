@@ -242,12 +242,26 @@ function buildLobes(t){
 
     const p=project(x,y,z);
     if(!p) continue;
-    lobes.push({ p:p, r:rad, decay:P.decay });
+
+    /* LANE DEPTH. Tone and sort order must NOT read the wobbled lobe's own
+       projected depth: neighbouring lobes share almost the same spine
+       position but get independent billow noise, so their wobbled depth
+       jitters lobe-to-lobe. Keying shading to that jitter is what made
+       individual lobes visible as separate blobs, and keying the sort to
+       it is what let a farther coil momentarily paint over a nearer one
+       wherever two coils' true depths were close. Both read the smooth,
+       UNWOBBLED spine depth instead, so a whole run of neighbouring lobes
+       — a "lane" — shares one continuous tone and one stable order, while
+       the wobbled position still decides where each lobe actually draws. */
+    const lane=project(P.x,P.y,P.z);
+    lobes.push({ p:p, r:rad, decay:P.decay, laneDepth:(lane||p).depth, laneSY:(lane||p).sy });
   }
 
-  /* Painter's algorithm: farthest first. This is where the self-occlusion
-     comes from — the near arc of the SAME body covering its far arc. */
-  lobes.sort((a,b)=>b.p.depth-a.p.depth);
+  /* Painter's algorithm on the LANE depth: farthest first. This is where
+     the self-occlusion comes from — the near arc of the SAME body covering
+     its far arc — and it stays stable because lane depth has no per-lobe
+     noise to tie or flip on. */
+  lobes.sort((a,b)=>b.laneDepth-a.laneDepth);
 }
 
 /* ======================================================================
@@ -261,21 +275,31 @@ function drawLobe(L){
 
   /* Depth tone: far material sits in a different band from near material,
      and material low in the funnel is darker than material at the rim. */
-  const depthT=clamp((p.depth-(CFG.cam.back-sp.outerR))/(2*sp.outerR),0,1);
+  const depthT=clamp((L.laneDepth-(CFG.cam.back-sp.outerR))/(2*sp.outerR),0,1);
   const body=clamp(lerp(cl.nearTone,cl.farTone,depthT)-cl.depthShade*(1-L.decay),0,1);
 
   const minX=Math.max(0,Math.floor(p.sx-rpx)), maxX=Math.min(W-1,Math.ceil(p.sx+rpx));
   const minY=Math.max(0,Math.floor(p.sy-rpx)), maxY=Math.min(H-1,Math.ceil(p.sy+rpx));
   const inv=1/rpx;
+  /* Top-lit/underside-dark shading is still normalised by THIS lobe's own
+     screen radius `inv` — so a big, near, prominent puff gets a broad
+     contrast band and a small, distant one gets a tight band, which is
+     the scale-appropriate look the flat lane-wide gradient lost. The only
+     change from the original is the CENTRE: it is `laneSY`, the smooth
+     lane's own screen row, not this lobe's own wobbled `p.sy`. Neighbouring
+     lobes on the same run of spine share nearly the same laneSY, so they
+     agree on where "up" is inside the shared cluster and the seam between
+     them disappears; lobes on a genuinely different, crossing part of the
+     coil keep their own lane centre and are free to shade differently,
+     which is correct — they are different surfaces. */
   for(let y=minY;y<=maxY;y++){
     const o=y*W, dy=(y+0.5-p.sy)*inv;
+    const shadeRow=body-clamp((y+0.5-L.laneSY)*inv,-1,1)*cl.formShade;
     for(let x=minX;x<=maxX;x++){
       const dx=(x+0.5-p.sx)*inv;
       const d2=dx*dx+dy*dy;
       if(d2>1) continue;
-      /* Within a lobe the top reads lighter and the underside darker,
-         which is what makes the mass look like volume and not a disc. */
-      const shade=body-dy*cl.formShade;
+      const shade=shadeRow;
       /* A rim hardened by `edge` keeps the silhouette graphic without
          turning into an outline. */
       const cov=smooth((1-Math.sqrt(d2))/Math.max(0.001,cl.edge));
