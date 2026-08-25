@@ -3,63 +3,83 @@
   "pixelPresets": [
     {
       "id": "standard",
-      "name": "Standard",
-      "gridK": 26,
+      "name": "Default",
+      "gridK": 20,
       "visitorExposed": true
     },
     {
       "id": "coarse",
-      "name": "Coarse",
-      "gridK": 16,
+      "name": "Robot",
+      "gridK": 11,
       "visitorExposed": true
     },
     {
       "id": "fine",
       "name": "Fine",
       "gridK": 40,
-      "visitorExposed": false
+      "visitorExposed": true
     }
   ],
   "palettes": [
     {
       "id": "paper-ink",
-      "name": "Paper / ink",
+      "name": "Blinking postcards",
       "mode": "1-bit",
-      "dark": "#374b6f",
-      "light": "#efece2",
+      "dark": "#0f0f13",
+      "light": "#eeebe1",
       "visitorExposed": true,
       "middle": "#a9d3e7",
       "accent": "#b8001f"
     },
     {
       "id": "night-signal",
-      "name": "Night signal",
-      "mode": "2-bit",
-      "dark": "#101014",
+      "name": "First PC",
+      "mode": "1-bit",
+      "dark": "#25342f",
       "middle": "#697077",
-      "light": "#efece2",
+      "light": "#00ea5f",
       "accent": "#c5e714",
       "visitorExposed": true
     },
     {
       "id": "oxide",
-      "name": "Oxide",
-      "mode": "2-bit",
-      "dark": "#201517",
+      "name": "Obra Dinn",
+      "mode": "1-bit",
+      "dark": "#3f281e",
       "middle": "#956453",
-      "light": "#f0e4cf",
+      "light": "#fdc954",
       "accent": "#e03d1e",
-      "visitorExposed": false
+      "visitorExposed": true
     },
     {
       "id": "palette",
+      "name": "Blinking Robot",
+      "mode": "2-bit",
+      "dark": "#2f0d3d",
+      "middle": "#16a2b5",
+      "light": "#e7f3e1",
+      "accent": "#c4e614",
+      "visitorExposed": true
+    },
+    {
+      "id": "palette-2",
+      "name": "Aaron",
+      "mode": "2-bit",
+      "dark": "#1f1717",
+      "middle": "#f4be96",
+      "light": "#fcf5ec",
+      "accent": "#cd5a66",
+      "visitorExposed": true
+    },
+    {
+      "id": "palette-3",
       "name": "Untitled palette",
       "mode": "2-bit",
-      "dark": "#101014",
-      "middle": "#697077",
-      "light": "#efece2",
-      "accent": "#c5e714",
-      "visitorExposed": false
+      "dark": "#146c86",
+      "middle": "#d57cb6",
+      "light": "#eae07f",
+      "accent": "#f5bcc2",
+      "visitorExposed": true
     }
   ],
   "defaults": {
