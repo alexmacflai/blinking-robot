@@ -485,7 +485,6 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
   // Shoes are a source-level material: slot 2 in 2-bit, while 1-bit ignores
   // this override and keeps the existing continuous shoe tone.
   const shoeSlot=(only===undefined) ? 2 : -1;
-  quad([pt(heelX,soleZ),collarBack,collarFront,pt(seam1A,soleZ)], tone, only, shoeSlot);
 
   /* Vamp: a proper four-cornered quad like the other two — back edge full
      collar height, front edge short but STILL VERTICAL, from soleZ up to
@@ -496,7 +495,6 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
      a quad and reads as a triangle. It is also unnecessary — the toe cap
      hinges about (seam2X,soleZ), a corner this quad already owns, so the
      two can never come apart there however far the toe flexes. */
-  quad([pt(seam1B,soleZ),pt(seam1B,topZ),pt(seam2B,midZ),pt(seam2B,soleZ)], tone, only, shoeSlot);
 
   /* Toe cap: continues the taper from `midZ` down to `tipZ` — short and
      blunt, not a point, so this stays a quad like the other two.
@@ -516,7 +514,6 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
   const toeWorldAng=toeRestZ>=0 ? th : toeFloorAng;
   const hingeAng=(toeWorldAng-th)*f.toeHingeAmt, hx=seam2X, hz=soleZ;
   const pth=(lx,lz)=>{ const r=rot(lx-hx,lz-hz,hingeAng); return pt(hx+r[0],hz+r[1]); };
-  quad([pth(seam2C,soleZ),pth(seam2C,midZ),pth(toeX,tipZ),pth(toeX,soleZ)], tone, only, shoeSlot);
 
   /* Cuff: the shin is a QUAD, not a capsule — straight sides, straight ends.
      The knee joint still reads as round because the thigh capsule above
@@ -562,6 +559,13 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
         [cpx+px_*rS-dux*OVERLAP,cpy+py_*rS-duy*OVERLAP],
         [apx+px_*rS+dux*reach,apy+py_*rS+duy*reach],
         [apx-px_*rS+dux*reach,apy-py_*rS+duy*reach]], tone, only);
+
+  /* Paint the shoe last. The sock reaches into the ankle collar by design;
+     keeping the shoe as the final geometry makes the footwear sit in front
+     of that overlap instead of letting the sock cover the heel and vamp. */
+  quad([pt(heelX,soleZ),collarBack,collarFront,pt(seam1A,soleZ)], tone, only, shoeSlot);
+  quad([pt(seam1B,soleZ),pt(seam1B,topZ),pt(seam2B,midZ),pt(seam2B,soleZ)], tone, only, shoeSlot);
+  quad([pth(seam2C,soleZ),pth(seam2C,midZ),pth(toeX,tipZ),pth(toeX,soleZ)], tone, only, shoeSlot);
 }
 
 function drawWalker(w,R){
