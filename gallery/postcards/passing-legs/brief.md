@@ -7,9 +7,11 @@
 - Everything above the knee, the room, the light source, and individual identity
   may be collapsed.
 
-## Accent treatment
+## Indexed colour treatment
 
-In 2-bit rendering, a light dither within the rendered shoe material carries
-the accent. Its coverage is clipped to the shoe geometry itself, so it moves
-with each step and cannot become a detached ankle box. The monochrome render
-ignores the mask.
+The postcard is authored as one continuous value field. In 1-bit, that field
+becomes ink/paper through ordered dithering. In 2-bit, it becomes palette
+indices 0–3: ink, neutral, colour, paper. Visible shoe geometry uses palette
+slot 2 in 2-bit and keeps its existing continuous tone in 1-bit. The material
+value is depth-tested with the shoe geometry, so it moves with each step and
+cannot become a detached or foreground-only accent layer.

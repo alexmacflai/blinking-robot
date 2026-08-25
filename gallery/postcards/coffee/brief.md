@@ -1,11 +1,12 @@
 # Coffee brief
 
-## Accent treatment
+## Indexed colour treatment
 
-In 2-bit rendering, coffee is the accent-bearing material. Its local coverage
-holds the surface, stream, and overflowing front of the cup together as the
-scene’s focal event; it is ignored in 1-bit so the established value split by
-state remains authoritative.
+The postcard is authored as one continuous value field. In 1-bit, that field
+becomes ink/paper through ordered dithering. In 2-bit, it becomes palette
+indices 0–3: ink, neutral, colour, paper. The coffee surface, stream, and
+overflowing front of the cup are intentional material values at palette slot 2
+in 2-bit; they remain part of the continuous luminance treatment in 1-bit.
 
 - An espresso machine fills a cup that is already full.
 - The machine must visibly cause a connected chain: pour, ripple, overflow, and

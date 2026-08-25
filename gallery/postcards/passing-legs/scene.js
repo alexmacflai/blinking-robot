@@ -19,7 +19,8 @@ import { createPlaybackState } from '../../shared/playback.js';
    CONTINUOUS luminance in a Float32 buffer, then threshold the finished
    composite once through an ordered Bayer 8x8 matrix. One dither pass means
    every surface is quantised on the same lattice and the frame reads as a
-   single screen-print rather than a stack of pre-dithered parts.
+   single screen-print rather than a stack of pre-dithered parts. In 2-bit,
+   visible shoes may carry an indexed material value at palette slot 2.
 
    GEOMETRY is a real one-point perspective, but only just. The camera sits at
    CAM.height above the floor with a horizontal axis, so the floor plane images
@@ -103,7 +104,7 @@ function packColor(hex){
    DERIVED STATE — rebuilt by build()
    ==================================================================== */
 let W,H,S;
-let lum,accent,img,buf32,CINK,CMID,CPAP,CACC;
+let lum,twoBitSlot,img,buf32,CINK,CMID,CPAP,CACC;
 let HOR;                 // horizon, in grid pixels
 let FLOORY;               // y where the nearest rank's soles touch — top of the hard floor band
 let SEPW;                // separation width, in grid pixels
@@ -119,7 +120,8 @@ function build(previousRanks=[]){
   cv.width=W; cv.height=H;
   img=ctx.createImageData(W,H);
   buf32=new Uint32Array(img.data.buffer);
-  lum=new Float32Array(W*H); accent=new Float32Array(W*H);
+  lum=new Float32Array(W*H); twoBitSlot=new Int8Array(W*H);
+  twoBitSlot.fill(-1);
   const palette=CFG.render||{paletteMode:'1-bit',dark:CFG.ink,middle:CFG.paper,light:CFG.paper,accent:CFG.paper};
   CINK=packColor(palette.dark); CMID=packColor(palette.middle); CPAP=packColor(palette.light); CACC=packColor(palette.accent);
 
@@ -168,7 +170,7 @@ function span(y,xa,xb,tone,alpha){
   for(let x=i0;x<=i1;x++){
     const cov=Math.min(x+1,xb)-Math.max(x,xa); if(cov<=0) continue;
     const a=alpha*cov, i=o+x;
-    lum[i]+=(tone-lum[i])*a;
+    twoBitSlot[i]=-1; lum[i]+=(tone-lum[i])*a;
   }
 }
 /* Shaded variant: fn(x,y) -> tone, sampled at the pixel centre. */
@@ -179,7 +181,7 @@ function spanF(y,xa,xb,fn,alpha){
   for(let x=i0;x<=i1;x++){
     const cov=Math.min(x+1,xb)-Math.max(x,xa); if(cov<=0) continue;
     const a=alpha*cov, i=o+x;
-    lum[i]+=(fn(x+0.5,cy)-lum[i])*a;
+    twoBitSlot[i]=-1; lum[i]+=(fn(x+0.5,cy)-lum[i])*a;
   }
 }
 
@@ -223,13 +225,13 @@ function capT(ax,ay,bx,by,ra,rb,tone,only){
       const cov=clamp(r+0.5-Math.sqrt(qx*qx+qy*qy),0,1); if(cov<=0) continue;
       const i=o+x;
       if(gated && (lum[i]>lim || lum[i]<0)) continue;
-      lum[i]+=(tone-lum[i])*cov;
+      twoBitSlot[i]=-1; lum[i]+=(tone-lum[i])*cov;
     }
   }
 }
 
 /* Convex quad, used for the coat column. Same gate as capT. */
-function quad(pts,tone,only,accentCoverage=0){
+function quad(pts,tone,only,materialSlot=-1){
   let ymin=1e9,ymax=-1e9;
   for(const p of pts){ if(p[1]<ymin)ymin=p[1]; if(p[1]>ymax)ymax=p[1]; }
   const y0=Math.max(0,Math.floor(ymin)), y1=Math.min(H-1,Math.ceil(ymax));
@@ -249,8 +251,7 @@ function quad(pts,tone,only,accentCoverage=0){
         let xa=Math.max(0,xs[i]), xb=Math.min(W,xs[i+1]), o=y*W;
         for(let x=Math.floor(xa);x<Math.ceil(xb);x++){
           const cov=Math.min(x+1,xb)-Math.max(x,xa); if(cov<=0) continue;
-          const k=o+x; lum[k]+=(tone-lum[k])*cov;
-          if(accentCoverage) accent[k]=Math.max(accent[k],accentCoverage*cov);
+          const k=o+x; twoBitSlot[k]=materialSlot; lum[k]+=(tone-lum[k])*cov;
         }
         continue;
       }
@@ -259,8 +260,7 @@ function quad(pts,tone,only,accentCoverage=0){
       for(let x=Math.floor(xa);x<Math.ceil(xb);x++){
         const cov=Math.min(x+1,xb)-Math.max(x,xa); if(cov<=0) continue;
         const k=o+x; if(lum[k]>lim || lum[k]<0) continue;
-        lum[k]+=(tone-lum[k])*cov;
-        if(accentCoverage) accent[k]=Math.max(accent[k],accentCoverage*cov);
+        twoBitSlot[k]=materialSlot; lum[k]+=(tone-lum[k])*cov;
       }
     }
   }
@@ -482,10 +482,10 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
      one moved vertex, inset toward the toe — the slanted back edge the
      reference draws, without touching the pivot. */
   const collarBack =pt(heelX+insetX,topZ), collarFront=pt(seam1A,topZ);
-  // Accent is a light dither within the real shoe shape. It gives cadence
-  // without making every shoe a solid, competing coloured mass.
-  const shoeAccent=(only===undefined) ? .38 : 0;
-  quad([pt(heelX,soleZ),collarBack,collarFront,pt(seam1A,soleZ)], tone, only, shoeAccent);
+  // Shoes are a source-level material: slot 2 in 2-bit, while 1-bit ignores
+  // this override and keeps the existing continuous shoe tone.
+  const shoeSlot=(only===undefined) ? 2 : -1;
+  quad([pt(heelX,soleZ),collarBack,collarFront,pt(seam1A,soleZ)], tone, only, shoeSlot);
 
   /* Vamp: a proper four-cornered quad like the other two — back edge full
      collar height, front edge short but STILL VERTICAL, from soleZ up to
@@ -496,7 +496,7 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
      a quad and reads as a triangle. It is also unnecessary — the toe cap
      hinges about (seam2X,soleZ), a corner this quad already owns, so the
      two can never come apart there however far the toe flexes. */
-  quad([pt(seam1B,soleZ),pt(seam1B,topZ),pt(seam2B,midZ),pt(seam2B,soleZ)], tone, only, shoeAccent);
+  quad([pt(seam1B,soleZ),pt(seam1B,topZ),pt(seam2B,midZ),pt(seam2B,soleZ)], tone, only, shoeSlot);
 
   /* Toe cap: continues the taper from `midZ` down to `tipZ` — short and
      blunt, not a point, so this stays a quad like the other two.
@@ -516,7 +516,7 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
   const toeWorldAng=toeRestZ>=0 ? th : toeFloorAng;
   const hingeAng=(toeWorldAng-th)*f.toeHingeAmt, hx=seam2X, hz=soleZ;
   const pth=(lx,lz)=>{ const r=rot(lx-hx,lz-hz,hingeAng); return pt(hx+r[0],hz+r[1]); };
-  quad([pth(seam2C,soleZ),pth(seam2C,midZ),pth(toeX,tipZ),pth(toeX,soleZ)], tone, only, shoeAccent);
+  quad([pth(seam2C,soleZ),pth(seam2C,midZ),pth(toeX,tipZ),pth(toeX,soleZ)], tone, only, shoeSlot);
 
   /* Cuff: the shin is a QUAD, not a capsule — straight sides, straight ends.
      The knee joint still reads as round because the thigh capsule above
@@ -608,7 +608,7 @@ function drawGround(){
 function drawFloor(){
   for(let y=Math.floor(FLOORY);y<H;y++){
     const o=y*W;
-    for(let x=0;x<W;x++) lum[o+x]=FLOOR;
+    for(let x=0;x<W;x++){ twoBitSlot[o+x]=-1; lum[o+x]=FLOOR; }
   }
 }
 
@@ -624,10 +624,14 @@ function dither(){
       const threshold=BAYER[row|(x&7)];
       let colour;
       if(palette.paletteMode==='2-bit'){
-        const scaled=clamp(lum[i],0,1)*2,base=Math.floor(scaled),fraction=scaled-base;
-        colour=[CINK,CMID,CPAP][Math.min(2,base+(fraction*64>threshold+.5?1:0))];
+        const slot=twoBitSlot[i];
+        if(slot>=0) colour=[CINK,CMID,CACC,CPAP][Math.min(3,slot)];
+        else {
+          const scaled=clamp(lum[i],0,1)*3,base=Math.floor(scaled),fraction=scaled-base;
+          const index=Math.min(3,base+(fraction*64>threshold+.5?1:0));
+          colour=[CINK,CMID,CACC,CPAP][index];
+        }
       }else colour=lum[i]*64>threshold+.5?CPAP:CINK;
-      if(palette.paletteMode==='2-bit'&&accent[i]*64>threshold) colour=CACC;
       buf32[i]=colour;
     }
   }
@@ -639,7 +643,7 @@ function dither(){
    ==================================================================== */
 function renderFrame(){
   lum.fill(1.0);
-  accent.fill(0);
+  twoBitSlot.fill(-1);
   drawBackground();
   drawGround();
   drawFloor();
