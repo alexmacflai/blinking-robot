@@ -188,42 +188,47 @@ marching, and a little too much of it becomes a goose-step.
 inhuman, or when the contact is not load-bearing in the image. A figure seen
 from far enough away that the foot is a few pixels does not repay any of this.
 
-## A field that drains toward a point
+## One body whose shape is the motion
 
 **Source:** [Cloud-drain warning sign postcard](../../gallery/postcards/cloud-drain-warning-sign/README.md)
 
-**Effect:** A continuous material field spirals inward, shrinks, and quietly
-ceases to exist at a centre, while an object standing in it remains completely
-unaffected. The motion reads as one relationship — material leaving, object
-indifferent — rather than as an object reacting to a force.
+**Effect:** A single continuous object — one cloud — is wound into a spiral
+and drains inward, shrinking, while something standing in it stays entirely
+indifferent. The spiral is not a pattern applied to material; it is the
+object's shape, and the motion is that object travelling through itself.
 
-**Works when:** the material has a silhouette of its own. The first attempt
-here drew the drain as tonal bands and read as a gradient, because a field
-with flow but no material is not cloud, water, or smoke — it is shading. The
-fix is a density field cut hard into mass and gaps, so the mass has lobes and
-edges, and only then shaded for depth.
+**Works when:** the form is built along a spine rather than drawn or sampled.
+A centreline carries the geometry, and heavily overlapping lobes strung along
+it give the body a silhouette, in the same way the discs inside a thick line
+give it a stroke. The lobes must never read as separate objects: their count
+is an implementation detail, and if they are visible as beads the technique
+has failed. Lobe size follows the spine's radius, so the shrink toward the
+centre is geometry rather than a fade.
 
-The flow is then applied as an INVERSE map: each point asks where its material
-came from, rather than shapes being moved. Winding the source radius outward
-by `exp(drain*t)` squeezes a wide annulus onto a narrow one, so material
-travels inward and genuinely shrinks on the way, with no separate size term
-and nothing spawned or destroyed. The spiral itself must not be drawn —
-differential rotation, inner material turning faster than outer, shears lobes
-into arms. Zeroing the shear should leave a rigidly turning field with no
-spiral; if arms survive, they were a pattern rather than a consequence.
+Depth must be genuine perspective with back-to-front sorting, because the
+payoff is the body occluding ITSELF where its near arc crosses its far arc.
+That self-occlusion, plus the near arc projecting larger than the far, is what
+separates an object in space from a pattern on a plane. Check the sign of the
+camera pitch: the far rim must sit higher on screen than the near rim.
 
-Emptying the centre belongs to the material, not the tone: raise the density
-cutoff toward the middle so lobes thin out and run out. Fading tone instead
-leaves a last shape to pop. Depth needs two independent terms — radial
-fall-off and a screen-Y near/far bias — or a squashed ellipse flattens into
-one shade.
+Two failed attempts preceded this one and are worth recording, because both
+looked plausible in isolation. Drawing the drain as tonal bands gives flow
+with no material and reads as a gradient. Replacing that with a warped noise
+density field gives material with no volume and no space — still a flat plane
+with a texture — and, because the warp wound coordinates outward without
+bound, it destroyed its own precision and decayed into static after minutes.
 
-**May vary:** lobe size and coverage, the drain and rotation rates, how much
-shear, and whether the drained field sits inside a larger still mass of the
-same material or alone.
+**May vary:** the spine's tightness, descent, and number of turns; the body's
+thickness, lump size and roughness; flow rate; and how much of the frame the
+form occupies.
 
-**Do not reuse when:** the object in the field should visibly respond to it —
-that is the windmill's
-[rotating form tears a cloud field](#rotating-form-tears-a-cloud-field), the
-opposite decision. It is also wrong where individual pieces of material must
-be tracked or counted, which a per-pixel field cannot do.
+**Do not reuse when:** the material genuinely is a field of many things rather
+than one object — that is the windmill's
+[rotating form tears a cloud field](#rotating-form-tears-a-cloud-field). It is
+also wrong where the form must be watched piece by piece, since a spine plus
+lobes has no per-piece identity to track.
+
+**Keep bounded:** every time-dependent quantity must wrap. The flow phase here
+is taken modulo the spine's span and the noise is periodic, so the scene runs
+on a fixed cycle and cannot drift or degrade however long it plays. Any
+technique that advances a coordinate forever will eventually eat itself.

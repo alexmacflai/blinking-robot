@@ -7,43 +7,48 @@
     "tone": 0.97,
     "grain": 0.01
   },
-  "sea": {
-    "horizonY": 232,
-    "horizonSoft": 26,
-    "tone": 0.9,
-    "grain": 0.02,
-    "depthShade": -0.12
+  "cam": {
+    "focal": 400,
+    "up": 95,
+    "back": 200,
+    "horizon": 280,
+    "offX": 0
   },
-  "pool": {
-    "cx": 117,
-    "cy": 312,
-    "radius": 150,
-    "squashY": 0.5,
-    "cloudScale": 5.2,
-    "seed": 11.7,
-    "cutoff": 0.47,
-    "edgeSoft": 0.03,
-    "spin": 0.3,
-    "shear": 0.75,
-    "drain": 0.055,
-    "coreFade": 0.32,
-    "outerBlend": 0.45,
-    "edgeTone": 0.95,
-    "innerTone": 0.62,
-    "farNearShade": 0.08,
-    "gapTone": 0.4,
-    "grain": 0.015
+  "spiral": {
+    "outerR": 78,
+    "tighten": 0.5,
+    "turns": 4,
+    "depth": 55,
+    "topY": 0,
+    "phase": 0,
+    "handed": 1
+  },
+  "cloud": {
+    "lobes": 700,
+    "flow": 0.06,
+    "thick": 11,
+    "billow": 0.25,
+    "billowScale": 8.5,
+    "tipFade": 0.18,
+    "edge": 0.08,
+    "nearTone": 1.0,
+    "farTone": 0.5,
+    "depthShade": 0.38,
+    "formShade": 0.45,
+    "headScale": 3.4,
+    "headSwell": 1.05,
+    "roughen": 0.45
   },
   "sign": {
-    "cx": 117,
     "topY": 60,
     "size": 66,
-    "corner": 3,
     "stroke": 6.5,
     "tone": 0.05,
     "faceTone": 0.97,
     "pictogramTone": 0.05,
-    "pictogramScale": 0.62
+    "pictogramScale": 0.62,
+    "footDepth": 0.72,
+    "poleTop": 45
   },
   "pole": {
     "width": 3,

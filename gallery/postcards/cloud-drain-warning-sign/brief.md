@@ -53,18 +53,20 @@ a screen-space mask, per [`rendering.md`](../../../knowledge/design/rendering.md
   stay distinguishable — tone must be a function of position on the spiral
   (angle/radius/depth), not a flat fill.
 - **Visual-language catalogue** ([`visual-language.md`](../../../knowledge/design/visual-language.md)):
-  no existing entry covers a field draining toward a point, so nothing is
-  reused wholesale. Two entries inform the approach without being copied:
-  windmill's *rotating form tears a cloud field* (source: treat cloud as one
-  continuous field, not discrete objects — reused for the base cloud
-  representation, along with windmill's unbounded, non-resetting time driver
-  for continuous rotation rather than a spawn/destroy population). Note the
-  first implementation of this scene expressed the drain as tonal bands and
-  had to be rebuilt: a field with flow but no material reads as a gradient,
-  not as cloud. The mass must have a lobed silhouette of its own before any
-  amount of shading will make it cloud.
-  The technique this postcard established is recorded separately as
-  *a field that drains toward a point*.
+  no existing entry covered a single body whose shape is a spiral, so nothing
+  was reused wholesale; the technique this postcard established is recorded
+  as *one body whose shape is the motion*. Windmill's *rotating form tears a
+  cloud field* was consulted and NOT followed — its cloud is a field, and a
+  field is the wrong primitive here.
+
+  Two earlier implementations were wrong and were thrown away. The first drew
+  the drain as tonal bands: a field with flow but no material, which reads as
+  a gradient, not cloud. The second replaced that with a noise density field
+  warped by a flow map — still a flat plane with a texture on it, no volume,
+  no space, and it decayed into static because the warp accumulated without
+  bound. The requirement both attempts missed is that a cloud is an object
+  with volume in a space, and that here there is exactly ONE of them.
+
 - **Discarded from the sketches**: the spiral drawn directly on the sign face
   (`references/IMG_2180.jpeg`) is an alternate pictogram concept the ticket
   supersedes with the fixed reaching/drowning hand; not used. A visibly

@@ -21,24 +21,31 @@ away beneath it.
 
 ## Local rules
 
-The cloud is a thresholded density field, not tonal shading. Shading alone has
-flow but no material and reads as a gradient; the lobes and their silhouettes
-are what make it cloud, so the density is cut hard into mass and gaps rather
-than painted as a ramp.
+There is ONE cloud. Not a cloud field, not a collection of clouds, and not a
+texture: a single continuous body whose shape is a spiral. It is built from
+heavily overlapping lobes strung along a logarithmic helix, exactly as the
+discs inside a thick line build one stroke. The lobe count is an
+implementation detail and must never become visible as separate puffs.
 
-The spiral is never drawn. Material is placed by an inverse flow map — each
-point asks where its cloud came from — and the arms are produced by
-differential rotation shearing the lobes over time. Set `pool.shear` to 0 and
-the field turns rigidly with no spiral at all, which is the check that the
-arms are a consequence rather than a pattern. The same winding squeezes a wide
-annulus onto a narrow one, so lobes shrink as they travel inward.
+The spiral is geometry, not a drawn pattern. The spine is fixed; material
+flows along it inward, and lobe size follows the coil radius, so the cloud
+shrinks as it winds in rather than being faded down.
 
-The centre empties by raising the density cutoff, not by fading tone: material
-runs out before the middle, so there is no last shape left to pop.
+Depth is real. A perspective camera looks down into the funnel, lobes are
+sorted by camera depth and drawn back to front, and the near arc of the body
+occludes its own far arc. The pole is depth-tested against the cloud for the
+same reason. Getting the camera pitch sign wrong inverts the read: the far
+rim must project higher on screen than the near rim.
 
-The sign and pole are drawn after the field and never read from it. Pole sway
-is wind only and defaults to still; if it is raised, it must stay small enough
-that the sign never appears pulled toward the drain.
+Nothing accumulates. The flow phase wraps, so the cloud runs on a fixed cycle
+and the scene at an hour is the scene at ten seconds. An earlier version wound
+its coordinates by `exp(rate*t)` with no bound and decayed into static after a
+couple of minutes; use the controls page's TIME section to confirm any change
+still survives a long run.
+
+The sign and pole are drawn after the cloud and never read from it. Pole sway
+is wind only and defaults to still; if raised, it must stay small enough that
+the sign never appears pulled toward the drain.
 
 Postcard surface, controls, and reference-material requirements live in
 [`AGENTS.md`](../../../AGENTS.md).
