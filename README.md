@@ -32,7 +32,8 @@ defaults in [`gallery/render-settings.json`](gallery/render-settings.json).
 
 For gallery-wide rendering authoring, open
 [`gallery/controls.html`](gallery/controls.html). It edits a browser-only draft
-and downloads a complete replacement settings file for review and commit.
+and saves the complete settings source through the local authoring server for
+review and commit.
 
 Authoring postcards use a small local server. From the repository root, run
 `python3 gallery/export-server.py`, then open

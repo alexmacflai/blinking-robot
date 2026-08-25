@@ -33,5 +33,6 @@ Accent is a compositional field, not a compulsory highlight. A scene brief
 that uses it names the accent-bearing object or field, whether it acts as a
 local focus, dominant mass, or atmosphere, and the intended distribution.
 Partial coverage may be graded, layered, blurred, or dithered; never recover
-it by detecting a source colour. Avoid evenly scattered, mid-sized accent that
-flattens the image’s hierarchy.
+it by detecting a source colour. Write the coverage alongside the object’s
+actual render geometry; never approximate it with screen-space boxes or bands.
+Avoid evenly scattered, mid-sized accent that flattens the image’s hierarchy.

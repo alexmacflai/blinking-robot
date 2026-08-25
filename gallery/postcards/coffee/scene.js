@@ -123,6 +123,21 @@ function span(y,xa,xb,tone,alpha){
     lum[i]+=(tone-lum[i])*a;
   }
 }
+function accentSpan(y,xa,xb,alpha=1){
+  if(y<0||y>=H||xb<=xa) return;
+  const o=y*W, i0=Math.max(0,Math.floor(xa)), i1=Math.min(W-1,Math.ceil(xb)-1);
+  for(let x=i0;x<=i1;x++){
+    const cov=Math.min(x+1,xb)-Math.max(x,xa);
+    if(cov>0) accent[o+x]=Math.max(accent[o+x],alpha*cov);
+  }
+}
+function accentEllipse(cx,cy,rx,ry,alpha=1){
+  const y0=Math.max(0,Math.floor(cy-ry)),y1=Math.min(H-1,Math.ceil(cy+ry));
+  for(let y=y0;y<=y1;y++){
+    const u=(y+.5-cy)/ry;if(u<=-1||u>=1)continue;
+    const dx=rx*Math.sqrt(1-u*u);accentSpan(y,cx-dx,cx+dx,alpha);
+  }
+}
 /* Shaded variant: fn(x,y) -> tone, sampled at the pixel centre. */
 function spanF(y,xa,xb,fn,alpha){
   if(y<0||y>=H||xb<=xa) return;
@@ -437,6 +452,7 @@ function drawInside(){
   ellipse(CUPX,RIMY,irx,iry,CFG.tone.wall,1);
   const srx=irx*0.985, sry=iry*0.985;
   ellipse(CUPX,SURFY,srx,sry,(x,y)=>surfaceTone(x,y,srx,sry),1);
+  accentEllipse(CUPX,SURFY,srx,sry,.78);
   /* Meniscus: coffee climbing the wall keeps the full read at the rim. */
   ring(CUPX,SURFY,srx,sry,srx-0.9*S,sry-0.9*S,0.34,0.55);
   /* The rim itself, drawn as a solid line all the way round. It is the single
@@ -491,6 +507,7 @@ function drawStream(){
       const n=(sx-x)/wid;
       return 1.0-0.62*n*n*n*n;
     },1);
+    accentSpan(y,x-wid,x+wid,.78);
   }
   /* Where it lands: a small bright collar, the only place the coffee is lit
      from inside. */
@@ -519,6 +536,7 @@ function drawSpill(){
       const x=CUPX+nx*h*0.92;
       const wid=CFG.spill.w*S*(0.7+0.3*(1-(y-yTop)/Math.max(1,yBot-yTop)));
       span(y,x-wid,x+wid,CFG.tone.spill,1);
+      accentSpan(y,x-wid,x+wid,.78);
       span(y,x-wid-0.7*S,x-wid,0.55,0.5);   // wet highlight on the lit side
     }
     /* pendant drop at the head while it is still running */
@@ -545,6 +563,7 @@ function drawSpill(){
          sides, so the band has a shape instead of a cut end */
       const k=1-Math.abs((a-Math.PI/2)/((a1-a0)/2));
       ellipse(x,y,(1.0+1.7*k)*S*over,(0.8+1.2*k)*S*over,CFG.tone.spill,1);
+      accentEllipse(x,y,(1.0+1.7*k)*S*over,(0.8+1.2*k)*S*over,.78);
     }
   }
 }
@@ -592,7 +611,11 @@ function dither(){
     for(let x=0;x<W;x++){
       const i=o+x;
       const threshold=BAYER[row|(x&7)];
-      let colour=palette.paletteMode==='2-bit'?[CINK,CMID,CPAP][clamp(Math.floor(lum[i]*3+(threshold/64-.5)),0,2)]:lum[i]*64>threshold+.5?CPAP:CINK;
+      let colour;
+      if(palette.paletteMode==='2-bit'){
+        const scaled=clamp(lum[i],0,1)*2,base=Math.floor(scaled),fraction=scaled-base;
+        colour=[CINK,CMID,CPAP][Math.min(2,base+(fraction*64>threshold+.5?1:0))];
+      }else colour=lum[i]*64>threshold+.5?CPAP:CINK;
       if(palette.paletteMode==='2-bit'&&accent[i]*64>threshold) colour=CACC;
       buf32[i]=colour;
     }
@@ -615,11 +638,6 @@ function renderFrame(){
   drawStream();       // lands on the coffee, in front of the far rim
   drawDrops();
   drawSpill();        // over the rim and down the front — nearest surface
-  // Accent-bearing material: coffee (surface, stream and overflow) is a local
-  // focus. This is geometry-led coverage, not a sampled source colour.
-  for(let y=Math.max(0,Math.floor(SURFY-2*S));y<Math.min(H,Math.ceil(BASEY+RBOT*ELLY+3*S));y++) for(let x=Math.max(0,Math.floor(CUPX-RTOP*ELLX));x<Math.min(W,Math.ceil(CUPX+RTOP*ELLX));x++){
-    const dx=(x-CUPX)/(RTOP*ELLX),dy=(y-SURFY)/(RTOP*ELLY); if(dx*dx+dy*dy<1||y>SURFY) accent[y*W+x]=.72;
-  }
   dither();
 }
 

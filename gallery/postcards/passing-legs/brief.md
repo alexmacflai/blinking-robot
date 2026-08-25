@@ -9,7 +9,7 @@
 
 ## Accent treatment
 
-In 2-bit rendering, small shoe/contact marks are the accent-bearing material.
-They remain local and intermittent across the traffic field, adding cadence
-without turning the passing figures into a coloured pattern. The monochrome
-render ignores the mask.
+In 2-bit rendering, a light dither within the rendered shoe material carries
+the accent. Its coverage is clipped to the shoe geometry itself, so it moves
+with each step and cannot become a detached ankle box. The monochrome render
+ignores the mask.

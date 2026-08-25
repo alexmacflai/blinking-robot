@@ -56,7 +56,12 @@
     for (const palette of visitorPalettes) palettePicker.append(Object.assign(document.createElement('option'), { value:palette.id, textContent:paletteLabel(palette) }));
     for (const preset of visitorPixels) pixelPicker.append(Object.assign(document.createElement('option'), { value:preset.id, textContent:preset.name }));
     palettePicker.value = selection.palette; pixelPicker.value = selection.pixelPreset;
-    const sendSelection = frame => frame.contentWindow?.postMessage({ type:'blinking-robot:render-settings', selection }, '*');
+    const sendSelection = frame => frame?.contentWindow?.postMessage({ type:'blinking-robot:render-settings', selection }, '*');
+    addEventListener('message', event => {
+      if (event.data?.type !== 'blinking-robot:render-ready') return;
+      const frame = [...document.querySelectorAll('.preview iframe')].find(item => item.contentWindow === event.source);
+      sendSelection(frame);
+    });
     palettePicker.addEventListener('change', () => { selection.palette=palettePicker.value; document.querySelectorAll('.preview iframe').forEach(sendSelection); });
     pixelPicker.addEventListener('change', () => { selection.pixelPreset=pixelPicker.value; document.querySelectorAll('.preview iframe').forEach(sendSelection); });
     const safeGalleryText = value => {

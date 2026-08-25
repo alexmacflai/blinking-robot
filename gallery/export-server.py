@@ -22,6 +22,7 @@ SETTINGS_PATH = "/__blinking-robot/settings"
 MAX_UPLOAD_BYTES = 128 * 1024 * 1024
 MAX_SETTINGS_BYTES = 2 * 1024 * 1024
 SNAPSHOTS_README = """# Saved settings snapshots\n\nLocal authoring snapshots for this postcard. Each JSON file is a named creative\nconfiguration saved through the loopback-only authoring server. They are never\nruntime dependencies; `../values.json` remains the postcard default.\n\nSee the repository rules in [`AGENTS.md`](../../../../AGENTS.md).\n"""
+RENDER_SETTINGS_FILE = REPOSITORY_ROOT / "gallery" / "render-settings.json"
 
 
 class GalleryHandler(SimpleHTTPRequestHandler):
@@ -99,13 +100,18 @@ class GalleryHandler(SimpleHTTPRequestHandler):
                 return
             try:
                 request = self.read_settings_request()
-                directory = self.settings_directory(request.get("postcard"))
                 values = request.get("values")
                 if not isinstance(values, dict):
                     raise ValueError("Settings must be a JSON object.")
-                if request.get("action") == "default":
+                if request.get("action") == "render-default":
+                    if not isinstance(values.get("pixelPresets"), list) or not isinstance(values.get("palettes"), list) or not isinstance(values.get("defaults"), dict):
+                        raise ValueError("Global rendering settings are incomplete.")
+                    target = RENDER_SETTINGS_FILE
+                elif request.get("action") == "default":
+                    directory = self.settings_directory(request.get("postcard"))
                     target = directory / "values.json"
                 elif request.get("action") == "snapshot":
+                    directory = self.settings_directory(request.get("postcard"))
                     snapshots = directory / "snapshots"
                     snapshots.mkdir(exist_ok=True)
                     (snapshots / "README.md").write_text(SNAPSHOTS_README, encoding="utf-8")

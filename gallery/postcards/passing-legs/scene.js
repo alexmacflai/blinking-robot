@@ -229,7 +229,7 @@ function capT(ax,ay,bx,by,ra,rb,tone,only){
 }
 
 /* Convex quad, used for the coat column. Same gate as capT. */
-function quad(pts,tone,only){
+function quad(pts,tone,only,accentCoverage=0){
   let ymin=1e9,ymax=-1e9;
   for(const p of pts){ if(p[1]<ymin)ymin=p[1]; if(p[1]>ymax)ymax=p[1]; }
   const y0=Math.max(0,Math.floor(ymin)), y1=Math.min(H-1,Math.ceil(ymax));
@@ -245,13 +245,22 @@ function quad(pts,tone,only){
     if(xs.length<2) continue;
     xs.sort((p,q)=>p-q);
     for(let i=0;i+1<xs.length;i+=2){
-      if(!gated){ span(y,xs[i],xs[i+1],tone,1); continue; }
+      if(!gated){
+        let xa=Math.max(0,xs[i]), xb=Math.min(W,xs[i+1]), o=y*W;
+        for(let x=Math.floor(xa);x<Math.ceil(xb);x++){
+          const cov=Math.min(x+1,xb)-Math.max(x,xa); if(cov<=0) continue;
+          const k=o+x; lum[k]+=(tone-lum[k])*cov;
+          if(accentCoverage) accent[k]=Math.max(accent[k],accentCoverage*cov);
+        }
+        continue;
+      }
       let xa=Math.max(0,xs[i]), xb=Math.min(W,xs[i+1]);
       const o=y*W;
       for(let x=Math.floor(xa);x<Math.ceil(xb);x++){
         const cov=Math.min(x+1,xb)-Math.max(x,xa); if(cov<=0) continue;
         const k=o+x; if(lum[k]>lim || lum[k]<0) continue;
         lum[k]+=(tone-lum[k])*cov;
+        if(accentCoverage) accent[k]=Math.max(accent[k],accentCoverage*cov);
       }
     }
   }
@@ -473,7 +482,10 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
      one moved vertex, inset toward the toe — the slanted back edge the
      reference draws, without touching the pivot. */
   const collarBack =pt(heelX+insetX,topZ), collarFront=pt(seam1A,topZ);
-  quad([pt(heelX,soleZ),collarBack,collarFront,pt(seam1A,soleZ)], tone, only);
+  // Accent is a light dither within the real shoe shape. It gives cadence
+  // without making every shoe a solid, competing coloured mass.
+  const shoeAccent=(only===undefined) ? .38 : 0;
+  quad([pt(heelX,soleZ),collarBack,collarFront,pt(seam1A,soleZ)], tone, only, shoeAccent);
 
   /* Vamp: a proper four-cornered quad like the other two — back edge full
      collar height, front edge short but STILL VERTICAL, from soleZ up to
@@ -484,7 +496,7 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
      a quad and reads as a triangle. It is also unnecessary — the toe cap
      hinges about (seam2X,soleZ), a corner this quad already owns, so the
      two can never come apart there however far the toe flexes. */
-  quad([pt(seam1B,soleZ),pt(seam1B,topZ),pt(seam2B,midZ),pt(seam2B,soleZ)], tone, only);
+  quad([pt(seam1B,soleZ),pt(seam1B,topZ),pt(seam2B,midZ),pt(seam2B,soleZ)], tone, only, shoeAccent);
 
   /* Toe cap: continues the taper from `midZ` down to `tipZ` — short and
      blunt, not a point, so this stays a quad like the other two.
@@ -504,7 +516,7 @@ function drawLeg(w,sc,p,hipZ,tone,only,grow){
   const toeWorldAng=toeRestZ>=0 ? th : toeFloorAng;
   const hingeAng=(toeWorldAng-th)*f.toeHingeAmt, hx=seam2X, hz=soleZ;
   const pth=(lx,lz)=>{ const r=rot(lx-hx,lz-hz,hingeAng); return pt(hx+r[0],hz+r[1]); };
-  quad([pth(seam2C,soleZ),pth(seam2C,midZ),pth(toeX,tipZ),pth(toeX,soleZ)], tone, only);
+  quad([pth(seam2C,soleZ),pth(seam2C,midZ),pth(toeX,tipZ),pth(toeX,soleZ)], tone, only, shoeAccent);
 
   /* Cuff: the shin is a QUAD, not a capsule — straight sides, straight ends.
      The knee joint still reads as round because the thigh capsule above
@@ -610,7 +622,11 @@ function dither(){
     for(let x=0;x<W;x++){
       const i=o+x;
       const threshold=BAYER[row|(x&7)];
-      let colour=palette.paletteMode==='2-bit'?[CINK,CMID,CPAP][clamp(Math.floor(lum[i]*3+(threshold/64-.5)),0,2)]:lum[i]*64>threshold+.5?CPAP:CINK;
+      let colour;
+      if(palette.paletteMode==='2-bit'){
+        const scaled=clamp(lum[i],0,1)*2,base=Math.floor(scaled),fraction=scaled-base;
+        colour=[CINK,CMID,CPAP][Math.min(2,base+(fraction*64>threshold+.5?1:0))];
+      }else colour=lum[i]*64>threshold+.5?CPAP:CINK;
       if(palette.paletteMode==='2-bit'&&accent[i]*64>threshold) colour=CACC;
       buf32[i]=colour;
     }
@@ -630,9 +646,6 @@ function renderFrame(){
   for(let i=ranks.length-1;i>=0;i--){
     const R=ranks[i];
     for(const w of R.walkers) drawWalker(w,R);
-    // Accent-bearing material: shoe/contact marks are local, repeated signals
-    // against the neutral traffic field. Coverage is authored from foot poses.
-    for(const w of R.walkers){ const a=ankleAt(w,w.p); const x=Math.round(pxOf(R.sc,a.x)), y=Math.round(pyOf(R.sc,a.z)); for(let yy=y-2;yy<=y+3;yy++) for(let xx=x-5;xx<=x+5;xx++) if(xx>=0&&xx<W&&yy>=0&&yy<H) accent[yy*W+xx]=.7; }
   }
   dither();
 }

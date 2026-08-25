@@ -36,7 +36,10 @@ if(!canvas||!stage||!config)throw new Error('Windmill needs canvas, stage, and v
    ==================================================================== */
 const clone=value=>JSON.parse(JSON.stringify(value));
 let DEFAULT_CFG=clone(config);
-let CFG=clone(config);
+// The scene owns this object for its whole lifetime. Global rendering messages
+// and the controls surface both mutate the live object, so a palette/pixel
+// change cannot land on a discarded construction-time copy.
+let CFG=config;
 
 const BASE_W = 234, BASE_H = 416;      // 9:16 authoring grid (26 x 9x16)
 const GRID_CHOICES = [11,13,16,20,26,32,40,48];
@@ -471,7 +474,10 @@ function drawSails(t){
       for(let x=x0;x<=x1;x++){
         const p=pCol[x], q=dy*iSCol[x];
         const s=sailInk(p*ca+q*sa, -p*sa+q*ca);
-        if(s){ const i=row+x; lum[i]=(s===1)?0.0:0.86; dof[i]=0; }
+        if(s){ const i=row+x; lum[i]=(s===1)?0.0:0.86; dof[i]=0;
+          // The accent is the actual moving panel slit, not a screen-space box.
+          if(s===2) accent[i]=1;
+        }
       }
     }
   }
@@ -891,10 +897,14 @@ function dither(){
       const i=o+x;
       const threshold=BAYER[row|((x+dof[i])&7)];
       let colour;
-      if(palette.paletteMode==='2-bit') colour=[CINK,CMID,CPAP][clamp(Math.floor(lum[i]*3+(threshold/64-.5)),0,2)];
-      else colour=lum[i]*64>threshold+.5?CPAP:CINK;
-      // The deck is an explicit semantic mask, separate from luminance. Its
-      // fractional coverage is dithered at the final palette stage.
+      if(palette.paletteMode==='2-bit'){
+        /* Ordered quantisation must split the dark→middle and middle→light
+           intervals independently. The previous formula biased gradients
+           toward light, which flattened the cloud tones. */
+        const scaled=clamp(lum[i],0,1)*2, base=Math.floor(scaled), fraction=scaled-base;
+        colour=[CINK,CMID,CPAP][Math.min(2,base+(fraction*64>threshold+.5?1:0))];
+      }else colour=lum[i]*64>threshold+.5?CPAP:CINK;
+      // Accent remains a separate material mask and is ignored in 1-bit.
       if(palette.paletteMode==='2-bit'&&accent[i]*64>threshold) colour=CACC;
       buf32[i]=colour;
     }
@@ -921,10 +931,6 @@ function renderFrame(t){
   drawBank(BANKS[1],t);         // L3
   drawMill();                   // tower, so the deck can bury its base
   drawDeck(t);                  // L2
-  // Accent-bearing material: the cloud deck is an atmospheric field, never a
-  // colour inferred from its neutral tone. The moving band keeps hierarchy
-  // broad and leaves the mill as the interruption.
-  for(let y=Math.max(0,Math.floor(H*.49));y<Math.min(H,Math.ceil(H*.73));y++) for(let x=0;x<W;x++) accent[y*W+x]=.32+.28*Math.max(0,Math.sin((x/S+t*CFG.wind*8)/17));
   drawSails(t);                 // rotor rides ahead of the cap
   drawHub();
   drawBank(BANKS[2],t);         // L1 — in front of everything
@@ -1052,7 +1058,13 @@ addEventListener('resize',fitCanvas);
 
 
 function start(){build();warmup();fitCanvas();renderFrame(t);if(loadEl)loadEl.style.display='none';startDriver();}
-function reset(){CFG=clone(DEFAULT_CFG);rebuild(false);return CFG;}
+function reset(){
+  const next=clone(DEFAULT_CFG);
+  Object.keys(CFG).forEach(key=>delete CFG[key]);
+  Object.assign(CFG,next);
+  rebuild(false);
+  return CFG;
+}
 function savePng(){
   const out=document.createElement('canvas');
   out.width=2160;out.height=3840;
