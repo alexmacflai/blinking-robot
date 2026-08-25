@@ -313,7 +313,7 @@ export function createPostcardControls({ panel, title, description, scene, confi
   basics.color({ label: 'darkest', get: () => config.render?.dark ?? config.ink, set: value => { config.ink = value; (config.render ??= {}).dark = value; }, update: 'refresh' });
   basics.color({ label: 'middle', get: () => config.render?.middle ?? config.paper, set: value => { (config.render ??= {}).middle = value; }, visible: () => config.render?.paletteMode === '2-bit', update: 'refresh' });
   basics.color({ label: 'brightest', get: () => config.render?.light ?? config.paper, set: value => { config.paper = value; (config.render ??= {}).light = value; }, update: 'refresh' });
-  basics.color({ label: 'accent', get: () => config.render?.accent ?? config.paper, set: value => { (config.render ??= {}).accent = value; }, visible: () => config.render?.paletteMode === '2-bit', update: 'refresh' });
+  basics.color({ label: 'colour', get: () => config.render?.accent ?? config.paper, set: value => { (config.render ??= {}).accent = value; }, visible: () => config.render?.paletteMode === '2-bit', update: 'refresh' });
   basics.action('SWAP TONES', () => { const dark=config.render?.dark ?? config.ink, light=config.render?.light ?? config.paper; config.ink=light; config.paper=dark; (config.render ??= {}).dark=light; config.render.light=dark; }, 'refresh');
 
   const postcard = localPostcardName();

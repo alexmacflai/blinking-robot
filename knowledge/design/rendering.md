@@ -20,19 +20,16 @@ Choose the rendering treatment that supports the scene's masses, hierarchy,
 and mood. Do not add texture, dither, palette variation, or edge detail merely
 to make an image feel finished.
 
-## Palette and accent
+## Palette and indexed colour
 
-Every postcard keeps neutral luminance and accent coverage as separate final
-rendering channels. In 1-bit mode neutral luminance maps to dark and light; in
-2-bit mode it maps to dark, middle, and light, while the independent accent
-coverage may replace the neutral output with the accent colour. This keeps a
-scene legible in monochrome and lets palette changes recolour a running frame
-without rebuilding its simulation.
+Every postcard keeps one continuous scene-value field until final rendering.
+In 1-bit mode that value maps to ink and paper through ordered dithering. In
+2-bit mode it maps to four ordered palette entries: darkest, middle, colour,
+and brightest. A material may provide explicit one-bit and two-bit values when
+the same object should read differently by mode; those values are written with
+the object geometry, not as a separate final colour mask.
 
-Accent is a compositional field, not a compulsory highlight. A scene brief
-that uses it names the accent-bearing object or field, whether it acts as a
-local focus, dominant mass, or atmosphere, and the intended distribution.
-Partial coverage may be graded, layered, blurred, or dithered; never recover
-it by detecting a source colour. Write the coverage alongside the object’s
-actual render geometry; never approximate it with screen-space boxes or bands.
-Avoid evenly scattered, mid-sized accent that flattens the image’s hierarchy.
+The colour entry is a value band, not a compulsory highlight. A scene brief
+that uses it names the material and its mode-specific value. Never recover a
+colour region by detecting a source colour or approximate it with screen-space
+boxes or bands.

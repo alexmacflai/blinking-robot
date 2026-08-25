@@ -1,11 +1,13 @@
 # Windmill brief
 
-## Accent treatment
+## Indexed colour treatment
 
-In 2-bit rendering, the narrow moving slits between the windmill’s sail panels
-carry the accent. They make the rotor’s motion legible without changing the
-cloud deck into a coloured stripe; the 1-bit image ignores that channel and
-retains its original tonal composition.
+The postcard is authored as one continuous value field. In 1-bit, that field
+becomes ink/paper through ordered dithering. In 2-bit, it becomes palette
+indices 0–3: ink, neutral, colour, paper. The narrow moving slits between the
+sail panels are an intentional material value: paper in 1-bit and palette slot
+2 in 2-bit. Their colour follows the rotor geometry and never comes from a
+screen-space mask.
 
 - A windmill turns through a wind-driven cloud sky.
 - The sails reveal cloud material that was already present in apparently empty

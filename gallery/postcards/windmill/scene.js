@@ -73,7 +73,7 @@ function packColor(hex){
    DERIVED STATE — everything below is rebuilt by build()
    ==================================================================== */
 let W,H,S;
-let bg,lum,accent,dof,dens,bankA,pCol,iSCol;
+let bg,lum,oneBitSlot,twoBitSlot,dof,dens,bankA,pCol,iSCol;
 let CINK,CMID,CPAP,CACC,img,buf32;
 let SUN,HUB,TOWER_X,MILL;
 let LA,LW,HW,INNER,CU,SLIT,FOC,YAW,CY_,SY_,OMEGA,ANG0;
@@ -110,7 +110,9 @@ function build(){
   cv.width=W; cv.height=H;
   img=ctx.createImageData(W,H);
   buf32=new Uint32Array(img.data.buffer);
-  bg=new Float32Array(W*H); lum=new Float32Array(W*H); accent=new Float32Array(W*H);
+  bg=new Float32Array(W*H); lum=new Float32Array(W*H);
+  oneBitSlot=new Int8Array(W*H); twoBitSlot=new Int8Array(W*H);
+  oneBitSlot.fill(-1); twoBitSlot.fill(-1);
   dof=new Int16Array(W*H); dens=new Float32Array(W*H); bankA=new Float32Array(W*H);
   pCol=new Float32Array(W); iSCol=new Float32Array(W);
 
@@ -244,7 +246,7 @@ function drawPuff(L,t){
   for(let i=yA*W, n=yB*W; i<n; i++){
     const a=bankA[i];
     if(a<=0) continue;
-    lum[i]=lum[i]*(1-a)+val*a;
+    oneBitSlot[i]=-1; twoBitSlot[i]=-1; lum[i]=lum[i]*(1-a)+val*a;
     if(a>0.5) dof[i]=dv;
   }
 }
@@ -275,7 +277,7 @@ function drawSea(L,t){
     for(let y=ys;y<H;y++){
       let a=(y-tp)/soft; if(a<=0)continue; if(a>1)a=1;
       const i=y*W+x;
-      lum[i]=lum[i]*(1-a)+val*a;
+      oneBitSlot[i]=-1; twoBitSlot[i]=-1; lum[i]=lum[i]*(1-a)+val*a;
       if(a>0.5) dof[i]=dv;
     }
   }
@@ -299,7 +301,7 @@ function buildFlocks(gy,gl){
   });
 }
 
-function px(x,y,v){ if(x<0||x>=W||y<0||y>=H) return; lum[y*W+x]=v; }
+function px(x,y,v){ if(x<0||x>=W||y<0||y>=H) return; const i=y*W+x; oneBitSlot[i]=-1; twoBitSlot[i]=-1; lum[i]=v; }
 
 function drawBird(x,y,d,sz){
   // A 1px silhouette cannot win against an 8px dither lattice, so each bird
@@ -309,7 +311,7 @@ function drawBird(x,y,d,sz){
     const xx=x+i, yy=y+j;
     if(xx<0||xx>=W||yy<0||yy>=H) continue;
     const k=yy*W+xx;
-    if(lum[k]<0.96) lum[k]=0.96;
+    if(lum[k]<0.96){ oneBitSlot[k]=-1; twoBitSlot[k]=-1; lum[k]=0.96; }
     dof[k]=0;
   }
   px(x,y,0); px(x,y+1,0);
@@ -378,10 +380,10 @@ function drawStar(t){
     if(x<0||x>=W||y<0||y>=H) continue;
     const k=y*W+x;
     const v = i<=2 ? 1.40 : 0.35+1.15*b;         // head is always a hard point
-    if(v>lum[k]){ lum[k]=v; dof[k]=0; }
+    if(v>lum[k]){ oneBitSlot[k]=-1; twoBitSlot[k]=-1; lum[k]=v; dof[k]=0; }
     if(i===0){                                   // give the head a little body
-      if(y>0){ const a=k-W; if(1.2>lum[a]){lum[a]=1.2; dof[a]=0;} }
-      if(y<H-1){ const a=k+W; if(1.2>lum[a]){lum[a]=1.2; dof[a]=0;} }
+      if(y>0){ const a=k-W; if(1.2>lum[a]){oneBitSlot[a]=-1; twoBitSlot[a]=-1; lum[a]=1.2; dof[a]=0;} }
+      if(y<H-1){ const a=k+W; if(1.2>lum[a]){oneBitSlot[a]=-1; twoBitSlot[a]=-1; lum[a]=1.2; dof[a]=0;} }
     }
   }
 }
@@ -475,8 +477,10 @@ function drawSails(t){
         const p=pCol[x], q=dy*iSCol[x];
         const s=sailInk(p*ca+q*sa, -p*sa+q*ca);
         if(s){ const i=row+x; lum[i]=(s===1)?0.0:0.86; dof[i]=0;
-          // The accent is the actual moving panel slit, not a screen-space box.
-          if(s===2) accent[i]=1;
+          // Material values are source-level palette indices, not a post-render
+          // colour mask. Ordinary sail ink is slot 0; the slit is paper in
+          // 1-bit and palette slot 2 in 2-bit.
+          oneBitSlot[i]=s===2?3:0; twoBitSlot[i]=s===2?2:0;
         }
       }
     }
@@ -576,7 +580,7 @@ function drawDeck(t){
       let dep=(y-top)*invD; if(dep>1)dep=1;
       const tone=DECK_TONE-shade*dep;
       const i=y*W+x;
-      lum[i]=lum[i]*(1-a)+tone*a;
+      oneBitSlot[i]=-1; twoBitSlot[i]=-1; lum[i]=lum[i]*(1-a)+tone*a;
       if(a>0.5) dof[i]=dv;
     }
   }
@@ -881,7 +885,7 @@ function drawEmit(t){
        instead is what let an entirely invisible medium report 7,000 of them. */
     eLit++;
     const j=y*W+x;
-    lum[j]=lum[j]*(1-a)+tone*a;
+    oneBitSlot[j]=-1; twoBitSlot[j]=-1; lum[j]=lum[j]*(1-a)+tone*a;
     if(a>0.5) dof[j]=0;
   }
 }
@@ -901,11 +905,15 @@ function dither(){
         /* Ordered quantisation must split the dark→middle and middle→light
            intervals independently. The previous formula biased gradients
            toward light, which flattened the cloud tones. */
-        const scaled=clamp(lum[i],0,1)*2, base=Math.floor(scaled), fraction=scaled-base;
-        colour=[CINK,CMID,CPAP][Math.min(2,base+(fraction*64>threshold+.5?1:0))];
-      }else colour=lum[i]*64>threshold+.5?CPAP:CINK;
-      // Accent remains a separate material mask and is ignored in 1-bit.
-      if(palette.paletteMode==='2-bit'&&accent[i]*64>threshold) colour=CACC;
+        const slot=twoBitSlot[i];
+        if(slot>=0) colour=[CINK,CMID,CACC,CPAP][Math.min(3,slot)];
+        else {
+          const scaled=clamp(lum[i],0,1)*3, base=Math.floor(scaled), fraction=scaled-base;
+          const index=Math.min(3,base+(fraction*64>threshold+.5?1:0));
+          colour=[CINK,CMID,CACC,CPAP][index];
+        }
+      }else if(oneBitSlot[i]>=0) colour=oneBitSlot[i]===0?CINK:CPAP;
+      else colour=lum[i]*64>threshold+.5?CPAP:CINK;
       buf32[i]=colour;
     }
   }
@@ -917,7 +925,7 @@ function dither(){
    ==================================================================== */
 function renderFrame(t){
   lum.set(bg);
-  accent.fill(0);
+  oneBitSlot.fill(-1); twoBitSlot.fill(-1);
   dof.fill(0);
   updateRotorCols();
   /* Enforce the no-overlap constraint HERE, against the exact blade angle this

@@ -29,7 +29,7 @@ function build(){
   palettes.color({label:'darkest',get:()=>palette.dark,set:value=>{palette.dark=value;},onChange:broadcast});
   palettes.color({label:'middle',get:()=>palette.middle||palette.light,set:value=>{palette.middle=value;},visible:()=>palette.mode==='2-bit',onChange:broadcast});
   palettes.color({label:'brightest',get:()=>palette.light,set:value=>{palette.light=value;},onChange:broadcast});
-  palettes.color({label:'accent',get:()=>palette.accent||palette.light,set:value=>{palette.accent=value;},visible:()=>palette.mode==='2-bit',onChange:broadcast});
+  palettes.color({label:'colour',get:()=>palette.accent||palette.light,set:value=>{palette.accent=value;},visible:()=>palette.mode==='2-bit',onChange:broadcast});
   palettes.toggle({label:'visitor exposed',get:()=>palette.visitorExposed,set:value=>{palette.visitorExposed=value;},onChange:broadcast});
   palettes.action('ADD PALETTE',()=>{const id=uniqueId(draft.palettes,'palette');draft.palettes.push({id,name:'Untitled palette',mode:'2-bit',dark:'#101014',middle:'#697077',light:'#efece2',accent:'#c5e714',visitorExposed:false});paletteId=id;refresh();});
   palettes.action('REMOVE PALETTE',()=>{if(draft.defaults.palette===paletteId){controls.notify('choose another default palette first');return;}draft.palettes=draft.palettes.filter(item=>item.id!==paletteId);paletteId=draft.palettes[0].id;refresh();});
