@@ -19,8 +19,11 @@ A coded animation postcard of a windmill.
 
 ## Local rules
 
-Run this postcard through the repository's local preview server. Save values
-downloads a replacement `values.json`; that one file supplies both surfaces.
+Run this postcard through the repository's local preview server. The local
+authoring server can save the default directly to `values.json`, or save named
+alternatives in `snapshots/`; loading a snapshot does not overwrite the
+default. Download Values remains available for static preview. That one default
+file supplies both surfaces.
 The **Gallery** section decides whether the postcard appears in the gallery and
 stores the hover writing, with paragraphs, bold, and italics.
 Save Frame exports the currently rendered Windmill frame as a 2160×3840 PNG.

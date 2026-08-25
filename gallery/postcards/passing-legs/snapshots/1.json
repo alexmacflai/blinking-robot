@@ -1,0 +1,99 @@
+{
+  "gridK": 26,
+  "fit": "fill",
+  "ink": "#101418",
+  "paper": "#e9e6dd",
+  "cam": {
+    "horizon": 60,
+    "focal": 350,
+    "height": 0.15
+  },
+  "legTones": {
+    "min": 0,
+    "max": 0.6
+  },
+  "rankDepth": {
+    "min": 1.32,
+    "max": 2.7
+  },
+  "ranks": [
+    {
+      "gap": [
+        0.9,
+        2.2
+      ],
+      "right": 0.85
+    },
+    {
+      "gap": [
+        0.8,
+        2
+      ],
+      "right": 0.15
+    },
+    {
+      "gap": [
+        0.7,
+        1.8
+      ],
+      "right": 0.8
+    },
+    {
+      "gap": [
+        0.6,
+        1.5
+      ],
+      "right": 0.25
+    }
+  ],
+  "fig": {
+    "hip": 1,
+    "thigh": 0.47,
+    "shin": 0.47,
+    "ankle": 0.1,
+    "rThigh": 0.088,
+    "rKnee": 0.066,
+    "rCuff": 0.076,
+    "sockLen": 0.05,
+    "rSock": 0.045,
+    "sockReach": 0.055,
+    "shoeL": 0.31,
+    "shoeH": 0.09,
+    "heelBack": 0.28,
+    "seam1Frac": 0.35,
+    "seam2Frac": 0.68,
+    "midFrac": 0.55,
+    "tipFrac": 0.34,
+    "insetFrac": 0.25,
+    "toeHingeAmt": 1,
+    "vary": 0.05
+  },
+  "gait": {
+    "speed": 1.25,
+    "step": 0.75,
+    "duty": 0.75,
+    "leadReach": -0.12,
+    "trailReach": 0.07,
+    "flat": 0.05,
+    "heelOff": 0.5,
+    "heelUp": 0.38,
+    "toeDown": 0.9,
+    "clear": 0.015,
+    "tuck": 0.05,
+    "leadBend": 0,
+    "trailBend": 0,
+    "bob": 0.02,
+    "vary": 0.25
+  },
+  "bg": {
+    "top": 0.86,
+    "bottom": 0.975,
+    "grain": 0
+  },
+  "ground": {
+    "tone": 1,
+    "grain": 0.12
+  },
+  "sep": 0.6,
+  "sepW": 2
+}

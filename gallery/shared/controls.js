@@ -41,6 +41,33 @@ export function downloadJson(name, value) {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
+function localPostcardName() {
+  const match = location.pathname.match(/\/gallery\/postcards\/([^/]+)\/controls\.html$/);
+  return match?.[1] || null;
+}
+
+async function localSettings(postcard, action, values, name = '') {
+  const response = await fetch('/__blinking-robot/settings', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Blinking-Robot-Authoring': '1' },
+    body: JSON.stringify({ postcard, action, values, name })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || 'Local save is unavailable.');
+  return result;
+}
+
+async function listLocalSnapshots(postcard) {
+  const response = await fetch(`/__blinking-robot/settings?postcard=${encodeURIComponent(postcard)}`, { headers: { 'X-Blinking-Robot-Authoring': '1' }, cache: 'no-store' });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || 'Local snapshots are unavailable.');
+  return result.snapshots || [];
+}
+
+function replaceObject(target, source) {
+  Object.keys(target).forEach(key => delete target[key]);
+  Object.assign(target, source);
+}
+
 export function saveCanvasPng(canvas, name = 'postcard-frame.png') {
   const output = document.createElement('canvas'); output.width = 2160; output.height = 3840;
   const context = output.getContext('2d'); context.imageSmoothingEnabled = false;
@@ -201,6 +228,7 @@ export function createPostcardControls({ panel, title, description, scene, confi
     const element = document.createElement('section'); element.className = 'postcard-section';
     element.append(Object.assign(document.createElement('h2'), { textContent: title })); if (description) element.append(note(description)); scrollable.append(element);
     const api = {
+      element,
       note(text) { element.append(note(text)); return api; },
       range(options) {
         const get = resolve(options), set = assign(options), row = document.createElement('div'), label = document.createElement('label'), input = document.createElement('input'), value = document.createElement('input');
@@ -285,6 +313,35 @@ export function createPostcardControls({ panel, title, description, scene, confi
   gallery.note(galleryFile ? 'Use Enter for a new paragraph. Select text, then use B or I. Save gallery details downloads the file used by the gallery.' : 'Use Enter for a new paragraph. Select text, then use B or I. Save values downloads this writing and publish state with the postcard configuration.');
   if (galleryFile) gallery.action('SAVE GALLERY DETAILS', () => downloadJson(galleryFile, galleryValues));
 
+  const postcard = localPostcardName();
+  if (postcard) {
+    const saved = section('SAVED SETTINGS', 'Available only through the loopback authoring server. The default updates values.json; snapshots keep named alternatives.');
+    const row = document.createElement('div'); row.className = 'postcard-row';
+    const label = document.createElement('label'); label.textContent = 'snapshot';
+    const select = document.createElement('select'); select.setAttribute('aria-label', 'Saved settings snapshot');
+    select.append(Object.assign(document.createElement('option'), { value: '', textContent: 'Choose a snapshot' })); row.append(label, select); saved.element.append(row);
+    const refreshSnapshots = async () => {
+      const snapshots = await listLocalSnapshots(postcard);
+      select.replaceChildren(Object.assign(document.createElement('option'), { value: '', textContent: 'Choose a snapshot' }));
+      snapshots.forEach(snapshot => select.append(Object.assign(document.createElement('option'), { value: snapshot.name, textContent: snapshot.name.replaceAll('-', ' ') })));
+      return snapshots;
+    };
+    saved.note('Snapshots are stored in this postcard’s snapshots/ folder and can be loaded without changing the default.');
+    saved.action('REFRESH SNAPSHOTS', () => refreshSnapshots().then(() => notify('snapshots refreshed')).catch(error => notify(error.message)));
+    saved.action('LOAD SNAPSHOT', () => {
+      if (!select.value) { notify('choose a snapshot'); return; }
+      fetch(`./snapshots/${encodeURIComponent(select.value)}.json`, { cache: 'no-store' }).then(response => {
+        if (!response.ok) throw new Error('Snapshot could not be loaded.'); return response.json();
+      }).then(values => { replaceObject(config, values); update('rebuild'); notify(`loaded ${select.value}`); }).catch(error => notify(error.message));
+    });
+    saved.action('SAVE AS SNAPSHOT', () => {
+      const name = window.prompt('Snapshot name');
+      if (!name?.trim()) return;
+      localSettings(postcard, 'snapshot', config, name).then(async result => { await refreshSnapshots(); select.value = result.saved.replace(/\.json$/, ''); notify(`saved ${result.saved}`); }).catch(error => notify(error.message));
+    });
+    refreshSnapshots().catch(() => { saved.element.hidden = true; });
+  }
+
   const actions = document.createElement('nav'); actions.className = 'postcard-actions'; actions.setAttribute('aria-label', 'Postcard actions');
   actions.append(button('play / pause', () => scene.togglePaused()), button('reset', () => location.reload()), button('save frame', () => scene.savePng()), button('save video', () => {
     if(!scene.saveVideo){notify('video export is unavailable');return;}
@@ -292,7 +349,10 @@ export function createPostcardControls({ panel, title, description, scene, confi
       mp4Url:'/__blinking-robot/export/mp4',
       onProgress: status => notify(status, { persistent:true })
     }).then(()=>notify('MP4 downloaded')).catch(error=>notify(error.message));
-  }), button('copy values', () => copyText(JSON.stringify(config, null, 2)).then(() => notify('values copied')).catch(() => notify('copy unavailable'))), button('save values', () => { downloadJson(valuesFile, config); notify('values downloaded'); }, 'primary'));
+  }), button('copy values', () => copyText(JSON.stringify(config, null, 2)).then(() => notify('values copied')).catch(() => notify('copy unavailable'))), button('download values', () => { downloadJson(valuesFile, config); notify('values downloaded'); }), button('save default', () => {
+    if (!postcard) { notify('local saving is unavailable'); return; }
+    localSettings(postcard, 'default', config).then(() => notify('default saved')).catch(error => notify(error.message));
+  }, 'primary'));
   panel.append(actions); syncScrollbar();
   return { section, sync, update, notify };
 }

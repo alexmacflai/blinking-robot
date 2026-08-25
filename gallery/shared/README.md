@@ -10,7 +10,8 @@ Reusable browser code used by two or more postcard authoring surfaces.
 
 - [controls.js](controls.js) — component-first authoring-panel builder,
   canonical sidebar shell, shared controls, update contract, action bar,
-  copying, values downloads, gallery-writing controls, and hard-pixel PNG/MP4
+  copying, local default and snapshot settings saves, values downloads,
+  gallery-writing controls, and hard-pixel PNG/MP4
   export helpers. Its controls tokens define the monochrome palette,
   `#C5E714` accent, spacing, borders, scrollbar, and Fira type stack.
 - [playback.js](playback.js) — tested pause/restart state used by animated
@@ -27,3 +28,6 @@ Keep scene-specific rendering and control declarations in each postcard folder.
 The shared builder owns the sidebar shell, generic Basics section, footer, and
 control behaviour; postcard modules add their scene-specific middle sections.
 Every postcard has one `values.json` read by both public and controls pages.
+When served by `export-server.py` on loopback, controls can overwrite that
+default locally or save named alternatives in the postcard's `snapshots/`
+folder. Static previews remain read-only and retain downloadable values files.
