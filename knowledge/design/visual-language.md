@@ -187,3 +187,32 @@ marching, and a little too much of it becomes a goose-step.
 **Do not reuse when:** the motion is meant to be mechanical, floating or
 inhuman, or when the contact is not load-bearing in the image. A figure seen
 from far enough away that the foot is a few pixels does not repay any of this.
+
+## A field that drains toward a point
+
+**Source:** [Cloud-drain warning sign postcard](../../gallery/postcards/cloud-drain-warning-sign/README.md)
+
+**Effect:** A continuous material field spirals inward and quietly ceases to
+exist at a centre, while an object standing in it remains completely
+unaffected. The motion reads as one relationship — material leaving, object
+indifferent — rather than as an object reacting to a force.
+
+**Works when:** the field is evaluated per pixel in polar coordinates rather
+than simulated as particles, and its phase uses `ln(radius)` rather than
+radius. The logarithm is what makes it a drain instead of a rotation: band
+spacing shrinks geometrically toward the centre, so material visibly gets
+smaller as it travels in, and no separate scaling term is needed. The
+disappearance must be an absence rather than an event — fade the banding
+amplitude to zero across an inner fraction so there is nothing left to pop.
+Depth needs two independent terms, radial fall-off and a screen-Y near/far
+bias, or a squashed ellipse collapses into a flat blob.
+
+**May vary:** the number of arms, the spiral's tightness, the drain rate and
+its sign, how much of the frame the field occupies, and whether the field sits
+in a larger continuous mass or alone.
+
+**Do not reuse when:** the object in the field should visibly respond to it —
+that is the windmill's
+[rotating form tears a cloud field](#rotating-form-tears-a-cloud-field), which
+is the opposite decision. It is also wrong where individual pieces of material
+must be tracked or counted, which a per-pixel field cannot do.
