@@ -34,9 +34,11 @@ Useful areas to probe when unresolved are:
 - the intended emotional temperature, humour, or unresolved reading; and
 - likely legibility failures or unwanted readings.
 
-When the scene uses a 2-bit palette accent, establish the accent-bearing
-material or field, whether it is a local focus, dominant mass, or atmosphere,
-and its intended distribution. Do not ask this for a monochrome-only scene.
+When the scene uses indexed 2-bit colour, establish the material or field that
+uses palette slot 2, whether it is a local focus, dominant mass, or atmosphere,
+and its intended distribution in both modes. Treat that as a source-level
+material value attached to the geometry; do not design a screen-space accent
+mask. Do not ask this for a monochrome-only scene.
 
 Do not ask a question merely to make the brief feel complete. Accept a rough
 answer, make a clear inference when it is safe, and flag only assumptions that
