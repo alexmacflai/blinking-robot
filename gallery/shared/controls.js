@@ -241,7 +241,8 @@ export function createPostcardControls({ panel, title, description, scene, confi
       color(options) {
         const get = resolve(options), set = assign(options), row = document.createElement('div'), label = document.createElement('label'), input = document.createElement('input');
         row.className = 'postcard-row'; input.type = 'color'; input.dataset.update = options.update || 'refresh'; labelInput(label, input, options.label); const show = () => { input.value = get(); };
-        input.addEventListener('input', () => { set(input.value); update(options.update || 'refresh'); }); row.append(label, input); element.append(row); syncers.push(show); show(); return api;
+        const syncVisibility = () => { row.hidden = options.visible ? !options.visible() : false; show(); };
+        input.addEventListener('input', () => { set(input.value); update(options.update || 'refresh'); }); row.append(label, input); element.append(row); syncers.push(syncVisibility); syncVisibility(); return api;
       },
       number(options) {
         const get = resolve(options), set = assign(options), row = document.createElement('div'), label = document.createElement('label'), input = document.createElement('input');
@@ -301,7 +302,11 @@ export function createPostcardControls({ panel, title, description, scene, confi
   basics.choice({ label: 'pixelation', values: gridValues.map(value => ({ value, label: `${9 * value}×${16 * value}` })), path: 'gridK', update: 'rebuild' });
   basics.note('Only 9:16 grids (9k × 16k) tile into whole internal pixels.');
   basics.choice({ label: 'display fit', values: [{ value: 'fill', label: 'FILL' }, { value: 'crisp', label: 'CRISP' }], path: 'fit', update: 'fit' });
-  basics.color({ label: 'darkest', get: () => config.render?.dark ?? config.ink, set: value => { config.ink = value; (config.render ??= {}).dark = value; }, update: 'refresh' }); basics.color({ label: 'brightest', get: () => config.render?.light ?? config.paper, set: value => { config.paper = value; (config.render ??= {}).light = value; }, update: 'refresh' });
+  basics.choice({ label: 'palette mode', get: () => config.render?.paletteMode ?? '1-bit', set: value => { (config.render ??= {}).paletteMode = value; }, values: ['1-bit', '2-bit'], update: 'refresh' });
+  basics.color({ label: 'darkest', get: () => config.render?.dark ?? config.ink, set: value => { config.ink = value; (config.render ??= {}).dark = value; }, update: 'refresh' });
+  basics.color({ label: 'middle', get: () => config.render?.middle ?? config.paper, set: value => { (config.render ??= {}).middle = value; }, visible: () => config.render?.paletteMode === '2-bit', update: 'refresh' });
+  basics.color({ label: 'brightest', get: () => config.render?.light ?? config.paper, set: value => { config.paper = value; (config.render ??= {}).light = value; }, update: 'refresh' });
+  basics.color({ label: 'accent', get: () => config.render?.accent ?? config.paper, set: value => { (config.render ??= {}).accent = value; }, visible: () => config.render?.paletteMode === '2-bit', update: 'refresh' });
   basics.action('SWAP TONES', () => { const dark=config.render?.dark ?? config.ink, light=config.render?.light ?? config.paper; config.ink=light; config.paper=dark; (config.render ??= {}).dark=light; config.render.light=dark; }, 'refresh');
 
   const galleryValues = galleryConfig || (config.postcard ??= { published: false, galleryText: '' });

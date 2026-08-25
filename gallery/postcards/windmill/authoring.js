@@ -25,9 +25,6 @@ installRenderMessageHandler(scene,cfg,renderSettings);
 const presets=controls.section('GLOBAL RENDER PRESETS','Saved global presets are shared with the gallery. Local experiments remain only in downloaded postcard values.');
 presets.select({label:'global palette',get:()=>cfg.render.globalSelection.palette,set:id=>{applyRenderSelection(cfg,renderSettings,{...cfg.render.globalSelection,palette:id});},values:renderSettings.palettes.map(p=>({value:p.id,label:paletteLabel(p)})),update:'refresh'});
 presets.select({label:'global pixel grid',get:()=>cfg.render.globalSelection.pixelPreset,set:id=>{applyRenderSelection(cfg,renderSettings,{...cfg.render.globalSelection,pixelPreset:id});},values:renderSettings.pixelPresets.map(p=>({value:p.id,label:p.name})),update:'rebuild'});
-const localPalette=controls.section('LOCAL PALETTE EXPERIMENT');
-localPalette.choice({label:'mode',get:()=>cfg.render.paletteMode,set:value=>{cfg.render.paletteMode=value;},values:['1-bit','2-bit'],update:'refresh'});
-localPalette.color({label:'dark',path:'render.dark',update:'refresh'}).color({label:'middle',path:'render.middle',update:'refresh'}).color({label:'light',path:'render.light',update:'refresh'}).color({label:'accent',path:'render.accent',update:'refresh'});
 const range = (section, label, path, min, max, step, format, update = 'update') => section.range({ label, path, min, max, step, format, update });
 
 range(controls.section('SCENE'), 'horizon', 'lift', -10, 70, 1, value => value);
