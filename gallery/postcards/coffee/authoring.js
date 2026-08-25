@@ -1,10 +1,11 @@
 import { createPostcardControls, saveCanvasPng, saveCanvasVideo } from '../../shared/controls.js';
+import { applyRenderSelection, installRenderMessageHandler, paletteLabel } from '../../shared/render-settings.js';
 
 const engine = window.__coffee;
 const cfg = engine.CFG;
 const galleryConfig = await fetch('./gallery.json', { cache: 'no-store' }).then(response => response.json());
 const scene = {
-  fit: () => engine.fit(), render: () => engine.render(), refresh: () => engine.rebuild(true), update: () => engine.rebuild(true), rebuild: () => engine.rebuild(true),
+  fit: () => engine.fit(), render: () => engine.render(), refresh: () => engine.refresh(), update: () => engine.rebuild(true), rebuild: () => engine.rebuild(true),
   togglePaused: () => engine.toggle(), savePng: () => saveCanvasPng(document.querySelector('#c'), 'coffee-frame-2160x3840.png'),
   saveVideo: options => saveCanvasVideo(document.querySelector('#c'), options),
   info: () => ({ W: cfg.gridK * 9, H: cfg.gridK * 16 })
@@ -13,6 +14,10 @@ const controls = createPostcardControls({
   panel: document.querySelector('#panel'), title: 'COFFEE', description: 'Coffee filling a cup that is already full.', scene, config: cfg,
   valuesFile: 'values.json', gridValues: [11, 13, 16, 20, 26, 32, 40, 48], galleryConfig, galleryFile: 'gallery.json'
 });
+const renderSettings=window.COFFEE_RENDER_SETTINGS; installRenderMessageHandler(scene,cfg,renderSettings);
+const presets=controls.section('GLOBAL RENDER PRESETS','Saved global presets are shared with the gallery. Local experiments remain only in downloaded postcard values.');
+presets.select({label:'global palette',get:()=>cfg.render.globalSelection.palette,set:id=>{applyRenderSelection(cfg,renderSettings,{...cfg.render.globalSelection,palette:id});},values:renderSettings.palettes.map(p=>({value:p.id,label:paletteLabel(p)})),update:'refresh'});
+presets.select({label:'global pixel grid',get:()=>cfg.render.globalSelection.pixelPreset,set:id=>{applyRenderSelection(cfg,renderSettings,{...cfg.render.globalSelection,pixelPreset:id});},values:renderSettings.pixelPresets.map(p=>({value:p.id,label:p.name})),update:'rebuild'});
 const range = (section, label, path, min, max, step, update = 'update') => section.range({ label, path, min, max, step, update });
 
 const cycle = controls.section('CYCLE');

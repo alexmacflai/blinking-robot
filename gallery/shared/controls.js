@@ -1,6 +1,8 @@
 /* Shared authoring-panel foundation. A postcard declares controls through this
    module; the module owns their markup, binding, sync, shell, and footer. */
 
+import { seedTwoBitChannels } from './render-settings.js';
+
 const getPath = (object, path) => path.split('.').reduce((value, key) => value[key], object);
 const setPath = (object, path, value) => {
   const keys = path.split('.');
@@ -108,10 +110,10 @@ function installStyles() {
     .postcard-panel-content{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}.postcard-panel-scrollable{height:100%;overflow-y:auto;scrollbar-width:none}.postcard-panel-scrollable::-webkit-scrollbar{display:none}.postcard-scrollbar{position:absolute;top:0;right:0;bottom:0;width:var(--pc-scrollbar);pointer-events:none}.postcard-scrollbar-thumb{position:absolute;right:2px;width:4px;min-height:var(--pc-scrollbar);background:var(--pc-accent);pointer-events:auto;cursor:grab}.postcard-scrollbar-thumb:active{cursor:grabbing}
     .postcard-controls-head{padding:var(--pc-space-3) var(--pc-space-4);border-bottom:var(--pc-border) solid var(--pc-white-15)}.postcard-controls-head h1{margin:0;color:var(--pc-white);font:700 14px/1.2 var(--pc-font-mono);letter-spacing:.04em;text-transform:uppercase}.postcard-controls-head p{margin:4px 0 0;color:var(--pc-white-50);font:400 14px/1.3 var(--pc-font-sans)}
     .postcard-section{padding:var(--pc-space-3) var(--pc-space-4);border-bottom:var(--pc-border) solid var(--pc-white-15)}.postcard-section h2{margin:0 0 var(--pc-space-3);color:var(--pc-accent);font:400 12px/1.2 var(--pc-font-mono);letter-spacing:.04em;text-transform:uppercase}.postcard-section .note{margin:var(--pc-space-2) 0 0;color:var(--pc-white-50);font:400 12px/1.35 var(--pc-font-sans)}
-    .postcard-row{display:flex;align-items:center;gap:var(--pc-space-2);margin:var(--pc-space-2) 0}.postcard-row label{color:var(--pc-white);font:400 12px/1.25 var(--pc-font-sans)}.postcard-row input[type=checkbox]{margin-left:auto;appearance:none;width:28px;height:14px;border:var(--pc-border) solid var(--pc-white-50);background:var(--pc-black);cursor:pointer}.postcard-row input[type=checkbox]::after{content:'';display:block;width:12px;height:12px;background:var(--pc-white-50);transition:transform .12s}.postcard-row input[type=checkbox]:checked{border-color:var(--pc-accent)}.postcard-row input[type=checkbox]:checked::after{background:var(--pc-accent);transform:translateX(14px)}.postcard-range{display:block}.postcard-range label{display:block;margin-bottom:var(--pc-space-1)}.postcard-range-field{display:flex;align-items:center;gap:var(--pc-space-4)}.postcard-row input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:14px;background:linear-gradient(to right,var(--pc-accent) 0 var(--pc-progress),var(--pc-white-50) var(--pc-progress) 100%) center/100% 2px no-repeat;outline:0}.postcard-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:4px;height:14px;border-radius:0;background:var(--pc-accent);cursor:pointer}.postcard-row input[type=range]::-moz-range-thumb{width:4px;height:14px;border:0;border-radius:0;background:var(--pc-accent);cursor:pointer}
-    .postcard-value{min-width:64px;padding:2px var(--pc-space-1);border:var(--pc-border) solid var(--pc-white-15);background:var(--pc-white-08);color:var(--pc-accent);font:400 12px/1.3 var(--pc-font-mono);font-variant-numeric:tabular-nums}.postcard-range-value{margin:0;width:64px;appearance:textfield}.postcard-range-value::-webkit-inner-spin-button,.postcard-range-value::-webkit-outer-spin-button{appearance:none;margin:0}.postcard-row input[type=color]{margin-left:auto;width:46px;height:24px;padding:2px;border:var(--pc-border) solid var(--pc-white-15);background:var(--pc-white-08);cursor:pointer;border-radius:0}.postcard-row input[type=number],.postcard-row select{margin-left:auto;width:92px;background:var(--pc-white-08);border:var(--pc-border) solid var(--pc-white-15);color:var(--pc-accent);padding:3px var(--pc-space-1);font:400 12px/1.3 var(--pc-font-mono);border-radius:0}
+    .postcard-row{display:flex;align-items:center;gap:var(--pc-space-2);margin:var(--pc-space-2) 0}.postcard-row[hidden]{display:none}.postcard-row label{color:var(--pc-white);font:400 12px/1.25 var(--pc-font-sans)}.postcard-row input[type=checkbox]{margin-left:auto;appearance:none;width:28px;height:14px;border:var(--pc-border) solid var(--pc-white-50);background:var(--pc-black);cursor:pointer}.postcard-row input[type=checkbox]::after{content:'';display:block;width:12px;height:12px;background:var(--pc-white-50);transition:transform .12s}.postcard-row input[type=checkbox]:checked{border-color:var(--pc-accent)}.postcard-row input[type=checkbox]:checked::after{background:var(--pc-accent);transform:translateX(14px)}.postcard-range{display:block}.postcard-range label{display:block;margin-bottom:var(--pc-space-1)}.postcard-range-field{display:flex;align-items:center;gap:var(--pc-space-4)}.postcard-row input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:14px;background:linear-gradient(to right,var(--pc-accent) 0 var(--pc-progress),var(--pc-white-50) var(--pc-progress) 100%) center/100% 2px no-repeat;outline:0}.postcard-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:4px;height:14px;border-radius:0;background:var(--pc-accent);cursor:pointer}.postcard-row input[type=range]::-moz-range-thumb{width:4px;height:14px;border:0;border-radius:0;background:var(--pc-accent);cursor:pointer}
+    .postcard-value{min-width:64px;padding:2px var(--pc-space-1);border:var(--pc-border) solid var(--pc-white-15);background:var(--pc-white-08);color:var(--pc-accent);font:400 12px/1.3 var(--pc-font-mono);font-variant-numeric:tabular-nums}.postcard-range-value{margin:0;width:64px;appearance:textfield}.postcard-range-value::-webkit-inner-spin-button,.postcard-range-value::-webkit-outer-spin-button{appearance:none;margin:0}.postcard-row input[type=color]{margin-left:auto;width:46px;height:24px;padding:2px;border:var(--pc-border) solid var(--pc-white-15);background:var(--pc-white-08);cursor:pointer;border-radius:0}.postcard-row input[type=number],.postcard-row input[type=text],.postcard-row select{margin-left:auto;width:92px;background:var(--pc-white-08);border:var(--pc-border) solid var(--pc-white-15);color:var(--pc-accent);padding:3px var(--pc-space-1);font:400 12px/1.3 var(--pc-font-mono);border-radius:0}
     .postcard-choice-label{display:block;margin:var(--pc-space-2) 0 0;color:var(--pc-white-50);font:400 12px/1.25 var(--pc-font-sans)}.postcard-choice{display:flex;flex-wrap:wrap;gap:var(--pc-space-1);margin:var(--pc-space-2) 0}.postcard-chip,.postcard-button{border:var(--pc-border) solid var(--pc-white);background:transparent;color:var(--pc-white);border-radius:0;font:500 12px/1.2 var(--pc-font-sans);text-transform:uppercase;cursor:pointer}.postcard-chip{padding:6px var(--pc-space-2);font-family:var(--pc-font-mono);text-transform:none}.postcard-chip:hover,.postcard-button:hover{border-color:var(--pc-accent);color:var(--pc-accent)}.postcard-chip[aria-pressed=true]{background:var(--pc-accent);border-color:var(--pc-accent);color:var(--pc-black)}
-    .postcard-button{width:100%;padding:8px;letter-spacing:.01em;margin-top:var(--pc-space-2)}.postcard-editor-label{display:block;margin:var(--pc-space-2) 0 var(--pc-space-1);color:var(--pc-white);font:400 12px/1.25 var(--pc-font-sans)}.postcard-editor-tools{display:flex;gap:var(--pc-space-1);margin-bottom:var(--pc-space-1)}.postcard-editor-tool{width:28px;height:24px;padding:0;border:var(--pc-border) solid var(--pc-white-50);background:var(--pc-black);color:var(--pc-white);font:700 12px/1 var(--pc-font-mono);cursor:pointer}.postcard-editor-tool:last-child{font-family:var(--pc-font-mono);font-style:italic}.postcard-editor-tool:hover,.postcard-editor-tool:focus-visible{border-color:var(--pc-accent);color:var(--pc-accent)}.postcard-rich-text{min-height:96px;max-height:320px;resize:vertical;overflow:auto;padding:var(--pc-space-2);border:var(--pc-border) solid var(--pc-white-50);background:var(--pc-white-08);color:var(--pc-white);font:400 12px/1.45 var(--pc-font-mono);white-space:pre-wrap;outline:0}.postcard-rich-text:focus{border-color:var(--pc-accent)}.postcard-rich-text:empty::before{content:attr(data-placeholder);color:var(--pc-white-50);pointer-events:none}.postcard-rich-text p{margin:0 0 .7em}.postcard-rich-text p:last-child{margin-bottom:0}.postcard-diagnostic{margin:var(--pc-space-2) 0 0;padding:var(--pc-space-2);background:var(--pc-white-08);border:var(--pc-border) solid var(--pc-white-15);color:var(--pc-white-50);font:400 11px/1.4 var(--pc-font-mono);white-space:pre-wrap}.postcard-actions{flex:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--pc-space-1);padding:var(--pc-space-3) var(--pc-space-4);background:var(--pc-black);border-top:var(--pc-border) solid var(--pc-white-15)}.postcard-actions .postcard-button{margin:0;padding:8px}.postcard-actions .primary{background:var(--pc-accent);border-color:var(--pc-accent);color:var(--pc-black)}
+    .postcard-button{width:100%;padding:8px;letter-spacing:.01em;margin-top:var(--pc-space-2)}.postcard-button.primary{background:var(--pc-accent);border-color:var(--pc-accent);color:var(--pc-black)}.postcard-editor-label{display:block;margin:var(--pc-space-2) 0 var(--pc-space-1);color:var(--pc-white);font:400 12px/1.25 var(--pc-font-sans)}.postcard-editor-tools{display:flex;gap:var(--pc-space-1);margin-bottom:var(--pc-space-1)}.postcard-editor-tool{width:28px;height:24px;padding:0;border:var(--pc-border) solid var(--pc-white-50);background:var(--pc-black);color:var(--pc-white);font:700 12px/1 var(--pc-font-mono);cursor:pointer}.postcard-editor-tool:last-child{font-family:var(--pc-font-mono);font-style:italic}.postcard-editor-tool:hover,.postcard-editor-tool:focus-visible{border-color:var(--pc-accent);color:var(--pc-accent)}.postcard-rich-text{min-height:96px;max-height:320px;resize:vertical;overflow:auto;padding:var(--pc-space-2);border:var(--pc-border) solid var(--pc-white-50);background:var(--pc-white-08);color:var(--pc-white);font:400 12px/1.45 var(--pc-font-mono);white-space:pre-wrap;outline:0}.postcard-rich-text:focus{border-color:var(--pc-accent)}.postcard-rich-text:empty::before{content:attr(data-placeholder);color:var(--pc-white-50);pointer-events:none}.postcard-rich-text p{margin:0 0 .7em}.postcard-rich-text p:last-child{margin-bottom:0}.postcard-diagnostic{margin:var(--pc-space-2) 0 0;padding:var(--pc-space-2);background:var(--pc-white-08);border:var(--pc-border) solid var(--pc-white-15);color:var(--pc-white-50);font:400 11px/1.4 var(--pc-font-mono);white-space:pre-wrap}.postcard-actions{flex:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--pc-space-1);padding:var(--pc-space-3) var(--pc-space-4);background:var(--pc-black);border-top:var(--pc-border) solid var(--pc-white-15)}.postcard-actions .postcard-button{margin:0;padding:8px}
     .postcard-toast{position:fixed;right:calc(var(--pc-panel-width) + var(--pc-space-2));bottom:var(--pc-space-2);z-index:40;background:var(--pc-black);border:var(--pc-border) solid var(--pc-accent);color:var(--pc-accent);padding:var(--pc-space-2);font:12px var(--pc-font-mono);opacity:0;transition:opacity .2s;pointer-events:none}.postcard-toast.on{opacity:1}.postcard-hud{position:absolute;left:10px;bottom:8px;opacity:.5;pointer-events:none;white-space:pre;font-family:var(--pc-font-mono)}
   `;
   document.head.append(style);
@@ -171,7 +173,12 @@ export async function createGalleryMetadataControls({ mount, metadataUrl = './ga
   }
   editor.addEventListener('keydown', event => event.stopPropagation());
   editor.addEventListener('input', saveText); editor.addEventListener('blur', () => { metadata.galleryText = cleanGalleryText(editor.innerHTML); editor.innerHTML = metadata.galleryText; });
-  section.append(row, editorLabel, tools, editor, note('Use Enter for a new paragraph. Select text, then use B or I.'), button('SAVE GALLERY DETAILS', () => { metadata.galleryText = cleanGalleryText(editor.innerHTML); downloadJson('gallery.json', metadata); }));
+  section.append(row, editorLabel, tools, editor, note('Use Enter for a new paragraph. Select text, then use B or I.'), button('SAVE GALLERY DETAILS', () => {
+    metadata.galleryText = cleanGalleryText(editor.innerHTML);
+    const postcard = localPostcardName();
+    if (!postcard) { downloadJson('gallery.json', metadata); return; }
+    localSettings(postcard, 'gallery', metadata).catch(() => downloadJson('gallery.json', metadata));
+  }));
   mount.append(section);
   return metadata;
 }
@@ -241,7 +248,8 @@ export function createPostcardControls({ panel, title, description, scene, confi
       color(options) {
         const get = resolve(options), set = assign(options), row = document.createElement('div'), label = document.createElement('label'), input = document.createElement('input');
         row.className = 'postcard-row'; input.type = 'color'; input.dataset.update = options.update || 'refresh'; labelInput(label, input, options.label); const show = () => { input.value = get(); };
-        input.addEventListener('input', () => { set(input.value); update(options.update || 'refresh'); }); row.append(label, input); element.append(row); syncers.push(show); show(); return api;
+        const syncVisibility = () => { row.hidden = options.visible ? !options.visible() : false; show(); };
+        input.addEventListener('input', () => { set(input.value); update(options.update || 'refresh'); }); row.append(label, input); element.append(row); syncers.push(syncVisibility); syncVisibility(); return api;
       },
       number(options) {
         const get = resolve(options), set = assign(options), row = document.createElement('div'), label = document.createElement('label'), input = document.createElement('input');
@@ -301,19 +309,29 @@ export function createPostcardControls({ panel, title, description, scene, confi
   basics.choice({ label: 'pixelation', values: gridValues.map(value => ({ value, label: `${9 * value}×${16 * value}` })), path: 'gridK', update: 'rebuild' });
   basics.note('Only 9:16 grids (9k × 16k) tile into whole internal pixels.');
   basics.choice({ label: 'display fit', values: [{ value: 'fill', label: 'FILL' }, { value: 'crisp', label: 'CRISP' }], path: 'fit', update: 'fit' });
-  basics.color({ label: 'darkest', path: 'ink', update: 'refresh' }); basics.color({ label: 'brightest', path: 'paper', update: 'refresh' });
-  basics.action('SWAP TONES', () => { [config.ink, config.paper] = [config.paper, config.ink]; }, 'refresh');
+  basics.choice({ label: 'palette mode', get: () => config.render?.paletteMode ?? '1-bit', set: value => { const render = (config.render ??= {}); render.paletteMode = value; if (value === '2-bit') seedTwoBitChannels(render); }, values: ['1-bit', '2-bit'], update: 'refresh' });
+  basics.color({ label: 'darkest', get: () => config.render?.dark ?? config.ink, set: value => { config.ink = value; (config.render ??= {}).dark = value; }, update: 'refresh' });
+  basics.color({ label: 'middle', get: () => config.render?.middle ?? config.paper, set: value => { (config.render ??= {}).middle = value; }, visible: () => config.render?.paletteMode === '2-bit', update: 'refresh' });
+  basics.color({ label: 'brightest', get: () => config.render?.light ?? config.paper, set: value => { config.paper = value; (config.render ??= {}).light = value; }, update: 'refresh' });
+  basics.color({ label: 'colour', get: () => config.render?.accent ?? config.paper, set: value => { (config.render ??= {}).accent = value; }, visible: () => config.render?.paletteMode === '2-bit', update: 'refresh' });
+  basics.action('SWAP TONES', () => { const dark=config.render?.dark ?? config.ink, light=config.render?.light ?? config.paper; config.ink=light; config.paper=dark; (config.render ??= {}).dark=light; config.render.light=dark; }, 'refresh');
 
+  const postcard = localPostcardName();
   const galleryValues = galleryConfig || (config.postcard ??= { published: false, galleryText: '' });
   galleryValues.published ??= false;
   galleryValues.galleryText ??= '';
   const gallery = section('GALLERY');
   gallery.toggle({ label: 'published', get: () => galleryValues.published, set: value => { galleryValues.published = value; }, update: 'none' });
   gallery.richText({ label: 'hover text', get: () => galleryValues.galleryText, set: value => { galleryValues.galleryText = value; }, update: 'none', placeholder: 'Write the text that appears over this postcard in the gallery.' });
-  gallery.note(galleryFile ? 'Use Enter for a new paragraph. Select text, then use B or I. Save gallery details downloads the file used by the gallery.' : 'Use Enter for a new paragraph. Select text, then use B or I. Save values downloads this writing and publish state with the postcard configuration.');
-  if (galleryFile) gallery.action('SAVE GALLERY DETAILS', () => downloadJson(galleryFile, galleryValues));
+  gallery.note(galleryFile ? 'Use Enter for a new paragraph. Select text, then use B or I. Save gallery details writes the gallery file through the local authoring server; static previews download it instead.' : 'Use Enter for a new paragraph. Select text, then use B or I. Save values downloads this writing and publish state with the postcard configuration.');
+  if (galleryFile) gallery.action('SAVE GALLERY DETAILS', () => {
+    galleryValues.galleryText = cleanGalleryText(galleryValues.galleryText);
+    if (!postcard) { downloadJson(galleryFile, galleryValues); notify('gallery details downloaded'); return; }
+    localSettings(postcard, 'gallery', galleryValues).then(() => notify('gallery details saved')).catch(error => {
+      notify(error.message === 'Unknown settings action.' ? 'restart authoring server to save gallery details' : error.message);
+    });
+  });
 
-  const postcard = localPostcardName();
   if (postcard) {
     const saved = section('SAVED SETTINGS', 'Available only through the loopback authoring server. The default updates values.json; snapshots keep named alternatives.');
     const row = document.createElement('div'); row.className = 'postcard-row';
@@ -355,4 +373,48 @@ export function createPostcardControls({ panel, title, description, scene, confi
   }, 'primary'));
   panel.append(actions); syncScrollbar();
   return { section, sync, update, notify };
+}
+
+// Global rendering uses the same panel, section, row, chip, colour, and action
+// components as postcard authoring. It deliberately omits postcard-only
+// basics, gallery writing, snapshots, and export actions.
+export function createGlobalControls({ panel, title, description }) {
+  installStyles();
+  panel.className = 'postcard-panel'; panel.replaceChildren();
+  const content = document.createElement('div'); content.className = 'postcard-panel-content';
+  const scrollable = document.createElement('div'); scrollable.className = 'postcard-panel-scrollable'; content.append(scrollable); panel.append(content);
+  const header = document.createElement('header'); header.className = 'postcard-controls-head';
+  header.append(Object.assign(document.createElement('h1'), { textContent:title }), Object.assign(document.createElement('p'), { textContent:description })); scrollable.append(header);
+  const toast = document.createElement('div'); toast.className = 'postcard-toast'; document.body.append(toast);
+  const notify = message => { toast.textContent=message; toast.classList.add('on'); clearTimeout(notify.timer); notify.timer=setTimeout(()=>toast.classList.remove('on'),1400); };
+  const syncers=[]; let controlId=0;
+  const labelInput=(label,input,text)=>{const id=`global-render-control-${++controlId}`;input.id=id;label.htmlFor=id;label.textContent=text;};
+  const sync=()=>syncers.forEach(syncer=>syncer());
+  function section(title, description='') {
+    const element=document.createElement('section');element.className='postcard-section';element.append(Object.assign(document.createElement('h2'),{textContent:title}));if(description)element.append(note(description));scrollable.append(element);
+    const api={
+      element,
+      note(text){element.append(note(text));return api;},
+      select(options){
+        const row=document.createElement('div'),label=document.createElement('label'),input=document.createElement('select');row.className='postcard-row';labelInput(label,input,options.label);
+        const refresh=()=>{const values=typeof options.values==='function'?options.values():options.values;input.replaceChildren(...values.map(value=>Object.assign(document.createElement('option'),{value:typeof value==='object'?value.value:value,textContent:typeof value==='object'?value.label:value})));input.value=options.get();row.hidden=options.visible?!options.visible():false;};
+        input.addEventListener('change',()=>{options.set(input.value);options.onChange?.();sync();});row.append(label,input);element.append(row);syncers.push(refresh);refresh();return api;
+      },
+      choice(options){
+        const host=document.createElement('div');host.className='postcard-choice';if(options.label)element.append(Object.assign(document.createElement('span'),{className:'postcard-choice-label',textContent:options.label}));element.append(host);
+        const refresh=()=>{const values=typeof options.values==='function'?options.values():options.values;host.replaceChildren(...values.map(value=>{const choice=typeof value==='object'?value:{value,label:String(value)},control=document.createElement('button');control.type='button';control.className='postcard-chip';control.textContent=choice.label;control.setAttribute('aria-pressed',String(choice.value===options.get()));control.addEventListener('click',()=>{options.set(choice.value);options.onChange?.();sync();});return control;}));};syncers.push(refresh);refresh();return api;
+      },
+      color(options){
+        const row=document.createElement('div'),label=document.createElement('label'),input=document.createElement('input');row.className='postcard-row';input.type='color';labelInput(label,input,options.label);const refresh=()=>{row.hidden=options.visible?!options.visible():false;input.value=options.get();};input.addEventListener('input',()=>{options.set(input.value);options.onChange?.();});row.append(label,input);element.append(row);syncers.push(refresh);refresh();return api;
+      },
+      text(options){
+        const row=document.createElement('div'),label=document.createElement('label'),input=document.createElement('input');row.className='postcard-row';input.type=options.type||'text';labelInput(label,input,options.label);const refresh=()=>{input.value=options.get();row.hidden=options.visible?!options.visible():false;};input.addEventListener('change',()=>{options.set(options.type==='number'?Number(input.value):input.value);options.onChange?.();sync();});row.append(label,input);element.append(row);syncers.push(refresh);refresh();return api;
+      },
+      toggle(options){
+        const row=document.createElement('div'),label=document.createElement('label'),input=document.createElement('input');row.className='postcard-row';input.type='checkbox';labelInput(label,input,options.label);const refresh=()=>{input.checked=Boolean(options.get());row.hidden=options.visible?!options.visible():false;};input.addEventListener('input',()=>{options.set(input.checked);options.onChange?.();sync();});row.append(label,input);element.append(row);syncers.push(refresh);refresh();return api;
+      },
+      action(label,callback,className=''){element.append(button(label,callback,className));return api;}
+    };return api;
+  }
+  return { section, sync, notify };
 }

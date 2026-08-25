@@ -36,7 +36,10 @@ if(!canvas||!stage||!config)throw new Error('Windmill needs canvas, stage, and v
    ==================================================================== */
 const clone=value=>JSON.parse(JSON.stringify(value));
 let DEFAULT_CFG=clone(config);
-let CFG=clone(config);
+// The scene owns this object for its whole lifetime. Global rendering messages
+// and the controls surface both mutate the live object, so a palette/pixel
+// change cannot land on a discarded construction-time copy.
+let CFG=config;
 
 const BASE_W = 234, BASE_H = 416;      // 9:16 authoring grid (26 x 9x16)
 const GRID_CHOICES = [11,13,16,20,26,32,40,48];
@@ -70,8 +73,8 @@ function packColor(hex){
    DERIVED STATE — everything below is rebuilt by build()
    ==================================================================== */
 let W,H,S;
-let bg,lum,dof,dens,bankA,pCol,iSCol;
-let CINK,CPAP,img,buf32;
+let bg,lum,oneBitSlot,twoBitSlot,dof,dens,bankA,pCol,iSCol;
+let CINK,CMID,CPAP,CACC,img,buf32;
 let SUN,HUB,TOWER_X,MILL;
 let LA,LW,HW,INNER,CU,SLIT,FOC,YAW,CY_,SY_,OMEGA,ANG0;
 let BANKS,FLOCKS;
@@ -108,10 +111,13 @@ function build(){
   img=ctx.createImageData(W,H);
   buf32=new Uint32Array(img.data.buffer);
   bg=new Float32Array(W*H); lum=new Float32Array(W*H);
+  oneBitSlot=new Int8Array(W*H); twoBitSlot=new Int8Array(W*H);
+  oneBitSlot.fill(-1); twoBitSlot.fill(-1);
   dof=new Int16Array(W*H); dens=new Float32Array(W*H); bankA=new Float32Array(W*H);
   pCol=new Float32Array(W); iSCol=new Float32Array(W);
 
-  CINK=packColor(CFG.ink); CPAP=packColor(CFG.paper);
+  const palette=CFG.render||{paletteMode:'1-bit',dark:CFG.ink,middle:CFG.paper,light:CFG.paper,accent:CFG.paper};
+  CINK=packColor(palette.dark); CMID=packColor(palette.middle); CPAP=packColor(palette.light); CACC=packColor(palette.accent);
 
   SUN={x:gl(CFG.sun.x), y:gy(CFG.sun.y), r:gl(CFG.sun.r)};
 
@@ -240,7 +246,7 @@ function drawPuff(L,t){
   for(let i=yA*W, n=yB*W; i<n; i++){
     const a=bankA[i];
     if(a<=0) continue;
-    lum[i]=lum[i]*(1-a)+val*a;
+    oneBitSlot[i]=-1; twoBitSlot[i]=-1; lum[i]=lum[i]*(1-a)+val*a;
     if(a>0.5) dof[i]=dv;
   }
 }
@@ -271,7 +277,7 @@ function drawSea(L,t){
     for(let y=ys;y<H;y++){
       let a=(y-tp)/soft; if(a<=0)continue; if(a>1)a=1;
       const i=y*W+x;
-      lum[i]=lum[i]*(1-a)+val*a;
+      oneBitSlot[i]=-1; twoBitSlot[i]=-1; lum[i]=lum[i]*(1-a)+val*a;
       if(a>0.5) dof[i]=dv;
     }
   }
@@ -295,7 +301,7 @@ function buildFlocks(gy,gl){
   });
 }
 
-function px(x,y,v){ if(x<0||x>=W||y<0||y>=H) return; lum[y*W+x]=v; }
+function px(x,y,v){ if(x<0||x>=W||y<0||y>=H) return; const i=y*W+x; oneBitSlot[i]=-1; twoBitSlot[i]=-1; lum[i]=v; }
 
 function drawBird(x,y,d,sz){
   // A 1px silhouette cannot win against an 8px dither lattice, so each bird
@@ -305,7 +311,7 @@ function drawBird(x,y,d,sz){
     const xx=x+i, yy=y+j;
     if(xx<0||xx>=W||yy<0||yy>=H) continue;
     const k=yy*W+xx;
-    if(lum[k]<0.96) lum[k]=0.96;
+    if(lum[k]<0.96){ oneBitSlot[k]=-1; twoBitSlot[k]=-1; lum[k]=0.96; }
     dof[k]=0;
   }
   px(x,y,0); px(x,y+1,0);
@@ -374,10 +380,10 @@ function drawStar(t){
     if(x<0||x>=W||y<0||y>=H) continue;
     const k=y*W+x;
     const v = i<=2 ? 1.40 : 0.35+1.15*b;         // head is always a hard point
-    if(v>lum[k]){ lum[k]=v; dof[k]=0; }
+    if(v>lum[k]){ oneBitSlot[k]=-1; twoBitSlot[k]=-1; lum[k]=v; dof[k]=0; }
     if(i===0){                                   // give the head a little body
-      if(y>0){ const a=k-W; if(1.2>lum[a]){lum[a]=1.2; dof[a]=0;} }
-      if(y<H-1){ const a=k+W; if(1.2>lum[a]){lum[a]=1.2; dof[a]=0;} }
+      if(y>0){ const a=k-W; if(1.2>lum[a]){oneBitSlot[a]=-1; twoBitSlot[a]=-1; lum[a]=1.2; dof[a]=0;} }
+      if(y<H-1){ const a=k+W; if(1.2>lum[a]){oneBitSlot[a]=-1; twoBitSlot[a]=-1; lum[a]=1.2; dof[a]=0;} }
     }
   }
 }
@@ -470,7 +476,12 @@ function drawSails(t){
       for(let x=x0;x<=x1;x++){
         const p=pCol[x], q=dy*iSCol[x];
         const s=sailInk(p*ca+q*sa, -p*sa+q*ca);
-        if(s){ const i=row+x; lum[i]=(s===1)?0.0:0.86; dof[i]=0; }
+        if(s){ const i=row+x; lum[i]=(s===1)?0.0:0.86; dof[i]=0;
+          // Material values are source-level palette indices, not a post-render
+          // colour mask. Ordinary sail ink is slot 0; the slit is paper in
+          // 1-bit and palette slot 2 in 2-bit.
+          oneBitSlot[i]=s===2?3:0; twoBitSlot[i]=s===2?2:0;
+        }
       }
     }
   }
@@ -569,7 +580,7 @@ function drawDeck(t){
       let dep=(y-top)*invD; if(dep>1)dep=1;
       const tone=DECK_TONE-shade*dep;
       const i=y*W+x;
-      lum[i]=lum[i]*(1-a)+tone*a;
+      oneBitSlot[i]=-1; twoBitSlot[i]=-1; lum[i]=lum[i]*(1-a)+tone*a;
       if(a>0.5) dof[i]=dv;
     }
   }
@@ -874,7 +885,7 @@ function drawEmit(t){
        instead is what let an entirely invisible medium report 7,000 of them. */
     eLit++;
     const j=y*W+x;
-    lum[j]=lum[j]*(1-a)+tone*a;
+    oneBitSlot[j]=-1; twoBitSlot[j]=-1; lum[j]=lum[j]*(1-a)+tone*a;
     if(a>0.5) dof[j]=0;
   }
 }
@@ -883,11 +894,27 @@ function drawEmit(t){
    DITHER + BLIT
    ==================================================================== */
 function dither(){
+  const palette=CFG.render||{paletteMode:'1-bit'};
   for(let y=0;y<H;y++){
     const row=(y&7)<<3, o=y*W;
     for(let x=0;x<W;x++){
       const i=o+x;
-      buf32[i] = lum[i]*64 > BAYER[row|((x+dof[i])&7)]+0.5 ? CPAP : CINK;
+      const threshold=BAYER[row|((x+dof[i])&7)];
+      let colour;
+      if(palette.paletteMode==='2-bit'){
+        /* Ordered quantisation must split the dark→middle and middle→light
+           intervals independently. The previous formula biased gradients
+           toward light, which flattened the cloud tones. */
+        const slot=twoBitSlot[i];
+        if(slot>=0) colour=[CINK,CMID,CACC,CPAP][Math.min(3,slot)];
+        else {
+          const scaled=clamp(lum[i],0,1)*3, base=Math.floor(scaled), fraction=scaled-base;
+          const index=Math.min(3,base+(fraction*64>threshold+.5?1:0));
+          colour=[CINK,CMID,CACC,CPAP][index];
+        }
+      }else if(oneBitSlot[i]>=0) colour=oneBitSlot[i]===0?CINK:CPAP;
+      else colour=lum[i]*64>threshold+.5?CPAP:CINK;
+      buf32[i]=colour;
     }
   }
   ctx.putImageData(img,0,0);
@@ -898,6 +925,7 @@ function dither(){
    ==================================================================== */
 function renderFrame(t){
   lum.set(bg);
+  oneBitSlot.fill(-1); twoBitSlot.fill(-1);
   dof.fill(0);
   updateRotorCols();
   /* Enforce the no-overlap constraint HERE, against the exact blade angle this
@@ -1005,8 +1033,8 @@ function update(){ rebuild(true,false); }
 /* Palette changes only affect the final dither colours. They do not need to
    rebuild the grid, cloud geometry, or the warmed particle state. */
 function refresh(){
-  CINK=packColor(CFG.ink);
-  CPAP=packColor(CFG.paper);
+  const palette=CFG.render||{dark:CFG.ink,middle:CFG.paper,light:CFG.paper,accent:CFG.paper};
+  CINK=packColor(palette.dark); CMID=packColor(palette.middle); CPAP=packColor(palette.light); CACC=packColor(palette.accent);
   renderFrame(t);
 }
 
@@ -1038,7 +1066,13 @@ addEventListener('resize',fitCanvas);
 
 
 function start(){build();warmup();fitCanvas();renderFrame(t);if(loadEl)loadEl.style.display='none';startDriver();}
-function reset(){CFG=clone(DEFAULT_CFG);rebuild(false);return CFG;}
+function reset(){
+  const next=clone(DEFAULT_CFG);
+  Object.keys(CFG).forEach(key=>delete CFG[key]);
+  Object.assign(CFG,next);
+  rebuild(false);
+  return CFG;
+}
 function savePng(){
   const out=document.createElement('canvas');
   out.width=2160;out.height=3840;

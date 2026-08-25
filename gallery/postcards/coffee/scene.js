@@ -14,7 +14,7 @@
    finished composite once through an ordered Bayer 8x8 matrix. One dither pass
    means every surface is quantized on the same lattice and the frame reads as
    a single screen-print instead of a stack of pre-dithered parts. Luminance is
-   the authoring space; the two-colour palette is applied only at the end.
+   the authoring space; the indexed palette is applied only at the end.
    >= 1.0 is immune to the dither (solid paper), <= 0 is always ink.
 
    GEOMETRY is a symmetric dimetric projection — no perspective, no vanishing
@@ -64,7 +64,7 @@ function packColor(hex){
    DERIVED STATE — rebuilt by build()
    ==================================================================== */
 let W,H,S;
-let lum,img,buf32,CINK,CPAP;
+let lum,twoBitSlot,img,buf32,CINK,CMID,CPAP,CACC;
 let EX,EY,OX,OY;            // projection, in grid pixels
 let ELLX,ELLY;              // world radius -> ellipse radii
 let CUPX,RIMY,BASEY,RTOP,RBOT,SURFY;
@@ -85,8 +85,10 @@ function build(){
   cv.width=W; cv.height=H;
   img=ctx.createImageData(W,H);
   buf32=new Uint32Array(img.data.buffer);
-  lum=new Float32Array(W*H);
-  CINK=packColor(CFG.ink); CPAP=packColor(CFG.paper);
+  lum=new Float32Array(W*H); twoBitSlot=new Int8Array(W*H);
+  twoBitSlot.fill(-1);
+  const palette=CFG.render||{paletteMode:'1-bit',dark:CFG.ink,middle:CFG.paper,light:CFG.paper,accent:CFG.paper};
+  CINK=packColor(palette.dark); CMID=packColor(palette.middle); CPAP=packColor(palette.light); CACC=packColor(palette.accent);
 
   const p=CFG.proj;
   EX=p.ex*S; EY=p.ey*S; OX=p.ox*S; OY=p.oy*S;
@@ -119,7 +121,22 @@ function span(y,xa,xb,tone,alpha){
   for(let x=i0;x<=i1;x++){
     const cov=Math.min(x+1,xb)-Math.max(x,xa); if(cov<=0) continue;
     const a=alpha*cov, i=o+x;
-    lum[i]+=(tone-lum[i])*a;
+    twoBitSlot[i]=-1; lum[i]+=(tone-lum[i])*a;
+  }
+}
+function materialSpan(y,xa,xb,slot=2,alpha=1){
+  if(y<0||y>=H||xb<=xa) return;
+  const o=y*W, i0=Math.max(0,Math.floor(xa)), i1=Math.min(W-1,Math.ceil(xb)-1);
+  for(let x=i0;x<=i1;x++){
+    const cov=Math.min(x+1,xb)-Math.max(x,xa);
+    if(cov>0 && alpha*cov>=0.5) twoBitSlot[o+x]=slot;
+  }
+}
+function materialEllipse(cx,cy,rx,ry,slot=2,alpha=1){
+  const y0=Math.max(0,Math.floor(cy-ry)),y1=Math.min(H-1,Math.ceil(cy+ry));
+  for(let y=y0;y<=y1;y++){
+    const u=(y+.5-cy)/ry;if(u<=-1||u>=1)continue;
+    const dx=rx*Math.sqrt(1-u*u);materialSpan(y,cx-dx,cx+dx,slot,alpha);
   }
 }
 /* Shaded variant: fn(x,y) -> tone, sampled at the pixel centre. */
@@ -130,7 +147,7 @@ function spanF(y,xa,xb,fn,alpha){
   for(let x=i0;x<=i1;x++){
     const cov=Math.min(x+1,xb)-Math.max(x,xa); if(cov<=0) continue;
     const a=alpha*cov, i=o+x;
-    lum[i]+=(fn(x+0.5,cy)-lum[i])*a;
+    twoBitSlot[i]=-1; lum[i]+=(fn(x+0.5,cy)-lum[i])*a;
   }
 }
 
@@ -210,7 +227,7 @@ function capsule(ax,ay,bx,by,r,fn,alpha){
       /* signed distance across the capsule, -1 (upper-left) .. 1 */
       const nrm=(qx*dy-qy*dx)/Math.sqrt(L2)/r;
       const i=o+x, a=alpha*cov;
-      lum[i]+=(fn(clamp(nrm,-1,1),t)-lum[i])*a;
+      twoBitSlot[i]=-1; lum[i]+=(fn(clamp(nrm,-1,1),t)-lum[i])*a;
     }
   }
 }
@@ -436,6 +453,7 @@ function drawInside(){
   ellipse(CUPX,RIMY,irx,iry,CFG.tone.wall,1);
   const srx=irx*0.985, sry=iry*0.985;
   ellipse(CUPX,SURFY,srx,sry,(x,y)=>surfaceTone(x,y,srx,sry),1);
+  materialEllipse(CUPX,SURFY,srx,sry,2,.78);
   /* Meniscus: coffee climbing the wall keeps the full read at the rim. */
   ring(CUPX,SURFY,srx,sry,srx-0.9*S,sry-0.9*S,0.34,0.55);
   /* The rim itself, drawn as a solid line all the way round. It is the single
@@ -490,6 +508,7 @@ function drawStream(){
       const n=(sx-x)/wid;
       return 1.0-0.62*n*n*n*n;
     },1);
+    materialSpan(y,x-wid,x+wid,2,.78);
   }
   /* Where it lands: a small bright collar, the only place the coffee is lit
      from inside. */
@@ -518,6 +537,7 @@ function drawSpill(){
       const x=CUPX+nx*h*0.92;
       const wid=CFG.spill.w*S*(0.7+0.3*(1-(y-yTop)/Math.max(1,yBot-yTop)));
       span(y,x-wid,x+wid,CFG.tone.spill,1);
+      materialSpan(y,x-wid,x+wid,2,.78);
       span(y,x-wid-0.7*S,x-wid,0.55,0.5);   // wet highlight on the lit side
     }
     /* pendant drop at the head while it is still running */
@@ -544,6 +564,7 @@ function drawSpill(){
          sides, so the band has a shape instead of a cut end */
       const k=1-Math.abs((a-Math.PI/2)/((a1-a0)/2));
       ellipse(x,y,(1.0+1.7*k)*S*over,(0.8+1.2*k)*S*over,CFG.tone.spill,1);
+      materialEllipse(x,y,(1.0+1.7*k)*S*over,(0.8+1.2*k)*S*over,2,.78);
     }
   }
 }
@@ -585,11 +606,23 @@ function drawMachine(){
    DITHER + BLIT
    ==================================================================== */
 function dither(){
+  const palette=CFG.render||{paletteMode:'1-bit'};
   for(let y=0;y<H;y++){
     const row=(y&7)<<3, o=y*W;
     for(let x=0;x<W;x++){
       const i=o+x;
-      buf32[i] = lum[i]*64 > BAYER[row|(x&7)]+0.5 ? CPAP : CINK;
+      const threshold=BAYER[row|(x&7)];
+      let colour;
+      if(palette.paletteMode==='2-bit'){
+        const slot=twoBitSlot[i];
+        if(slot>=0) colour=[CINK,CMID,CACC,CPAP][Math.min(3,slot)];
+        else {
+          const scaled=clamp(lum[i],0,1)*3,base=Math.floor(scaled),fraction=scaled-base;
+          const index=Math.min(3,base+(fraction*64>threshold+.5?1:0));
+          colour=[CINK,CMID,CACC,CPAP][index];
+        }
+      }else colour=lum[i]*64>threshold+.5?CPAP:CINK;
+      buf32[i]=colour;
     }
   }
   ctx.putImageData(img,0,0);
@@ -600,6 +633,7 @@ function dither(){
    ==================================================================== */
 function renderFrame(){
   lum.fill(0);
+  twoBitSlot.fill(-1);
   drawMachine();      // behind and above everything
   drawTray();
   drawPool();         // spill spreads on the tray, under the cup's silhouette
@@ -679,5 +713,5 @@ function rebuild(keepTime){
 
 
 function boot(){build();t=0;resetCycle();warmup();fitCanvas();renderFrame();if(loadEl)loadEl.remove();startDriver();}
-window.__coffee={CFG,rebuild,fit:fitCanvas,render:renderFrame,boot,png(){const a=document.createElement('a');a.download='coffee-'+W+'x'+H+'.png';a.href=cv.toDataURL('image/png');a.click();},seek(sec){manualPaused=true;t=0;waveAmp=0;wavePhase=0;pool=0;drips=[];drops=[];resetCycle();for(let i=0;i<Math.round(sec*60);i++)step(DT);renderFrame();},toggle(){manualPaused=!manualPaused;return manualPaused;}};
+window.__coffee={CFG,rebuild,fit:fitCanvas,render:renderFrame,refresh(){const p=CFG.render||{dark:CFG.ink,middle:CFG.paper,light:CFG.paper,accent:CFG.paper};CINK=packColor(p.dark);CMID=packColor(p.middle);CPAP=packColor(p.light);CACC=packColor(p.accent);renderFrame();},boot,png(){const a=document.createElement('a');a.download='coffee-'+W+'x'+H+'.png';a.href=cv.toDataURL('image/png');a.click();},seek(sec){manualPaused=true;t=0;waveAmp=0;wavePhase=0;pool=0;drips=[];drops=[];resetCycle();for(let i=0;i<Math.round(sec*60);i++)step(DT);renderFrame();},toggle(){manualPaused=!manualPaused;return manualPaused;}};
 })();

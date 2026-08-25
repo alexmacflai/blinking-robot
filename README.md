@@ -26,7 +26,14 @@ go straight to one:
 Each postcard folder also has a maker-facing `controls.html`; its README routes
 to both surfaces and its supplied source material.
 Published postcards appear in the gallery. Their saved gallery writing appears
-over the animation on hover.
+over the animation on hover. Visitors can temporarily preview the palette and
+pixel presets the maker has exposed, while public pages begin with the tracked
+defaults in [`gallery/render-settings.json`](gallery/render-settings.json).
+
+For gallery-wide rendering authoring, open
+[`gallery/controls.html`](gallery/controls.html). It edits a browser-only draft
+and saves the complete settings source through the local authoring server for
+review and commit.
 
 Authoring postcards use a small local server. From the repository root, run
 `python3 gallery/export-server.py`, then open

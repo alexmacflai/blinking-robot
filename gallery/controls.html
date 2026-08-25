@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Blinking Robot — global rendering controls</title>
+  <link rel="stylesheet" href="shared/controls-theme.css">
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--pc-black);color:var(--pc-white);font:14px/1.4 var(--pc-font-sans)}.global-layout{display:grid;grid-template-columns:minmax(0,1fr) var(--pc-panel-width);min-height:100vh}.global-stage{min-width:0;padding:clamp(20px,4vw,56px);display:flex;flex-direction:column}.global-stage header{flex:none;margin-bottom:clamp(20px,4vh,48px)}.global-stage h1{margin:0;color:var(--pc-white);font:700 clamp(18px,2vw,28px)/1.1 var(--pc-font-mono);letter-spacing:.06em}.global-stage header p{max-width:620px;margin:8px 0 0;color:var(--pc-white-50)}.global-previews{flex:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,2vw,28px);align-items:start}.global-preview{min-width:0;display:flex;flex-direction:column;gap:10px}.global-preview h2{margin:0;color:var(--pc-white-50);font:400 13px/1.2 var(--pc-font-mono)}.global-preview-frame{width:100%;height:auto;aspect-ratio:9/16;border:1px solid var(--pc-white-15);background:#111116;image-rendering:pixelated}@media(max-width:1100px){.global-previews{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.global-layout{grid-template-columns:1fr}.global-stage{padding:24px}.global-previews{grid-template-columns:1fr}.global-preview-frame{max-height:72vh}.postcard-panel{height:auto;min-height:0;border-left:0;border-top:var(--pc-border) solid var(--pc-white-15)}}
+  </style>
+</head>
+<body><main class="global-layout"><section class="global-stage"><header><h1>GLOBAL RENDERING</h1><p>Shared palettes and pixel settings for every postcard.</p></header><div id="previews" class="global-previews" aria-label="Live postcard previews"></div></section><aside id="panel" aria-label="Global rendering controls"></aside></main><script type="module" src="./global-controls.js"></script></body>
+</html>

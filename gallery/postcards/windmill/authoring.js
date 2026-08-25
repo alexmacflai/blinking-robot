@@ -1,7 +1,9 @@
 import { createPostcardControls } from '../../shared/controls.js';
+import { loadRenderSettings, applyRenderSelection, installRenderMessageHandler, paletteLabel } from '../../shared/render-settings.js';
 import { createWindmillScene } from './scene.js';
 
 const values = await fetch('./values.json', { cache: 'no-store' }).then(response => response.json());
+const renderSettings=await loadRenderSettings(); applyRenderSelection(values,renderSettings);
 const scene = createWindmillScene({
   canvas: document.querySelector('#c'),
   stage: document.querySelector('#stage'),
@@ -19,6 +21,10 @@ const controls = createPostcardControls({
   valuesFile: 'values.json',
   gridValues: [11, 13, 16, 20, 26, 32, 40, 48]
 });
+installRenderMessageHandler(scene,cfg,renderSettings);
+const presets=controls.section('GLOBAL RENDER PRESETS','Saved global presets are shared with the gallery. Local experiments remain only in downloaded postcard values.');
+presets.select({label:'global palette',get:()=>cfg.render.globalSelection.palette,set:id=>{applyRenderSelection(cfg,renderSettings,{...cfg.render.globalSelection,palette:id});},values:renderSettings.palettes.map(p=>({value:p.id,label:paletteLabel(p)})),update:'refresh'});
+presets.select({label:'global pixel grid',get:()=>cfg.render.globalSelection.pixelPreset,set:id=>{applyRenderSelection(cfg,renderSettings,{...cfg.render.globalSelection,pixelPreset:id});},values:renderSettings.pixelPresets.map(p=>({value:p.id,label:p.name})),update:'rebuild'});
 const range = (section, label, path, min, max, step, format, update = 'update') => section.range({ label, path, min, max, step, format, update });
 
 range(controls.section('SCENE'), 'horizon', 'lift', -10, 70, 1, value => value);
