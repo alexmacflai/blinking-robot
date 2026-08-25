@@ -35,6 +35,11 @@ it requires the locally installed `ffmpeg` command (`brew install ffmpeg`). For 
 `python3 -m http.server` still works. Older postcards can still be opened
 directly; migrated postcards use nearby scene and values files.
 
+On the local authoring server, a controls page can save its current values as
+the postcard default or as a named snapshot. Snapshots live beside the postcard
+in `snapshots/`; normal static previews cannot write either file and retain the
+download option instead.
+
 Run the playback regression check with `node --test test/playback.test.mjs`.
 
 ## Repository

@@ -4,7 +4,7 @@
   "ink": "#101418",
   "paper": "#e9e6dd",
   "cam": {
-    "horizon": 240,
+    "horizon": 60,
     "focal": 350,
     "height": 0.15
   },

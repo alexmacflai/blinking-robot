@@ -21,7 +21,8 @@ an individual animation.
   rendered over the preview
 - every postcard’s public and controls surfaces read its shared `values.json`
 - [`export-server.py`](export-server.py) — `[authoring] [video-export]` — serves
-  the gallery and converts recorded WebM exports to MP4 with local FFmpeg
+  the gallery, saves postcard defaults and named local snapshots only for
+  loopback clients, and converts recorded WebM exports to MP4 with local FFmpeg
 - [`postcards/README.md`](postcards/README.md) — `[index] [routing]`
 
 ## Local rules
