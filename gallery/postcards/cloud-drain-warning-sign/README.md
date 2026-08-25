@@ -43,6 +43,16 @@ its coordinates by `exp(rate*t)` with no bound and decayed into static after a
 couple of minutes; use the controls page's TIME section to confirm any change
 still survives a long run.
 
+The body enters off frame. `cloud.runway` evaluates the spine further out
+than the visible rim so the cloud is born, and finishes swelling, before its
+entry point comes into view; `cloud.startFade` must finish inside that runway
+or material is seen growing into existence. The controls page reports whether
+it does — treat anything other than `grown 100% (hidden)` as a bug.
+
+`spiral.dropCurve` shapes the descent. Above 1 the cloud travels close to
+horizontal and saves its drop for the approach to the centre, which is what
+makes it read as a wide surface with a throat rather than a chute.
+
 The sign and pole are drawn after the cloud and never read from it. Pole sway
 is wind only and defaults to still; if raised, it must stay small enough that
 the sign never appears pulled toward the drain.

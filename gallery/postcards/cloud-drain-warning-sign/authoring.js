@@ -53,19 +53,25 @@ r(spiral, 'rim radius', 'spiral.outerR', 20, 160, 1, v => v);
 spiral.note('Beyond about 70 the outer coil runs past the frame edges, which is what makes it read as a sea rather than an object.');
 r(spiral, 'tightening', 'spiral.tighten', 0.15, 1.2, 0.01, v => v.toFixed(2));
 spiral.note('How fast the coils close in. Together with cloud thickness this decides whether the turns stay separate or merge into a solid bowl.');
-r(spiral, 'turns', 'spiral.turns', 2, 9, 0.5, v => `${v} turns`);
-r(spiral, 'funnel depth', 'spiral.depth', 0, 160, 1, v => v);
+r(spiral, 'cycles', 'spiral.turns', 2, 12, 0.5, v => `${v} turns`);
+spiral.note('How many times the cloud goes round between entering and reaching the middle — how far it travels.');
+r(spiral, 'funnel depth', 'spiral.depth', 0, 200, 1, v => v);
 spiral.note('0 lays the spiral flat. Depth is what turns it into a drain rather than a whirl on a surface.');
-r(spiral, 'rotation', 'spiral.phase', -3.15, 3.15, 0.01, v => `${(v * 180 / Math.PI).toFixed(0)}°`);
+r(spiral, 'descent curve', 'spiral.dropCurve', 0.3, 5, 0.05, v => v.toFixed(2));
+spiral.note('1 sinks steadily from the moment the cloud enters. Above 1 keeps it travelling much flatter and saves the drop for the approach to the centre; below 1 drops it early.');
+r(spiral, 'entry angle', 'spiral.phase', -3.15, 3.15, 0.01, v => `${(v * 180 / Math.PI).toFixed(0)}°`);
+spiral.note('Where the cloud comes in from. Around -135° puts the entry off frame at the bottom left.');
 spiral.select({ label: 'handedness', get: () => String(cfg.spiral.handed), set: v => { cfg.spiral.handed = Number(v); }, values: [{ value: '1', label: 'clockwise' }, { value: '-1', label: 'anticlockwise' }], update: 'render' });
 
 const cloud = controls.section('THE CLOUD', 'One continuous body wrapped around that centreline. The lobes are how it is built, not separate clouds — keep enough of them that the silhouette stays single.');
 r(cloud, 'thickness', 'cloud.thick', 3, 40, 0.5, v => v.toFixed(1));
 cloud.note('Thicker than the gap between coils and the turns merge into one mass; thinner and the spiral arm reads clearly.');
-r(cloud, 'flow', 'cloud.flow', 0, 0.5, 0.005, v => v < 0.002 ? 'stopped' : `${v.toFixed(3)} · ${(cfg.spiral.turns / v).toFixed(0)}s cycle`);
+r(cloud, 'travel speed', 'cloud.flow', 0, 0.5, 0.005, v => v < 0.002 ? 'stopped' : `${v.toFixed(3)} · ${(cfg.spiral.turns / v).toFixed(0)}s cycle`);
 cloud.note('How fast material travels inward along the body. The cycle length is shown because the cloud repeats — that is deliberate, and it is what stops the scene degrading over time.');
 r(cloud, 'body detail', 'cloud.lobes', 120, 2400, 20, v => v);
 cloud.note('Too few and the body breaks into visible beads; more costs frame time without changing the silhouette.');
+r(cloud, 'lumpiness', 'cloud.lumpContrast', 0.2, 5, 0.05, v => v.toFixed(2));
+cloud.note('Pushes the bulges apart from the middle. Low is a smooth swelling tube; high gives distinct cumulus lumps with pinches between them.');
 r(cloud, 'head size', 'cloud.headSwell', 0, 2.2, 0.05, v => v.toFixed(2));
 r(cloud, 'head spacing', 'cloud.headScale', 0.1, 8, 0.05, v => v.toFixed(2));
 cloud.note('Heads are the big cumulus bulges. Spacing must stay high enough that a head spans only a handful of lobes, or the body just swells smoothly and stops reading as cloud.');
@@ -76,6 +82,38 @@ r(cloud, 'wander spacing', 'cloud.billowScale', 1, 20, 0.5, v => v.toFixed(1));
 r(cloud, 'silhouette hardness', 'cloud.edge', 0.02, 0.6, 0.01, v => v.toFixed(2));
 r(cloud, 'thin out at centre', 'cloud.tipFade', 0.02, 0.8, 0.01, v => v.toFixed(2));
 cloud.note('Material runs out before the middle so nothing is left to pop. Lower values keep cloud closer in to the drain.');
+r(cloud, 'off-frame runway', 'cloud.runway', 0, 1.2, 0.02, v => v.toFixed(2));
+r(cloud, 'grow in over', 'cloud.startFade', 0.02, 1, 0.02, v => v.toFixed(2));
+cloud.note('The body is born and swells to full size before the entry point comes into view. Grow-in must finish inside the runway, or material is seen appearing. The diagnostic below reports whether it does.');
+cloud.diagnostic(() => {
+  const sp = cfg.spiral, cl = cfg.cloud, cam = cfg.cam;
+  const S = (9 * cfg.gridK) / 234, W = 9 * cfg.gridK, H = 16 * cfg.gridK;
+  const project = (x, y, z) => {
+    const py = y - cam.up, pz = z + cam.back;
+    const pitch = Math.atan2(cam.up, Math.max(1, cam.back));
+    const cp = Math.cos(pitch), sn = Math.sin(pitch);
+    const yv = py * cp + pz * sn, zv = -py * sn + pz * cp;
+    if (zv <= 1) return null;
+    const k = cam.focal / zv;
+    return { sx: (117 + cam.offX + x * k) * S, sy: (cam.horizon - yv * k) * S, k };
+  };
+  let firstVisible = null;
+  for (let i = 0; i <= 300 && !firstVisible; i++) {
+    const s = i * 0.005;
+    const sp2 = s - cl.runway;
+    const decay = Math.exp(-sp.tighten * sp2), R = sp.outerR * decay;
+    const th = sp2 * 2 * Math.PI * (sp.handed < 0 ? -1 : 1) + sp.phase;
+    const drop = sp.depth * Math.pow(1 - decay, Math.max(0.05, sp.dropCurve));
+    const p = project(R * Math.cos(th), sp.topY - drop, R * Math.sin(th));
+    if (!p) continue;
+    const grown = Math.min(1, s / Math.max(0.001, cl.startFade));
+    const m = cl.thick * p.k * S * grown;
+    if (p.sx + m > 0 && p.sx - m < W && p.sy + m > 0 && p.sy - m < H) firstVisible = { s, grown };
+  }
+  if (!firstVisible) return 'entry never enters frame';
+  const pct = Math.round(firstVisible.grown * 100);
+  return `enters view at s=${firstVisible.s.toFixed(2)}\ngrown       ${pct}%  ${pct >= 99 ? '(hidden)' : '(POPS IN VIEW)'}`;
+});
 
 const tone = controls.section('CLOUD TONE', 'Depth is carried by value, which is what keeps the coil legible in monochrome.');
 r(tone, 'near tone', 'cloud.nearTone', 0, 1, 0.005, v => v.toFixed(3));
@@ -86,8 +124,11 @@ tone.note('Darkens material as it descends, so the funnel has a floor.');
 r(tone, 'form shading', 'cloud.formShade', 0, 0.9, 0.01, v => v.toFixed(2));
 tone.note('Lighter tops, darker undersides. This is what makes the mass read as volume instead of a flat disc.');
 
-const sky = controls.section('SKY');
-r(sky, 'tone', 'bg.tone', 0, 1, 0.005, v => v.toFixed(3));
+const sky = controls.section('SKY', 'A vertical gradient. The start is the top of the postcard by definition; only where it ends is authored.');
+r(sky, 'top tone', 'bg.topTone', 0, 1, 0.005, v => v.toFixed(3));
+r(sky, 'end tone', 'bg.bottomTone', 0, 1, 0.005, v => v.toFixed(3));
+r(sky, 'gradient ends at', 'bg.endY', 20, 416, 2, v => `${v} of 416`);
+sky.note('Below this height the sky holds the end tone flat. Set it near 416 to ramp across the whole frame.');
 r(sky, 'grain', 'bg.grain', 0, 0.12, 0.002, v => v.toFixed(3));
 
 const sign = controls.section('SIGN', 'Standing in the same space as the cloud: its foot is the drain’s own axis, projected.');

@@ -114,7 +114,7 @@ function packColor(hex){
    DERIVED STATE — rebuilt by build()
    ==================================================================== */
 let W,H,S;
-let lum,img,buf32,CINK,CPAP;
+let lum,twoBitSlot,img,buf32,CINK,CMID,CPAP,CACC;
 let dep;                 // per-pixel cloud depth, for occluding the pole
 let lobes=[];
 
@@ -128,9 +128,11 @@ function build(){
   img=ctx.createImageData(W,H);
   buf32=new Uint32Array(img.data.buffer);
   lum=new Float32Array(W*H);
+  twoBitSlot=new Int8Array(W*H);
+  twoBitSlot.fill(-1);
   dep=new Float32Array(W*H);
-  const palette=CFG.render||{dark:CFG.ink,light:CFG.paper};
-  CINK=packColor(palette.dark); CPAP=packColor(palette.light);
+  const palette=CFG.render||{paletteMode:'1-bit',dark:CFG.ink,middle:CFG.paper,light:CFG.paper,accent:CFG.paper};
+  CINK=packColor(palette.dark); CMID=packColor(palette.middle); CPAP=packColor(palette.light); CACC=packColor(palette.accent);
   lobes=[];
 }
 
@@ -142,10 +144,14 @@ function spineAt(s){
   const decay=Math.exp(-sp.tighten*s);      // s counts turns inward
   const R=sp.outerR*decay;
   const theta=s*2*Math.PI*(sp.handed<0?-1:1)+sp.phase;
-  /* Descent is tied to how far the radius has closed, so the funnel's
-     profile follows the coil: material that has travelled halfway in has
-     dropped halfway down. */
-  const drop=sp.depth*(1-decay);
+  /* Descent is tied to how far the radius has closed, but shaped by
+     `dropCurve` so the cloud does NOT sink steadily from the moment it
+     enters. Above 1 the body stays close to horizontal for most of its
+     travel and only plunges as it nears the middle, which is how a drain
+     actually behaves — a wide flat surface with a throat at the centre.
+     At 1 the descent is linear in the closing radius. */
+  const closed=1-decay;
+  const drop=sp.depth*Math.pow(closed,Math.max(0.05,sp.dropCurve));
   return { R:R, x:R*Math.cos(theta), z:R*Math.sin(theta), y:sp.topY-drop, decay:decay };
 }
 
@@ -195,7 +201,12 @@ function buildLobes(t){
        and nothing is seen to appear or vanish. */
     const s=(id+phase)%span;
 
-    const P=spineAt(s);
+    /* RUNWAY. The spine is evaluated further out than the visible rim, so
+       the body is born, and finishes swelling to full size, while still
+       off frame. Without it the fade-in happens in view and material is
+       seen growing into existence — the very pop the off-frame emitter
+       exists to hide. */
+    const P=spineAt(s-cl.runway);
 
     /* Silhouette. Position and radius are displaced by noise keyed to the
        piece's IDENTITY, not its screen position, so a bulge travels with
@@ -212,9 +223,17 @@ function buildLobes(t){
        body into cumulus heads, and the faster `wobR` that roughens their
        edges. One scale alone reads either as a lumpy sausage or as noise;
        the pair is what gives a cloud its big-mass-with-broken-edge look. */
-    const heads=fbm1(nk*cl.headScale+5.5,23);
+    /* Pushing the head noise away from its middle makes the bulges
+       distinct instead of a gentle swell — this is the lumpiness dial. */
+    const raw=fbm1(nk*cl.headScale+5.5,23);
+    const heads=clamp((raw-0.5)*cl.lumpContrast+0.5,0,1);
+
     const taper=smooth(clamp(P.decay/Math.max(0.001,cl.tipFade),0,1));
-    const rad=cl.thick*P.decay*(0.3+heads*cl.headSwell+wobR*cl.roughen)*taper;
+    /* Material also swells in over the first stretch of the spine. The
+       outer end is meant to sit off frame, but a fade-in means nothing can
+       pop into being even if the camera or the rim radius is changed. */
+    const born=smooth(clamp(s/Math.max(0.001,cl.startFade),0,1));
+    const rad=cl.thick*P.decay*(0.3+heads*cl.headSwell+wobR*cl.roughen)*taper*born;
     if(rad<=0) continue;
 
     const outward=1+wob*cl.billow;
@@ -262,6 +281,9 @@ function drawLobe(L){
       const cov=smooth((1-Math.sqrt(d2))/Math.max(0.001,cl.edge));
       const i=o+x;
       lum[i]=lerp(lum[i],clamp(shade,0,1),cov);
+      /* Clouds use a three-level gradient in 2-bit mode: dark, middle,
+         light. Reserve slot 2 for explicit sign colour, never cloud tone. */
+      twoBitSlot[i]=-2;
       /* Record where the cloud is, and how far away, so the pole can be
          occluded by material that is genuinely in front of it. */
       if(cov>0.5&&p.depth<dep[i]) dep[i]=p.depth;
@@ -272,7 +294,7 @@ function drawLobe(L){
 /* ======================================================================
    PRIMITIVES — sign geometry
    ==================================================================== */
-function fillTriangle(x0,y0,x1,y1,x2,y2,tone){
+function fillTriangle(x0,y0,x1,y1,x2,y2,tone,slot=-1){
   const minY=Math.max(0,Math.floor(Math.min(y0,y1,y2)));
   const maxY=Math.min(H-1,Math.ceil(Math.max(y0,y1,y2)));
   for(let y=minY;y<=maxY;y++){
@@ -286,17 +308,17 @@ function fillTriangle(x0,y0,x1,y1,x2,y2,tone){
     xs.sort((a,b)=>a-b);
     const xa=Math.max(0,xs[0]), xb=Math.min(W,xs[xs.length-1]);
     const i0=Math.floor(xa), i1=Math.ceil(xb)-1, o=y*W;
-    for(let x=i0;x<=i1;x++) lum[o+x]=tone;
+    for(let x=i0;x<=i1;x++) { lum[o+x]=tone; twoBitSlot[o+x]=slot; }
   }
 }
-function stampDisc(cx,cy,r,tone){
+function stampDisc(cx,cy,r,tone,slot=-1){
   const minX=Math.max(0,Math.floor(cx-r)), maxX=Math.min(W-1,Math.ceil(cx+r));
   const minY=Math.max(0,Math.floor(cy-r)), maxY=Math.min(H-1,Math.ceil(cy+r));
   for(let y=minY;y<=maxY;y++){
     const o=y*W;
     for(let x=minX;x<=maxX;x++){
       const dx=x+0.5-cx, dy=y+0.5-cy;
-      if(dx*dx+dy*dy<=r*r) lum[o+x]=tone;
+      if(dx*dx+dy*dy<=r*r) { lum[o+x]=tone; twoBitSlot[o+x]=slot; }
     }
   }
 }
@@ -318,12 +340,12 @@ function stampDiscDepth(cx,cy,r,tone,depth){
   }
 }
 
-function thickLine(x0,y0,x1,y1,width,tone){
+function thickLine(x0,y0,x1,y1,width,tone,slot=-1){
   const len=Math.hypot(x1-x0,y1-y0);
   const steps=Math.max(1,Math.ceil(len/Math.max(0.4,width*0.5)));
   for(let i=0;i<=steps;i++){
     const t=i/steps;
-    stampDisc(lerp(x0,x1,t),lerp(y0,y1,t),width*0.5,tone);
+    stampDisc(lerp(x0,x1,t),lerp(y0,y1,t),width*0.5,tone,slot);
   }
 }
 
@@ -332,9 +354,18 @@ function thickLine(x0,y0,x1,y1,width,tone){
    ==================================================================== */
 function drawSky(){
   dep.fill(Infinity);
+  /* Slot assignments are frame-local. Without clearing them here, the
+     2-bit sign outline leaves palette-slot trails when the pole sways. */
+  twoBitSlot.fill(-1);
+  const bg=CFG.bg;
+  /* A vertical gradient from the top of the frame down to `endY`, below
+     which the sky holds `bottomTone`. The ramp start is the top edge by
+     definition, so only its end has to be authored. */
+  const endY=Math.max(1,bg.endY);
   for(let y=0;y<H;y++){
     const o=y*W, by=y/S;
-    for(let x=0;x<W;x++) lum[o+x]=clamp(CFG.bg.tone+grain(x/S,by)*CFG.bg.grain,0,1);
+    const tone=lerp(bg.topTone,bg.bottomTone,clamp(by/endY,0,1));
+    for(let x=0;x<W;x++) lum[o+x]=clamp(tone+grain(x/S,by)*bg.grain,0,1);
   }
 }
 
@@ -382,7 +413,10 @@ function drawSign(t){
   const topProj=project(0,topWorldY,0);
   if(topProj){ const [tx,ty]=rot(topProj.sx,topProj.sy); thickLine(tx,ty,(blx+brx)*0.5,bly,pl.width*S,pl.tone); }
 
-  fillTriangle(ax,ay,blx,bly,brx,bry,sg.tone);
+  /* In 2-bit mode slot 2 is reserved for the sign's printed structure:
+     the outer warning border and the pictogram. The face clears the slot
+     again so only the outline remains assigned to it. */
+  fillTriangle(ax,ay,blx,bly,brx,bry,sg.tone,2);
 
   const inset=sg.stroke*S/height;
   const cxA=(ax+blx+brx)/3, cyA=(ay+bly+bry)/3;
@@ -401,10 +435,10 @@ function drawSign(t){
   const wristY=iay+faceH*0.86;
   const palmTopY=wristY-handH*0.42;
   const armW=Math.max(1.2,handH*0.17);
-  thickLine(faceCX,wristY,faceCX,palmTopY,armW,sg.pictogramTone);
+  thickLine(faceCX,wristY,faceCX,palmTopY,armW,sg.pictogramTone,2);
   const fingerLen=handH*0.42, fingerW=Math.max(1,armW*0.72);
   for(const [spread,rise] of [[-0.62,0.78],[-0.22,1],[0.22,1],[0.62,0.78]]){
-    thickLine(faceCX,palmTopY,faceCX+fingerLen*spread,palmTopY-fingerLen*rise,fingerW,sg.pictogramTone);
+    thickLine(faceCX,palmTopY,faceCX+fingerLen*spread,palmTopY-fingerLen*rise,fingerW,sg.pictogramTone,2);
   }
 }
 
@@ -421,11 +455,24 @@ function renderFrame(t){
 }
 
 function dither(){
+  const palette=CFG.render||{paletteMode:'1-bit'};
   for(let y=0;y<H;y++){
     const row=(y&7)<<3, o=y*W;
     for(let x=0;x<W;x++){
       const i=o+x;
-      buf32[i]=lum[i]*64>BAYER[row|(x&7)]+.5?CPAP:CINK;
+      const threshold=BAYER[row|(x&7)];
+      if(palette.paletteMode==='2-bit'){
+        const slot=twoBitSlot[i];
+        if(slot>=0) buf32[i]=[CINK,CMID,CACC,CPAP][Math.min(3,slot)];
+        else {
+          const scaled=clamp(lum[i],0,1)*3, base=Math.floor(scaled), fraction=scaled-base;
+          const index=slot===-2
+            ? (() => { const levels=clamp(lum[i],0,1)*2, lower=Math.floor(levels), part=levels-lower;
+                return [0,1,3][Math.min(2,lower+(part*64>threshold+.5?1:0))]; })()
+            : Math.min(3,base+(fraction*64>threshold+.5?1:0));
+          buf32[i]=[CINK,CMID,CACC,CPAP][index];
+        }
+      }else buf32[i]=lum[i]*64>threshold+.5?CPAP:CINK;
     }
   }
   ctx.putImageData(img,0,0);
@@ -491,7 +538,7 @@ startDriver();
 
 window.__drain={ CFG:CFG,
   fit:fitCanvas, render:()=>renderFrame(elapsed),
-  refresh(){const p=CFG.render||{dark:CFG.ink,light:CFG.paper};CINK=packColor(p.dark);CPAP=packColor(p.light);renderFrame(elapsed);},
+  refresh(){const p=CFG.render||{dark:CFG.ink,middle:CFG.paper,light:CFG.paper,accent:CFG.paper};CINK=packColor(p.dark);CMID=packColor(p.middle);CPAP=packColor(p.light);CACC=packColor(p.accent);renderFrame(elapsed);},
   update:rebuild, rebuild, png,
   toggle:function(){
     const shouldRun=playback.toggleManual();

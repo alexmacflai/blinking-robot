@@ -28,6 +28,8 @@ this first version (ticket direction; accent-slot decisions are deferred).
 In 1-bit the field becomes ink/paper through ordered dithering. The sign
 face's pictogram is drawn as geometry with its own value, not as a bitmap or
 a screen-space mask, per [`rendering.md`](../../../knowledge/design/rendering.md#palette-and-indexed-colour).
+In 2-bit, palette slot 2 is reserved for the sign's outer outline and printed
+hand pictogram; the face, pole, cloud, and sky remain tone-quantized.
 
 ## Design position (rule 13)
 
