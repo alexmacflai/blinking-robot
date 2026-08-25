@@ -192,27 +192,38 @@ from far enough away that the foot is a few pixels does not repay any of this.
 
 **Source:** [Cloud-drain warning sign postcard](../../gallery/postcards/cloud-drain-warning-sign/README.md)
 
-**Effect:** A continuous material field spirals inward and quietly ceases to
-exist at a centre, while an object standing in it remains completely
+**Effect:** A continuous material field spirals inward, shrinks, and quietly
+ceases to exist at a centre, while an object standing in it remains completely
 unaffected. The motion reads as one relationship — material leaving, object
 indifferent — rather than as an object reacting to a force.
 
-**Works when:** the field is evaluated per pixel in polar coordinates rather
-than simulated as particles, and its phase uses `ln(radius)` rather than
-radius. The logarithm is what makes it a drain instead of a rotation: band
-spacing shrinks geometrically toward the centre, so material visibly gets
-smaller as it travels in, and no separate scaling term is needed. The
-disappearance must be an absence rather than an event — fade the banding
-amplitude to zero across an inner fraction so there is nothing left to pop.
-Depth needs two independent terms, radial fall-off and a screen-Y near/far
-bias, or a squashed ellipse collapses into a flat blob.
+**Works when:** the material has a silhouette of its own. The first attempt
+here drew the drain as tonal bands and read as a gradient, because a field
+with flow but no material is not cloud, water, or smoke — it is shading. The
+fix is a density field cut hard into mass and gaps, so the mass has lobes and
+edges, and only then shaded for depth.
 
-**May vary:** the number of arms, the spiral's tightness, the drain rate and
-its sign, how much of the frame the field occupies, and whether the field sits
-in a larger continuous mass or alone.
+The flow is then applied as an INVERSE map: each point asks where its material
+came from, rather than shapes being moved. Winding the source radius outward
+by `exp(drain*t)` squeezes a wide annulus onto a narrow one, so material
+travels inward and genuinely shrinks on the way, with no separate size term
+and nothing spawned or destroyed. The spiral itself must not be drawn —
+differential rotation, inner material turning faster than outer, shears lobes
+into arms. Zeroing the shear should leave a rigidly turning field with no
+spiral; if arms survive, they were a pattern rather than a consequence.
+
+Emptying the centre belongs to the material, not the tone: raise the density
+cutoff toward the middle so lobes thin out and run out. Fading tone instead
+leaves a last shape to pop. Depth needs two independent terms — radial
+fall-off and a screen-Y near/far bias — or a squashed ellipse flattens into
+one shade.
+
+**May vary:** lobe size and coverage, the drain and rotation rates, how much
+shear, and whether the drained field sits inside a larger still mass of the
+same material or alone.
 
 **Do not reuse when:** the object in the field should visibly respond to it —
 that is the windmill's
-[rotating form tears a cloud field](#rotating-form-tears-a-cloud-field), which
-is the opposite decision. It is also wrong where individual pieces of material
-must be tracked or counted, which a per-pixel field cannot do.
+[rotating form tears a cloud field](#rotating-form-tears-a-cloud-field), the
+opposite decision. It is also wrong where individual pieces of material must
+be tracked or counted, which a per-pixel field cannot do.

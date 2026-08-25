@@ -8,29 +8,31 @@
     "grain": 0.01
   },
   "sea": {
-    "horizonY": 228,
-    "horizonSoft": 14,
-    "tone": 0.82,
+    "horizonY": 232,
+    "horizonSoft": 26,
+    "tone": 0.9,
     "grain": 0.02,
-    "depthShade": -0.16
+    "depthShade": -0.12
   },
   "pool": {
     "cx": 117,
-    "cy": 310,
+    "cy": 312,
     "radius": 150,
     "squashY": 0.5,
-    "arms": 2,
-    "rings": 2.1,
-    "rotSpeed": 0.09,
-    "edgeTone": 0.86,
-    "innerTone": 0.34,
-    "centreTone": 0.79,
-    "bandDepth": 0.22,
-    "farNearShade": 0.09,
-    "coreFade": 0.22,
-    "edgeSoft": 0.18,
-    "grain": 0.02,
-    "bandHard": 0.5
+    "cloudScale": 5.2,
+    "seed": 11.7,
+    "cutoff": 0.47,
+    "edgeSoft": 0.03,
+    "spin": 0.3,
+    "shear": 0.75,
+    "drain": 0.055,
+    "coreFade": 0.32,
+    "outerBlend": 0.45,
+    "edgeTone": 0.95,
+    "innerTone": 0.62,
+    "farNearShade": 0.08,
+    "gapTone": 0.4,
+    "grain": 0.015
   },
   "sign": {
     "cx": 117,

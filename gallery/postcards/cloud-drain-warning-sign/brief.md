@@ -58,10 +58,13 @@ a screen-space mask, per [`rendering.md`](../../../knowledge/design/rendering.md
   windmill's *rotating form tears a cloud field* (source: treat cloud as one
   continuous field, not discrete objects — reused for the base cloud
   representation, along with windmill's unbounded, non-resetting time driver
-  for continuous rotation rather than a spawn/destroy population).
-  If the drain's field-toward-a-point technique proves reusable elsewhere, it
-  should be added to the catalogue as a new entry rather than folded into
-  either existing one.
+  for continuous rotation rather than a spawn/destroy population). Note the
+  first implementation of this scene expressed the drain as tonal bands and
+  had to be rebuilt: a field with flow but no material reads as a gradient,
+  not as cloud. The mass must have a lobed silhouette of its own before any
+  amount of shading will make it cloud.
+  The technique this postcard established is recorded separately as
+  *a field that drains toward a point*.
 - **Discarded from the sketches**: the spiral drawn directly on the sign face
   (`references/IMG_2180.jpeg`) is an alternate pictogram concept the ticket
   supersedes with the fixed reaching/drowning hand; not used. A visibly

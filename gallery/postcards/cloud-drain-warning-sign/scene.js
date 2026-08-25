@@ -93,6 +93,32 @@ function build(){
 /* ======================================================================
    WHIRLPOOL FIELD — one continuous value per pixel
    ==================================================================== */
+/* ---------- cloud material -------------------------------------------
+   Value noise, three octaves. This is the CLOUD, and it is why the scene is
+   not just a shaded spiral: a drain drawn as tonal rings has flow but no
+   material, so it reads as a gradient. Cloud needs a lumpy silhouette, so
+   the field is a DENSITY that gets thresholded into mass and gaps —
+   hard-edged lobes, per the house rendering discipline — rather than a
+   smooth ramp painted across the bowl. */
+function hash2(ix,iy){
+  let h=Math.imul(ix,374761393)+Math.imul(iy,668265263);
+  h=Math.imul(h^(h>>>13),1274126177);
+  return ((h^(h>>>16))>>>0)/4294967296;
+}
+function vnoise(x,y){
+  const ix=Math.floor(x), iy=Math.floor(y);
+  const fx=x-ix, fy=y-iy;
+  const ux=fx*fx*(3-2*fx), uy=fy*fy*(3-2*fy);
+  const a=hash2(ix,iy), b=hash2(ix+1,iy), c=hash2(ix,iy+1), d=hash2(ix+1,iy+1);
+  return lerp(lerp(a,b,ux),lerp(c,d,ux),uy);
+}
+function fbm(x,y){
+  return vnoise(x,y)*0.5+vnoise(x*2.03,y*2.03)*0.32+vnoise(x*4.07,y*4.07)*0.18;
+}
+
+/* ======================================================================
+   CLOUD SEA + DRAIN — one continuous mass, warped by an inverse flow map
+   ==================================================================== */
 function fieldTone(bx,by,t){
   const p=CFG.pool, sea=CFG.sea;
 
@@ -100,58 +126,67 @@ function fieldTone(bx,by,t){
      sea. The whirlpool is a depression INSIDE that sea, not an object
      floating in the air — the brief's "sea of clouds", not a cloud. */
   const horizon=sea.horizonY;
-  if(by<horizon){
-    const fade=smooth(clamp((horizon-by)/Math.max(1,sea.horizonSoft),0,1));
-    const sky=CFG.bg.tone+grain(bx,by)*CFG.bg.grain;
-    const seaTop=sea.tone+grain(bx*3.1,by*3.1)*sea.grain;
-    return clamp(lerp(seaTop,sky,fade),0,1);
-  }
-
-  const seaBase=sea.tone+((by-horizon)/Math.max(1,BASE_H-horizon))*sea.depthShade;
-  let tone=seaBase;
+  if(by<horizon-sea.horizonSoft) return clamp(CFG.bg.tone+grain(bx,by)*CFG.bg.grain,0,1);
 
   const dx=bx-p.cx, dy=(by-p.cy)/Math.max(0.05,p.squashY);
   const r=Math.sqrt(dx*dx+dy*dy);
   const rn=r/p.radius;
+  const angle=Math.atan2(dy,dx);
 
-  if(rn<=1){
-    const angle=Math.atan2(dy,dx);
+  /* INVERSE FLOW MAP. Instead of moving cloud shapes around, ask where the
+     material at this point came from and sample the cloud there. Winding
+     the source radius OUTWARD by exp(+drain*t) means what is here now was
+     further out before, so material reads as travelling inward — and since
+     a wide annulus is being squeezed onto a narrow one, the lobes genuinely
+     SHRINK on the way in, which is what the brief asks for.
 
-    /* One log-ish spiral phase per pixel. Advancing it with time makes a
-       given band's radius shrink, which is the drain: material travels
-       inward without anything being spawned or destroyed. */
-    /* A LOG spiral, not an Archimedean one. Using ln(r) means the bands'
-       radial spacing shrinks geometrically toward the centre, so a band
-       visibly gets smaller as it travels inward — the brief's "material
-       scales down as it follows the spiral" falls out of the geometry
-       instead of needing a separate size term. */
-    const rl=Math.log(Math.max(rn,0.02));
-    const phase=(angle*p.arms)/(2*Math.PI)+rl*p.rings+t*p.rotSpeed;
-    /* Hardening the sine into a plateau is what makes the arms read as
-       graphic masses rather than as a soft airbrushed gradient. */
-    const raw=Math.sin(2*Math.PI*phase);
-    const hard=clamp(p.bandHard,0,0.99);
-    const band=hard>0?clamp(raw/(1-hard),-1,1):raw;
+     Differential rotation supplies the spiral: the inner cloud turns faster
+     than the outer cloud, so a lobe is sheared into an arm over time rather
+     than a spiral being drawn as a pattern. */
+  const swirl=clamp(rn,0.09,1);
+  const omega=p.spin*(1+p.shear*(1/swirl-1));
+  const rs=rn*Math.exp(p.drain*t);
+  const as=angle-omega*t;
 
-    /* Depth reads through position: radius sets the bowl's fall-off, and
-       screen Y separates the near (lower) rim from the far (upper) rim. */
-    const bowl=lerp(p.edgeTone,p.innerTone,smooth(1-rn));
-    const nearFar=clamp((p.cy-by)/(p.radius*p.squashY),-1,1);
-    const bias=nearFar*p.farNearShade;
+  /* Sample back in Cartesian so the noise stays continuous across the 2*pi
+     seam; sampling on the angle directly leaves a hard radial join. */
+  const sx=rs*Math.cos(as)*p.cloudScale;
+  const sy=rs*Math.sin(as)*p.cloudScale;
 
-    /* Material diminishes across the inner fraction and is gone at the
-       centre — no sharp pop, nothing drawn there to pop. */
-    const coreFade=smooth(clamp(rn/Math.max(0.001,p.coreFade),0,1));
-    const rim=p.edgeSoft>0?smooth(clamp((1-rn)/p.edgeSoft,0,1)):1;
-    const presence=rim*coreFade;
+  /* Outside the drain the sea is still cloud and still the SAME mass, so it
+     is the same noise with the warp faded out — not a second field laid
+     alongside, which would show as a seam at the rim. */
+  const outside=smooth(clamp((rn-1)/Math.max(0.001,p.outerBlend),0,1));
+  const fx=lerp(sx,dx/p.radius*p.cloudScale,outside);
+  const fy=lerp(sy,dy/p.radius*p.cloudScale,outside);
 
-    const spiral=bowl+bias+band*p.bandDepth*coreFade;
-    tone=lerp(seaBase,spiral,presence);
-    /* The quiet centre resolves to the drain's own tone, not to the sea. */
-    tone=lerp(p.centreTone,tone,coreFade);
-  }
+  const density=fbm(fx+p.seed,fy-p.seed);
 
+  /* The centre empties by RAISING the cutoff, not by fading tone: lobes
+     shrink and run out of material, so there is no last shape left to pop
+     and nothing drawn at the middle to catch the eye. */
+  const coreFade=smooth(clamp(rn/Math.max(0.001,p.coreFade),0,1));
+  const cutoff=lerp(1.2,p.cutoff,coreFade);
+  const cover=smooth((density-cutoff)/Math.max(0.001,p.edgeSoft)+0.5);
+
+  /* Depth is carried BY the cloud rather than painted over it: radius sets
+     the bowl's fall-off into the drain, screen Y separates the near (lower)
+     rim from the far (upper) rim. That is what keeps the twisting form
+     legible in monochrome instead of flattening to one shade. */
+  const bowl=lerp(p.edgeTone,p.innerTone,smooth(1-clamp(rn,0,1)));
+  const nearFar=clamp((p.cy-by)/(p.radius*p.squashY),-1,1);
+  const lit=clamp(bowl+nearFar*p.farNearShade,0,1);
+  const seaLit=clamp(sea.tone+((by-horizon)/Math.max(1,BASE_H-horizon))*sea.depthShade,0,1);
+
+  let tone=lerp(p.gapTone,lerp(lit,seaLit,outside),cover);
   tone+=grain(bx*3.1,by*3.1)*p.grain;
+
+  /* Soften the sea into the sky across the horizon band, so the mass has a
+     top edge without a drawn line. */
+  if(by<horizon){
+    const fade=smooth(clamp((horizon-by)/Math.max(1,sea.horizonSoft),0,1));
+    tone=lerp(tone,CFG.bg.tone,fade);
+  }
   return clamp(tone,0,1);
 }
 

@@ -21,10 +21,20 @@ away beneath it.
 
 ## Local rules
 
-The whirlpool is a per-pixel field, not a particle system: the spiral's phase
-is a function of angle and `ln(radius)`, so advancing it with time both pulls
-material inward and shrinks its spacing on the way. Nothing is spawned or
-destroyed, and there is no cycle to return to.
+The cloud is a thresholded density field, not tonal shading. Shading alone has
+flow but no material and reads as a gradient; the lobes and their silhouettes
+are what make it cloud, so the density is cut hard into mass and gaps rather
+than painted as a ramp.
+
+The spiral is never drawn. Material is placed by an inverse flow map — each
+point asks where its cloud came from — and the arms are produced by
+differential rotation shearing the lobes over time. Set `pool.shear` to 0 and
+the field turns rigidly with no spiral at all, which is the check that the
+arms are a consequence rather than a pattern. The same winding squeezes a wide
+annulus onto a narrow one, so lobes shrink as they travel inward.
+
+The centre empties by raising the density cutoff, not by fading tone: material
+runs out before the middle, so there is no last shape left to pop.
 
 The sign and pole are drawn after the field and never read from it. Pole sway
 is wind only and defaults to still; if it is raised, it must stay small enough
