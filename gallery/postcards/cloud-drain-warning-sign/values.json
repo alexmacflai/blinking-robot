@@ -1,0 +1,77 @@
+{
+  "gridK": 20,
+  "fit": "fill",
+  "ink": "#0f0f13",
+  "paper": "#eeebe1",
+  "bg": {
+    "topTone": 0.16,
+    "bottomTone": 0.685,
+    "endY": 140,
+    "grain": 0,
+    "tone": 0.5
+  },
+  "cam": {
+    "focal": 355,
+    "up": 121,
+    "back": 190,
+    "horizon": 230,
+    "offX": 0
+  },
+  "spiral": {
+    "outerR": 124,
+    "tighten": 0.49,
+    "turns": 11.5,
+    "depth": 44,
+    "topY": 0,
+    "phase": -2.356,
+    "handed": 1,
+    "dropCurve": 2.7
+  },
+  "cloud": {
+    "lobes": 2000,
+    "flow": 0.09,
+    "thick": 20.5,
+    "billow": 0.17,
+    "billowScale": 8.5,
+    "tipFade": 0.18,
+    "edge": 0.1,
+    "nearTone": 0,
+    "farTone": 1,
+    "depthShade": 0.41,
+    "formShade": 0.64,
+    "headScale": 4.7,
+    "headSwell": 1.4,
+    "roughen": 0.54,
+    "lumpContrast": 3.4,
+    "startFade": 0.14,
+    "runway": 0.18
+  },
+  "sign": {
+    "topY": 60,
+    "size": 75,
+    "stroke": 10,
+    "tone": 0,
+    "faceTone": 1,
+    "pictogramTone": 0,
+    "pictogramScale": 0.62,
+    "footDepth": 0.72,
+    "poleTop": 45
+  },
+  "pole": {
+    "width": 4.25,
+    "tone": 0,
+    "swayAmp": 3,
+    "swaySpeed": 0.67
+  },
+  "render": {
+    "paletteMode": "1-bit",
+    "dark": "#0f0f13",
+    "middle": "#a9d3e7",
+    "light": "#eeebe1",
+    "accent": "#b8001f",
+    "globalSelection": {
+      "pixelPreset": "standard",
+      "palette": "paper-ink"
+    }
+  }
+}

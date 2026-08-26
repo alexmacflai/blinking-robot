@@ -41,8 +41,8 @@ visual medium or format.
 
 ## Postcard elements and behaviours
 
-`[bird]` `[cloud]` `[leg]` `[liquid]` `[particles]` `[people]` `[sim]` `[sky]`
-`[walking]` `[wind]`
+`[bird]` `[cloud]` `[leg]` `[liquid]` `[particles]` `[people]` `[sign]` `[sim]`
+`[sky]` `[spiral]` `[walking]` `[wind]`
 
 ## Process — how work gets done here
 

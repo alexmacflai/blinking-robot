@@ -20,6 +20,8 @@ Contains the individual coded animation postcards in the Blinking Robot gallery.
 - [`coffee/README.md`](coffee/README.md) — `[coffee] [liquid] [sim] [particles]`
 - [`passing-legs/README.md`](passing-legs/README.md) — `[passing-legs] [people]
   [walking] [leg]`
+- [`cloud-drain-warning-sign/README.md`](cloud-drain-warning-sign/README.md) —
+  `[sign] [cloud] [spiral] [sky] [wind]`
 
 ## Local rules
 

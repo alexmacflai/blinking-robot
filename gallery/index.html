@@ -42,9 +42,10 @@
   <script type="module">
     import { loadRenderSettings, selectedSettings, paletteLabel } from './shared/render-settings.js';
     const POSTCARDS = [
-      { title:'Windmill', description:'procedural 1-bit postcard', src:'postcards/windmill/index.html', metadata:'postcards/windmill/values.json', select: values => values.postcard },
+      { title:'Cloud-drain warning sign', description:'procedural 1-bit postcard', src:'postcards/cloud-drain-warning-sign/index.html', metadata:'postcards/cloud-drain-warning-sign/gallery.json' },
+      { title:'Passing legs', description:'procedural 1-bit postcard', src:'postcards/passing-legs/index.html', metadata:'postcards/passing-legs/gallery.json' },
       { title:'Coffee', description:'procedural 1-bit postcard', src:'postcards/coffee/index.html', metadata:'postcards/coffee/gallery.json' },
-      { title:'Passing legs', description:'procedural 1-bit postcard', src:'postcards/passing-legs/index.html', metadata:'postcards/passing-legs/gallery.json' }
+      { title:'Windmill', description:'procedural 1-bit postcard', src:'postcards/windmill/index.html', metadata:'postcards/windmill/values.json', select: values => values.postcard },
     ];
     const gallery = document.getElementById('gallery');
     const settings = await loadRenderSettings();

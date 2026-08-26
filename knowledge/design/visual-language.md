@@ -187,3 +187,48 @@ marching, and a little too much of it becomes a goose-step.
 **Do not reuse when:** the motion is meant to be mechanical, floating or
 inhuman, or when the contact is not load-bearing in the image. A figure seen
 from far enough away that the foot is a few pixels does not repay any of this.
+
+## One body whose shape is the motion
+
+**Source:** [Cloud-drain warning sign postcard](../../gallery/postcards/cloud-drain-warning-sign/README.md)
+
+**Effect:** A single continuous object — one cloud — is wound into a spiral
+and drains inward, shrinking, while something standing in it stays entirely
+indifferent. The spiral is not a pattern applied to material; it is the
+object's shape, and the motion is that object travelling through itself.
+
+**Works when:** the form is built along a spine rather than drawn or sampled.
+A centreline carries the geometry, and heavily overlapping lobes strung along
+it give the body a silhouette, in the same way the discs inside a thick line
+give it a stroke. The lobes must never read as separate objects: their count
+is an implementation detail, and if they are visible as beads the technique
+has failed. Lobe size follows the spine's radius, so the shrink toward the
+centre is geometry rather than a fade.
+
+Depth must be genuine perspective with back-to-front sorting, because the
+payoff is the body occluding ITSELF where its near arc crosses its far arc.
+That self-occlusion, plus the near arc projecting larger than the far, is what
+separates an object in space from a pattern on a plane. Check the sign of the
+camera pitch: the far rim must sit higher on screen than the near rim.
+
+Two failed attempts preceded this one and are worth recording, because both
+looked plausible in isolation. Drawing the drain as tonal bands gives flow
+with no material and reads as a gradient. Replacing that with a warped noise
+density field gives material with no volume and no space — still a flat plane
+with a texture — and, because the warp wound coordinates outward without
+bound, it destroyed its own precision and decayed into static after minutes.
+
+**May vary:** the spine's tightness, descent, and number of turns; the body's
+thickness, lump size and roughness; flow rate; and how much of the frame the
+form occupies.
+
+**Do not reuse when:** the material genuinely is a field of many things rather
+than one object — that is the windmill's
+[rotating form tears a cloud field](#rotating-form-tears-a-cloud-field). It is
+also wrong where the form must be watched piece by piece, since a spine plus
+lobes has no per-piece identity to track.
+
+**Keep bounded:** every time-dependent quantity must wrap. The flow phase here
+is taken modulo the spine's span and the noise is periodic, so the scene runs
+on a fixed cycle and cannot drift or degrade however long it plays. Any
+technique that advances a coordinate forever will eventually eat itself.
