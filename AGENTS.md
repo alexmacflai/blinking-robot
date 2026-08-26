@@ -5,6 +5,16 @@ then the durable knowledge relevant to the change, then the README of the
 directory you are changing. Follow direct links from this page or the nearest
 README; do not chain through intermediate READMEs to get there.
 
+## Repository-local skills
+
+Before handling a request, inspect `workflows/skills/README.md` and search
+`workflows/skills/` for a matching `SKILL.md`. If one matches the request, read
+it completely and follow it. Repository-local skills are mandatory workflows,
+not optional reference material.
+
+For requests involving a new postcard idea, GitHub ticket, or issue draft, use
+`workflows/skills/postcard-idea-to-ticket/SKILL.md`.
+
 `[agent]` `[conventions]` `[index]`
 
 ## What this repository is
