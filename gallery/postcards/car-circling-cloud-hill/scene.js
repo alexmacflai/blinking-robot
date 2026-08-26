@@ -198,36 +198,30 @@ function roadRho(s){
   return rd.summitRho+(1-rd.summitRho)*clamp(soft,0,1);
 }
 function roadTheta(s){
-  const rd=CFG.road;
-  /* The turn happens ENTIRELY on the climb (s<0), which is the side the
-     hill itself hides. By the crest (s=0) bearing has already eased down
-     to `frontBearing` with zero remaining rate — `smooth` is tangent to
-     flat at its own top end — and it is held there, EXACTLY constant,
-     for the whole descent. The descent is therefore a literal straight
-     radial line in world space: the car's orientation never changes and
-     it never appears to steer, because past the crest there is nothing
-     left to turn.
+  /* Exactly two constants. No easing, no sweep, no interpolation of any
+     kind — that is the whole fix. The road is ONE straight line laid
+     across the hill's central axis: the front half sits at `frontBearing`,
+     the back half sits at the diametrically opposite bearing (+180°), and
+     the two meet at the crest where rho is smallest. Because rho shrinks
+     to (almost) zero there, the two halves converge to (almost) the same
+     point despite the bearing itself stepping discontinuously — there is
+     no turn to see because there is no turn: a car on either half holds
+     one fixed heading for the entire half, and the two halves are mirror
+     images of each other through the hill's axis, not a curve joining
+     them. This is also the only shape consistent with "wraps the surface
+     from one bottom to the other, no turns" — anything that eases between
+     two different bearings, however briefly, is a turn.
 
-     Two earlier attempts were wrong. Sweeping azimuth across the WHOLE
-     path (climb and descent both) put a real, visible bend in the one
-     stretch that is on screen the whole time — a car following its own
-     orientation through that bend reads as cornering, which is exactly
-     what a straight descent must not do. Flattening early, before the
-     crest, put the flat stretch on BOTH sides of an early split point,
-     so the climb and the descent shared a meridian and the car appeared
-     to drive up and straight back down the same line. Splitting the flat
-     region exactly at the crest — never earlier, never later — avoids
-     both: only one side is ever flat, and it is the side that shows. */
-  if(s>=0) return rd.frontBearing;
-  const u=clamp(s+1,0,1);                              // 0 at rear foot, 1 at the crest
-  /* `sweepCurve` still shapes how the turn is paced across the climb —
-     high values hold near rearBearing longer and spend the turn late,
-     close to the crest; low values turn early. Either way `smooth` is
-     the outer step, so the join at the crest stays tangent-flat exactly
-     regardless of curve. */
-  const eased=smooth(Math.pow(u,Math.max(0.2,rd.sweepCurve)));
-  const wind=(1-eased)*Math.sin(u*Math.PI*rd.windings)*rd.wander;  // fades out with the turn — none of it reaches the straight run
-  return rd.rearBearing+(rd.frontBearing-rd.rearBearing)*eased+wind;
+     Two earlier shapes were wrong. Sweeping azimuth across the whole
+     path put a real bend in the one stretch that stays on screen the
+     whole time. Finishing that sweep early, on the climb, before the
+     crest, was also wrong on inspection — the swept arc travels at
+     close to the hill's own base radius, where the hill has ~zero
+     height, so large parts of ANY swept path are simply not behind the
+     hill's bulk, regardless of where the sweep is timed to finish. Two
+     fixed bearings sidesteps that entirely: there is no arc to expose. */
+  const rd=CFG.road;
+  return s>=0 ? rd.frontBearing : rd.frontBearing+Math.PI;
 }
 function roadPoint(s){
   const P=surface(roadRho(s),roadTheta(s));
@@ -686,15 +680,16 @@ function drawCars(t){
   const c=CFG.car;
   const faces=[];
   for(const car of carsAt(t)){
-    /* Depth-tested against the hill only on the climb (car.s<0), which is
-       what makes a car emerge from behind the shoulder. The front descent
-       (car.s>=0) is BY CONSTRUCTION the one straight, camera-facing run
-       that is never supposed to go behind the hill — testing it anyway
-       chases a numerical margin against a coarse, obliquely-viewed mesh
-       that can never be made reliable, and was exactly what made the car
-       flicker out partway down the slope. Skipping the test there is not
-       a workaround for that bug; it is the correct occlusion rule for a
-       path whose visibility is already decided by its own geometry. */
+    /* Depth-tested against the hill only on the back half (car.s<0),
+       which is what lets the hill's own bulk hide the part of that half
+       that is genuinely behind it and show the part that is not — the
+       back half is real surface geometry now, not a swung-out arc, so
+       the ordinary depth test against the hill is the correct, honest
+       answer there. The front half (car.s>=0) is skipped: it is BY
+       CONSTRUCTION the fixed straight run, never behind the hill, and
+       testing it anyway chases a numerical margin against a coarse,
+       obliquely-viewed mesh that can never be made reliable — that is
+       what made the car flicker out partway down the slope before. */
     const hide=car.s<0;
     const F=roadFrame(car.s);
     const sh=carShape(car.id);

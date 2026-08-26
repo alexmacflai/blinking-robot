@@ -38,9 +38,6 @@
     "summitRho": 0.06,
     "summitRound": 0.22,
     "frontBearing": -0.26,
-    "rearBearing": 3.14159,
-    "windings": 1,
-    "wander": 0.06,
     "width": 14,
     "lift": 0.4,
     "samples": 220,
@@ -49,8 +46,7 @@
     "dashPeriod": 0.045,
     "dashLength": 0.3,
     "dashWidth": 1.2,
-    "dashLift": 0.25,
-    "sweepCurve": 2.6
+    "dashLift": 0.25
   },
   "house": {
     "atS": 0.18,
