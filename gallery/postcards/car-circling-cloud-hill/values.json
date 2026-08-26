@@ -36,7 +36,7 @@
   },
   "road": {
     "summitRho": 0,
-    "summitRound": 0.22,
+    "summitRound": 0,
     "frontBearing": -0.26,
     "width": 14,
     "lift": 0.4,

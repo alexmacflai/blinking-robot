@@ -193,8 +193,22 @@ function surface(rho,theta){
    ==================================================================== */
 function roadRho(s){
   const rd=CFG.road;
-  const e=Math.max(0.02,rd.summitRound);
-  const soft=(Math.sqrt(s*s+e*e)-e)/(Math.sqrt(1+e*e)-e);
+  /* At summitRound 0 this is exactly |s| — rho advances at a constant
+     rate, so a car moving at constant ds/dt covers the road at a steady
+     pace with NO stall anywhere, including at the crest. Any positive
+     summitRound rounds the crest crossing by flattening rho near s=0,
+     and that flattening is precisely a stall: d(rho)/ds falls to zero
+     there, so the car creeps for a long real-time stretch either side of
+     the top however fast `car.speed` is set. Rounding the crest and
+     moving at a constant pace are the same knob pulling opposite ways;
+     0 is the setting that keeps the motion honest.
+
+     The apex needs no rounding anyway. Both halves pass through rho=0 on
+     opposite bearings, so the world path runs straight through the axis
+     with a continuous tangent, and hillY'(0)=0 makes the vertical
+     component continuous too — the cusp is in rho only, not in space. */
+  const e=Math.max(0,rd.summitRound);
+  const soft=e>0 ? (Math.sqrt(s*s+e*e)-e)/(Math.sqrt(1+e*e)-e) : Math.abs(s);
   return rd.summitRho+(1-rd.summitRho)*clamp(soft,0,1);
 }
 function roadTheta(s){
@@ -680,17 +694,21 @@ function drawCars(t){
   const c=CFG.car;
   const faces=[];
   for(const car of carsAt(t)){
-    /* Depth-tested against the hill only on the back half (car.s<0),
-       which is what lets the hill's own bulk hide the part of that half
-       that is genuinely behind it and show the part that is not — the
-       back half is real surface geometry now, not a swung-out arc, so
-       the ordinary depth test against the hill is the correct, honest
-       answer there. The front half (car.s>=0) is skipped: it is BY
-       CONSTRUCTION the fixed straight run, never behind the hill, and
-       testing it anyway chases a numerical margin against a coarse,
-       obliquely-viewed mesh that can never be made reliable — that is
-       what made the car flicker out partway down the slope before. */
-    const hide=car.s<0;
+    /* ALWAYS depth-tested. The scene is real 3D: the car rides the road,
+       the road is offset along the hill's own surface normal, and the
+       depth buffer alone decides what covers what — front and back half
+       are the same code path, with no special case for either.
+
+       An earlier version skipped the test on the front half, on the
+       claim that the margin there was too small to be reliable. That
+       claim came from a bad measurement: the probe lifted its test point
+       straight up in Y instead of along the surface normal the way
+       roadPoint does, so it compared the wrong point and reported the
+       car behind the hill. Measured correctly, the car clears the hill
+       by 0.6-2.6 world units all the way down the front face, and
+       `hill.meshInset` biases the hill farther still, so the ordinary
+       test has room to spare and needs no help. */
+    const hide=true;
     const F=roadFrame(car.s);
     const sh=carShape(car.id);
     const ax={x:F.bx,y:F.by,z:F.bz};          // across the road
