@@ -73,8 +73,9 @@ road.note('Where the descent points. 0° runs it straight at the viewer; a littl
 rb(road, 'rear bearing', 'road.rearBearing', 1.6, 5, 0.01, v => `${(v * 180 / Math.PI).toFixed(0)}°`);
 road.note('Where the climb comes from. Past 180° the car appears around one shoulder rather than the other.');
 rb(road, 'turn distribution', 'road.sweepCurve', 0.4, 3.5, 0.05, v => v.toFixed(2));
-road.note('High values spend the turn on the hidden half and leave the visible descent nearly straight; low values bring the wrap into view and can turn the descent into a spiral.');
+road.note('The whole turn happens on the climb, and only there — the descent is always a literal straight radial line, so the car never appears to steer. High values hold near the rear bearing longer and spend the turn late, close to the crest; low values turn early. Either way the join at the crest is exactly tangent, with no kink.');
 rb(road, 'wander', 'road.wander', 0, 0.6, 0.01, v => v.toFixed(2));
+road.note('Texture on the climb only — it fades to nothing by the crest and never reaches the straight descent.');
 rb(road, 'wander cycles', 'road.windings', 0.5, 4, 0.5, v => v.toFixed(1));
 rb(road, 'width', 'road.width', 2, 30, 0.5, v => v.toFixed(1));
 rb(road, 'summit clearance', 'road.summitRho', 0, 0.4, 0.005, v => v.toFixed(3));

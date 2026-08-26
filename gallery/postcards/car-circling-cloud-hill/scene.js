@@ -199,23 +199,35 @@ function roadRho(s){
 }
 function roadTheta(s){
   const rd=CFG.road;
-  /* Azimuth sweeps smoothly and MONOTONICALLY across the whole path, rear
-     to front — never flat, never reversing. A flat stretch through the
-     crest was tried and rejected: it makes the climb and the descent sit
-     on the very same meridian of the hill, so the car visibly drives up
-     one line and straight back down it — a literal U-turn, not a wrap.
-     Keeping azimuth in motion the whole way means the descent lands on a
-     different meridian than the climb, which is what makes it a wrap
-     instead of a there-and-back.
+  /* The turn happens ENTIRELY on the climb (s<0), which is the side the
+     hill itself hides. By the crest (s=0) bearing has already eased down
+     to `frontBearing` with zero remaining rate — `smooth` is tangent to
+     flat at its own top end — and it is held there, EXACTLY constant,
+     for the whole descent. The descent is therefore a literal straight
+     radial line in world space: the car's orientation never changes and
+     it never appears to steer, because past the crest there is nothing
+     left to turn.
 
-     `curve` pushes most of that motion into the rear half (still hidden
-     behind the hill), so the visible run — crest to front foot — covers
-     only the tail of the sweep and reads as one smooth pass rather than
-     the wide swing a linear sweep would put on screen. */
-  const t=clamp((1-s)*0.5,0,1);                        // 1 at rear foot, 0 at front foot
-  const sweep=Math.pow(t,Math.max(0.2,rd.sweepCurve));
-  const wind=Math.sin(t*Math.PI*rd.windings)*rd.wander;
-  return rd.frontBearing+(rd.rearBearing-rd.frontBearing)*sweep+wind;
+     Two earlier attempts were wrong. Sweeping azimuth across the WHOLE
+     path (climb and descent both) put a real, visible bend in the one
+     stretch that is on screen the whole time — a car following its own
+     orientation through that bend reads as cornering, which is exactly
+     what a straight descent must not do. Flattening early, before the
+     crest, put the flat stretch on BOTH sides of an early split point,
+     so the climb and the descent shared a meridian and the car appeared
+     to drive up and straight back down the same line. Splitting the flat
+     region exactly at the crest — never earlier, never later — avoids
+     both: only one side is ever flat, and it is the side that shows. */
+  if(s>=0) return rd.frontBearing;
+  const u=clamp(s+1,0,1);                              // 0 at rear foot, 1 at the crest
+  /* `sweepCurve` still shapes how the turn is paced across the climb —
+     high values hold near rearBearing longer and spend the turn late,
+     close to the crest; low values turn early. Either way `smooth` is
+     the outer step, so the join at the crest stays tangent-flat exactly
+     regardless of curve. */
+  const eased=smooth(Math.pow(u,Math.max(0.2,rd.sweepCurve)));
+  const wind=(1-eased)*Math.sin(u*Math.PI*rd.windings)*rd.wander;  // fades out with the turn — none of it reaches the straight run
+  return rd.rearBearing+(rd.frontBearing-rd.rearBearing)*eased+wind;
 }
 function roadPoint(s){
   const P=surface(roadRho(s),roadTheta(s));
