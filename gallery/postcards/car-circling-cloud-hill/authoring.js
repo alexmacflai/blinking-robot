@@ -1,0 +1,193 @@
+import { createPostcardControls, saveCanvasPng, saveCanvasVideo } from '../../shared/controls.js';
+import { applyRenderSelection, installRenderMessageHandler, paletteLabel } from '../../shared/render-settings.js';
+
+const engine = window.__hill, cfg = engine.CFG;
+const galleryConfig = await fetch('./gallery.json', { cache: 'no-store' }).then(response => response.json());
+
+const scene = {
+  fit: () => engine.fit(),
+  render: () => engine.render(),
+  refresh: () => engine.refresh(),
+  update: () => engine.update(true),
+  rebuild: () => engine.rebuild(true),
+  togglePaused: () => engine.toggle(),
+  savePng: () => saveCanvasPng(document.querySelector('#c'), 'car-circling-cloud-hill-frame-2160x3840.png'),
+  saveVideo: options => { engine.play(); return saveCanvasVideo(document.querySelector('#c'), options); },
+  info: () => ({ W: cfg.gridK * 9, H: cfg.gridK * 16 })
+};
+
+const controls = createPostcardControls({
+  panel: document.querySelector('#panel'),
+  title: 'CAR CIRCLING A CLOUD-COVERED HILL',
+  description: 'Traffic over a hill that sits between two layers of cloud.',
+  scene, config: cfg,
+  valuesFile: 'values.json',
+  gridValues: [11, 13, 16, 20, 26, 32, 40, 48],
+  galleryConfig, galleryFile: 'gallery.json'
+});
+
+const renderSettings = window.HILL_RENDER_SETTINGS;
+installRenderMessageHandler(scene, cfg, renderSettings);
+
+const presets = controls.section('GLOBAL RENDER PRESETS', 'Saved global presets are shared with the gallery. Local experiments remain only in downloaded postcard values.');
+presets.select({ label: 'global palette', get: () => cfg.render.globalSelection.palette, set: id => { applyRenderSelection(cfg, renderSettings, { ...cfg.render.globalSelection, palette: id }); }, values: renderSettings.palettes.map(p => ({ value: p.id, label: paletteLabel(p) })), update: 'refresh' });
+presets.select({ label: 'global pixel grid', get: () => cfg.render.globalSelection.pixelPreset, set: id => { applyRenderSelection(cfg, renderSettings, { ...cfg.render.globalSelection, pixelPreset: id }); }, values: renderSettings.pixelPresets.map(p => ({ value: p.id, label: p.name })), update: 'rebuild' });
+
+/* The hill, road, house and smoke are baked once, so anything that changes
+   their geometry, their tone, or the camera has to re-bake: those controls
+   use `rebuild`, not `render`. Only the cars and cloud drift are free. */
+const r = (section, label, path, min, max, step, format, update = 'render') => section.range({ label, path, min, max, step, format, update });
+const rb = (section, label, path, min, max, step, format) => r(section, label, path, min, max, step, format, 'rebuild');
+
+const cam = controls.section('CAMERA', 'In front of the hill and a little above its foot. The pitch is derived from height and distance, so the camera always looks at the hill.');
+rb(cam, 'height above foot', 'cam.up', 0, 220, 1, v => v);
+rb(cam, 'distance back', 'cam.back', 120, 700, 5, v => v);
+cam.note('Raising the height alone tips the hill toward a plan view and flattens the wrap of the road; pulling back alone weakens the difference in size between a car at the top and one at the bottom.');
+rb(cam, 'focal length', 'cam.focal', 120, 700, 5, v => v);
+rb(cam, 'horizon', 'cam.horizon', 120, 460, 1, v => `${v} of 416`);
+rb(cam, 'sideways', 'cam.offX', -80, 80, 1, v => `${v > 0 ? '+' : ''}${v}`);
+cam.diagnostic(() => {
+  const c = cfg.cam;
+  const pitch = Math.atan2(c.up, Math.max(1, c.back)) * 180 / Math.PI;
+  return `pitch        ${pitch.toFixed(1)}°\nhill height  ${cfg.hill.height}\nhill radius  ${cfg.hill.radius}`;
+});
+
+const hill = controls.section('THE HILL', 'A surface of revolution. It is shaded as a near-flat mass on purpose: the road is the only mark it carries, and a dome gradient would band under the dither and compete with it.');
+rb(hill, 'base radius', 'hill.radius', 30, 140, 1, v => v);
+rb(hill, 'height', 'hill.height', 40, 260, 1, v => v);
+rb(hill, 'flank steepness', 'hill.flank', 1.2, 5, 0.05, v => v.toFixed(2));
+rb(hill, 'crown roundness', 'hill.crown', 0.2, 1.4, 0.01, v => v.toFixed(2));
+hill.note('Low crown gives a flat table with steep sides and makes a car spend most of its journey near the top; high crown makes a cone and loses the sketch’s dome. The two are read together.');
+rb(hill, 'tone', 'hill.tone', 0, 1, 0.005, v => v.toFixed(3));
+rb(hill, 'silhouette darkening', 'hill.rimDark', 0, 0.9, 0.01, v => v.toFixed(2));
+rb(hill, 'darkening tightness', 'hill.rimCurve', 0.5, 10, 0.1, v => v.toFixed(1));
+hill.note('The rim is what holds the hill apart from a cloud of the same value behind it. Higher tightness keeps the mass flat and confines the change to the very edge.');
+rb(hill, 'mesh rings', 'hill.rings', 12, 120, 2, v => v);
+rb(hill, 'mesh meridians', 'hill.meridians', 16, 160, 4, v => v);
+rb(hill, 'ring crowding', 'hill.ringBias', 0.3, 1.6, 0.05, v => v.toFixed(2));
+hill.note('Below 1 the rings crowd toward the foot, where the flank is steepest. Raise the counts only if the silhouette shows facets.');
+
+const road = controls.section('THE ROAD', 'One continuous path: out of the hidden rear, over the summit, down the front. It is a strip offset along the hill’s own surface normal, so the hill hides the far half of it for free.');
+rb(road, 'front bearing', 'road.frontBearing', -1.6, 1.6, 0.01, v => `${(v * 180 / Math.PI).toFixed(0)}°`);
+road.note('Where the descent points. 0° runs it straight at the viewer; a little either way leans it across the front face.');
+rb(road, 'rear bearing', 'road.rearBearing', 1.6, 5, 0.01, v => `${(v * 180 / Math.PI).toFixed(0)}°`);
+road.note('Where the climb comes from. Past 180° the car appears around one shoulder rather than the other.');
+rb(road, 'turn distribution', 'road.sweepCurve', 0.4, 3.5, 0.05, v => v.toFixed(2));
+road.note('High values spend the turn on the hidden half and leave the visible descent nearly straight; low values bring the wrap into view and can turn the descent into a spiral.');
+rb(road, 'wander', 'road.wander', 0, 0.6, 0.01, v => v.toFixed(2));
+rb(road, 'wander cycles', 'road.windings', 0.5, 4, 0.5, v => v.toFixed(1));
+rb(road, 'width', 'road.width', 2, 30, 0.5, v => v.toFixed(1));
+rb(road, 'summit clearance', 'road.summitRho', 0, 0.4, 0.005, v => v.toFixed(3));
+rb(road, 'summit rounding', 'road.summitRound', 0.02, 0.8, 0.01, v => v.toFixed(2));
+road.note('How wide the arc is where the road crosses the top. Small values turn the crossing into a hairpin.');
+rb(road, 'lift off the hill', 'road.lift', 0, 3, 0.05, v => v.toFixed(2));
+road.note('Enough to clear the hill in depth, not so much that the road pokes out past the silhouette at the shoulder.');
+rb(road, 'tone', 'road.tone', 0, 1, 0.005, v => v.toFixed(3));
+rb(road, 'samples', 'road.samples', 40, 400, 10, v => v);
+
+const dash = controls.section('CENTRE DASHES', 'A road marking, not a subject. Keep them clearly lighter than a car, or a car on the road is indistinguishable from a dash and the postcard loses its only moving thing.');
+rb(dash, 'tone', 'road.dashTone', 0, 1, 0.005, v => v.toFixed(3));
+rb(dash, 'spacing', 'road.dashPeriod', 0.01, 0.2, 0.005, v => v.toFixed(3));
+rb(dash, 'dash length', 'road.dashLength', 0, 1, 0.02, v => v <= 0 ? 'off' : v.toFixed(2));
+rb(dash, 'width', 'road.dashWidth', 0.2, 6, 0.1, v => v.toFixed(1));
+rb(dash, 'lift', 'road.dashLift', 0, 1.5, 0.05, v => v.toFixed(2));
+
+const car = controls.section('THE TRAFFIC', 'Cars ride the road on a wrapped phase. The span is longer than the road, and the extra length is empty: nothing is ever seen to appear on the road or turn round.');
+r(car, 'speed', 'car.speed', 0.01, 0.6, 0.005, v => `${v.toFixed(3)} · ${(2 / v).toFixed(0)}s to cross`);
+r(car, 'cars at once', 'car.slots', 1, 6, 1, v => v);
+car.note('One is the ticket’s reading: a car has left the frame before the next comes over the shoulder. More than one puts several on the road at the same time.');
+r(car, 'empty road between', 'car.gap', 0, 4, 0.05, v => `${v.toFixed(2)} · ${(v / Math.max(0.001, cfg.car.speed)).toFixed(0)}s`);
+r(car, 'size', 'car.size', 2, 24, 0.5, v => v.toFixed(1));
+r(car, 'size variation', 'car.sizeVary', 0, 0.6, 0.02, v => v.toFixed(2));
+r(car, 'width', 'car.widthRatio', 0.25, 1, 0.01, v => v.toFixed(2));
+r(car, 'height', 'car.heightRatio', 0.2, 1, 0.01, v => v.toFixed(2));
+r(car, 'tone', 'car.tone', 0, 1, 0.005, v => v.toFixed(3));
+r(car, 'tone variation', 'car.toneVary', 0, 0.4, 0.005, v => v.toFixed(3));
+r(car, 'form shading', 'car.shade', 0, 0.6, 0.01, v => v.toFixed(2));
+r(car, 'wheel tone', 'car.wheelTone', 0, 1, 0.005, v => v.toFixed(3));
+r(car, 'wheels appear at', 'car.wheelAt', 0, 30, 0.5, v => `${v.toFixed(1)}px long`);
+car.note('Wheels are drawn only once a car is long enough on screen for them to be more than a stray pixel. Set to 0 to draw them always.');
+r(car, 'accent every', 'car.accentEvery', 0, 12, 1, v => v === 0 ? 'never' : `every ${v}`);
+car.note('In 2-bit mode an accented car takes palette slot 2. Off by default: a procession of coloured cars makes the traffic the spectacle rather than the ordinary thing.');
+car.diagnostic(() => {
+  const c = cfg.car;
+  const span = 2 + Math.max(0, c.gap);
+  return `on the road   ${engine.state().onRoad}\nfull cycle    ${(span / Math.max(0.001, c.speed)).toFixed(0)}s\nempty for     ${(Math.max(0, c.gap) / Math.max(0.001, c.speed)).toFixed(0)}s`;
+});
+
+const house = controls.section('THE HOUSE', 'Small, still, beside the road. It is placed from the road’s own frame, so moving the road carries it along.');
+rb(house, 'where on the road', 'house.atS', -1, 1, 0.01, v => v.toFixed(2));
+rb(house, 'out from the road', 'house.besideRho', -0.6, 0.6, 0.01, v => v.toFixed(2));
+rb(house, 'around the hill', 'house.besideTheta', -2, 2, 0.01, v => `${(v * 180 / Math.PI).toFixed(0)}°`);
+house.note('Against the sky at the summit a light-walled house disappears and only its roof reads. Step it down the shoulder, or keep it dark.');
+rb(house, 'size', 'house.size', 0, 60, 0.5, v => v <= 0 ? 'none' : v.toFixed(1));
+rb(house, 'wall height', 'house.wall', 0.15, 1, 0.01, v => v.toFixed(2));
+rb(house, 'roof pitch', 'house.roof', 0, 0.9, 0.01, v => v.toFixed(2));
+rb(house, 'plan width', 'house.width', 0.3, 1.4, 0.02, v => v.toFixed(2));
+rb(house, 'plan depth', 'house.depth', 0.3, 1.4, 0.02, v => v.toFixed(2));
+rb(house, 'facing', 'house.yaw', -3.15, 3.15, 0.01, v => `${(v * 180 / Math.PI).toFixed(0)}°`);
+rb(house, 'settle into the hill', 'house.sink', -0.2, 0.4, 0.01, v => v.toFixed(2));
+rb(house, 'wall tone', 'house.tone', 0, 1, 0.005, v => v.toFixed(3));
+rb(house, 'roof tone', 'house.roofTone', 0, 1, 0.005, v => v.toFixed(3));
+rb(house, 'form shading', 'house.shade', 0, 0.5, 0.01, v => v.toFixed(2));
+
+const smoke = controls.section('CHIMNEY AND SMOKE', 'The plume is STILL. The postcard has one moving thing; a second would compete with it. The sketch’s smoke is kept as a graphic mark.');
+rb(smoke, 'chimney width', 'house.chimney', 0, 0.5, 0.01, v => v.toFixed(2));
+rb(smoke, 'chimney height', 'house.chimneyAt', 0, 0.8, 0.01, v => v.toFixed(2));
+rb(smoke, 'plume height', 'house.smokeHeight', 0, 6, 0.05, v => v <= 0 ? 'none' : v.toFixed(2));
+rb(smoke, 'plume lean', 'house.smokeDrift', -1.5, 1.5, 0.02, v => v.toFixed(2));
+rb(smoke, 'plume coils', 'house.smokeCoils', 0, 4, 0.05, v => v.toFixed(2));
+rb(smoke, 'puffs', 'house.smokePuffs', 3, 40, 1, v => v);
+rb(smoke, 'puff size at chimney', 'house.smokeR0', 0.01, 0.5, 0.005, v => v.toFixed(3));
+rb(smoke, 'puff size at top', 'house.smokeR1', 0.01, 0.8, 0.005, v => v.toFixed(3));
+rb(smoke, 'tone', 'house.smokeTone', 0, 1, 0.005, v => v.toFixed(3));
+
+const light = controls.section('LIGHT', 'A direction, not a lighting model. It decides which flat tone a face of the house or a car takes.');
+rb(light, 'from the side', 'light.x', -1, 1, 0.02, v => v.toFixed(2));
+rb(light, 'from above', 'light.y', -1, 1, 0.02, v => v.toFixed(2));
+rb(light, 'from the front', 'light.z', -1, 1, 0.02, v => v.toFixed(2));
+
+const sky = controls.section('SKY', 'A vertical gradient. The start is the top of the postcard by definition; only where it ends is authored.');
+r(sky, 'top tone', 'bg.topTone', 0, 1, 0.005, v => v.toFixed(3));
+r(sky, 'end tone', 'bg.bottomTone', 0, 1, 0.005, v => v.toFixed(3));
+r(sky, 'gradient ends at', 'bg.endY', 20, 416, 2, v => `${v} of 416`);
+r(sky, 'grain', 'bg.grain', 0, 0.12, 0.002, v => v.toFixed(3));
+
+/* One section per bank, built from the values file so adding a bank to
+   values.json gives it controls without editing this page. */
+cfg.banks.forEach((bank, index) => {
+  const behind = bank.front ? 'In front of the hill, and drawn after the cars: this is what a car disappears into.' : 'Behind the hill, and drawn before it.';
+  const section = controls.section(`CLOUD — ${String(bank.id).toUpperCase()}`, `${bank.kind === 'puff' ? 'Clusters of soft lobes in open sky.' : 'A lobed upper surface filling to the bottom of the frame.'} ${behind}`);
+  const p = key => `banks.${index}.${key}`;
+  rb(section, 'height', p('y'), 0, 460, 1, v => `${v} of 416`);
+  rb(section, 'tone', p('tone'), 0, 1, 0.005, v => v.toFixed(3));
+  rb(section, 'tile width', p('tile'), 60, 500, 5, v => v);
+  section.note('The bank repeats across this width. Narrower packs more cloud into the frame.');
+  if (bank.kind === 'puff') {
+    rb(section, 'clusters', p('clusters'), 1, 8, 1, v => v);
+    rb(section, 'lobes per cluster', p('per'), 1, 10, 1, v => v);
+  } else {
+    rb(section, 'lobes', p('lobes'), 2, 16, 1, v => v);
+    rb(section, 'edge softness', p('soft'), 0.2, 8, 0.1, v => v.toFixed(1));
+    rb(section, 'floor above the line', p('floorUp'), 0, 40, 1, v => v === 0 ? 'no floor' : v);
+    section.note('A floor keeps the mass continuous while its lobes billow above it. Without one you have to pack the lobes tight, and tightly packed lobes make the surface a ruled line.');
+  }
+  rb(section, 'lobe width (min)', p('rx.0'), 4, 80, 1, v => v);
+  rb(section, 'lobe width (max)', p('rx.1'), 4, 90, 1, v => v);
+  rb(section, 'lobe height (min)', p('ry.0'), 2, 60, 1, v => v);
+  rb(section, 'lobe height (max)', p('ry.1'), 2, 70, 1, v => v);
+  rb(section, 'seed', p('seed'), 1, 99999, 1, v => v);
+  r(section, 'drift', p('drift'), -12, 12, 0.5, v => Math.abs(v) < 0.25 ? 'still' : v.toFixed(1));
+  section.note('Still by default. Drifting cloud makes the occluding layers read as weather rather than as the edges of the world — the postcard has one moving thing.');
+});
+
+const time = controls.section('TIME', 'The still world is baked and the cars ride a wrapped phase, so nothing here can drift or decay. These are to check that.');
+time.action('+1 MINUTE', () => engine.run(60), 'render');
+time.action('+1 HOUR', () => engine.run(3600), 'render');
+time.diagnostic(() => {
+  const s = engine.state();
+  return `elapsed      ${s.elapsed}s\non the road  ${s.onRoad}`;
+});
+
+controls.sync();
+setInterval(() => controls.sync(), 500);

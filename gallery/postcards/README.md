@@ -22,6 +22,8 @@ Contains the individual coded animation postcards in the Blinking Robot gallery.
   [walking] [leg]`
 - [`cloud-drain-warning-sign/README.md`](cloud-drain-warning-sign/README.md) —
   `[sign] [cloud] [spiral] [sky] [wind]`
+- [`car-circling-cloud-hill/README.md`](car-circling-cloud-hill/README.md) —
+  `[car] [hill] [road] [house] [cloud] [sky] [depth]`
 
 ## Local rules
 

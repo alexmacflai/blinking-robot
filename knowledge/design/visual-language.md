@@ -232,3 +232,44 @@ lobes has no per-piece identity to track.
 is taken modulo the spine's span and the noise is periodic, so the scene runs
 on a fixed cycle and cannot drift or degrade however long it plays. Any
 technique that advances a coordinate forever will eventually eat itself.
+
+## Occlusion as geometry, not as draw order
+
+**Source:** [Car circling a cloud-covered hill postcard](../../gallery/postcards/car-circling-cloud-hill/README.md)
+
+**Effect:** A subject travels a route that goes behind the thing it is
+travelling on. It is hidden for half its journey, appears over a shoulder,
+crosses, and is covered again — and the depth of the scene is stated entirely
+by what disappears, with no shading doing the work. The landform, the path on
+it, and the subject are world-space forms put through one camera and resolved
+by a **depth buffer**, so every "this covers that" is a consequence rather
+than an ordering decision.
+
+**Works when:** the route genuinely leaves the visible side, and the thing
+doing the hiding is a form the camera can be given rather than a silhouette
+already drawn. The path must be built as a strip offset outward along the
+host surface's own normal — then the hidden stretch of path is hidden by the
+same test that hides the subject, and no separate bookkeeping exists to
+disagree with itself. Getting this right costs one z-test per pixel and
+removes an entire class of "which layer is this in" decisions.
+
+It pairs with **baking**: if the occluding world is still, rasterise it once
+into a luminance/depth/coverage layer at build time and copy it in per frame.
+The moving subject then costs only its own faces, and the cost of real
+geometry stops being a reason not to use it. The tradeoff is a real one to
+state — anything that changes the still world has to re-bake, so a controls
+surface must know which of its dials are geometry and which are not.
+
+**May vary:** the host form, the shape of the route, how much of it is
+hidden, and whether the subject is one thing or traffic. Passive fields —
+here the cloud layers — can stay flat 2D banks composited before or after the
+depth pass; they do not have to join the buffer to occlude, they only have to
+be on the correct side of it.
+
+**Do not reuse when:** the scene is genuinely flat and its layering is a
+graphic decision rather than a spatial one — a depth buffer then encodes a
+truth the image does not have, and costs a projection per vertex to say
+nothing. It is also the wrong tool where the occluder is a soft field with no
+surface, which is the drain's
+[one body whose shape is the motion](#one-body-whose-shape-is-the-motion): a
+painter's sort on a smooth lane depth is what that needs, not a z-test.

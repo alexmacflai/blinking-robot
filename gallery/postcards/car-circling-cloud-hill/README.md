@@ -1,0 +1,58 @@
+# Car circling a cloud-covered hill postcard
+
+A coded animation postcard of traffic crossing a hill that stands between two
+layers of cloud.
+
+## Context
+
+`[car]` `[hill]` `[road]` `[house]` `[cloud]` `[sky]` `[depth]`
+
+## Open
+
+- [`index.html`](index.html) — public postcard
+- [`controls.html`](controls.html) — maker-facing controls
+- [`authoring.js`](authoring.js) — this postcard’s scene-specific controls declaration
+- [`bootstrap.js`](bootstrap.js) — loads the saved values before scene and controls
+- [`scene.js`](scene.js) — the shared renderer for both surfaces
+- [`values.json`](values.json) — the one saved creative configuration for both pages
+- [`gallery.json`](gallery.json) — gallery publish state and hover writing
+- [`brief.md`](brief.md) — scene intent and design position
+- [`references/README.md`](references/README.md) — supplied source material
+
+## Local rules
+
+Occlusion is geometry, not draw order. The hill, road, house and cars are
+world-space forms put through one camera and resolved by a depth buffer. A car
+on the far side is hidden because the hill is genuinely in front of it, and the
+far stretch of road is hidden for the same reason — the road is a strip offset
+outward along the hill’s own surface normal, never a curve drawn onto a
+finished silhouette. Do not replace any of this with layer ordering: every
+acceptance criterion in the ticket about what covers what depends on it.
+
+The hill is a **flat mass**. Its tone is near-constant with the fall-off pushed
+out to the silhouette, because the road is the only mark it carries and a dome
+gradient bands under the dither along the same axis. Raising the silhouette
+darkening is how the hill stays separate from a cloud of its own value behind
+it; shading the dome is not.
+
+Keep the centre dashes clearly lighter than a car. They are a road marking, and
+when they are as dark as a car the postcard loses the only moving thing in it.
+
+The still world — hill, road, dashes, house, smoke — is **baked once** into a
+luminance/depth/coverage layer at build time. Anything that changes their
+geometry, tone, or the camera must re-bake, which is why those controls use
+`rebuild` rather than `render`. Only the cars and optional cloud drift are
+evaluated per frame.
+
+The clouds are two-dimensional lobed banks in the windmill’s manner, not
+objects in the depth buffer. A bank is either in front of the cars or behind
+the hill, and that flag is the whole of its depth behaviour.
+
+Nothing accumulates. Cars are slots on a phase wrapped into a fixed span longer
+than the road itself; the extra length is empty, so nothing is seen to appear
+on the road or turn round. Car identity is hashed from the wrap count, so the
+procession keeps changing while no state is kept. Use the controls page’s TIME
+section to confirm any change still survives a long run.
+
+Postcard surface, controls, and reference-material requirements live in
+[`AGENTS.md`](../../../AGENTS.md).

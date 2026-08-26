@@ -1,0 +1,168 @@
+{
+  "gridK": 20,
+  "fit": "fill",
+  "ink": "#0f0f13",
+  "paper": "#eeebe1",
+  "bg": {
+    "topTone": 1.0,
+    "bottomTone": 0.94,
+    "endY": 416,
+    "grain": 0
+  },
+  "cam": {
+    "focal": 300,
+    "up": 55,
+    "back": 330,
+    "horizon": 300,
+    "offX": 0
+  },
+  "light": {
+    "x": -0.5,
+    "y": 0.78,
+    "z": -0.38
+  },
+  "hill": {
+    "radius": 84,
+    "height": 124,
+    "flank": 2.6,
+    "crown": 0.72,
+    "tone": 0.74,
+    "rimDark": 0.4,
+    "rimCurve": 4.0,
+    "rings": 56,
+    "meridians": 80,
+    "ringBias": 0.55
+  },
+  "road": {
+    "summitRho": 0.06,
+    "summitRound": 0.22,
+    "frontBearing": -0.22,
+    "rearBearing": 3.4,
+    "sweepCurve": 1.25,
+    "windings": 1,
+    "wander": 0.16,
+    "width": 14,
+    "lift": 0.5,
+    "samples": 220,
+    "tone": 1.0,
+    "dashTone": 0.25,
+    "dashPeriod": 0.045,
+    "dashLength": 0.3,
+    "dashWidth": 1.2,
+    "dashLift": 0.25
+  },
+  "house": {
+    "atS": -0.02,
+    "besideRho": 0.3,
+    "besideTheta": -0.85,
+    "size": 16,
+    "width": 0.62,
+    "depth": 0.5,
+    "wall": 0.5,
+    "roof": 0.3,
+    "sink": 0.02,
+    "yaw": -0.35,
+    "tone": 0.1,
+    "roofTone": 0.0,
+    "shade": 0.06,
+    "chimney": 0.14,
+    "chimneyAt": 0.3,
+    "smokeHeight": 2.4,
+    "smokePuffs": 12,
+    "smokeCoils": 1.4,
+    "smokeDrift": 0.45,
+    "smokeR0": 0.05,
+    "smokeR1": 0.22,
+    "smokeTone": 0.86
+  },
+  "car": {
+    "slots": 1,
+    "gap": 0.9,
+    "speed": 0.13,
+    "size": 8,
+    "widthRatio": 0.55,
+    "heightRatio": 0.42,
+    "sizeVary": 0.22,
+    "tone": 0.04,
+    "toneVary": 0.05,
+    "shade": 0.18,
+    "wheelTone": 0.0,
+    "wheelAt": 5,
+    "accentEvery": 0
+  },
+  "banks": [
+    {
+      "id": "summit",
+      "kind": "puff",
+      "front": false,
+      "y": 196,
+      "tile": 210,
+      "tone": 0.8,
+      "seed": 20260826,
+      "clusters": 2,
+      "per": 4,
+      "rx": [
+        10,
+        18
+      ],
+      "ry": [
+        10,
+        20
+      ],
+      "drift": 0
+    },
+    {
+      "id": "mid",
+      "kind": "sea",
+      "front": true,
+      "y": 310,
+      "tile": 210,
+      "tone": 0.9,
+      "seed": 7712,
+      "lobes": 4,
+      "soft": 1.5,
+      "rx": [
+        30,
+        55
+      ],
+      "ry": [
+        20,
+        38
+      ],
+      "floorUp": 0,
+      "drift": 0
+    },
+    {
+      "id": "near",
+      "kind": "sea",
+      "front": true,
+      "y": 336,
+      "tile": 230,
+      "tone": 1.0,
+      "seed": 40311,
+      "lobes": 4,
+      "soft": 1.5,
+      "rx": [
+        32,
+        58
+      ],
+      "ry": [
+        20,
+        40
+      ],
+      "floorUp": 0,
+      "drift": 0
+    }
+  ],
+  "render": {
+    "paletteMode": "1-bit",
+    "dark": "#0f0f13",
+    "middle": "#a9d3e7",
+    "light": "#eeebe1",
+    "accent": "#b8001f",
+    "globalSelection": {
+      "pixelPreset": "standard",
+      "palette": "paper-ink"
+    }
+  }
+}

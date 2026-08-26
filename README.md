@@ -22,6 +22,8 @@ go straight to one:
   [particles]`
 - [Passing legs](gallery/postcards/passing-legs/index.html) — `[passing-legs]
   [people] [walking] [leg]`
+- [Car circling a cloud-covered hill](gallery/postcards/car-circling-cloud-hill/index.html)
+  — `[car] [hill] [road] [house] [cloud] [sky] [depth]`
 
 Each postcard folder also has a maker-facing `controls.html`; its README routes
 to both surfaces and its supplied source material.

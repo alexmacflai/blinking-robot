@@ -35,14 +35,14 @@ visual medium or format.
 ## Domain — technical or visual territory
 
 `[coded-animation]` `[procedural-rendering]` `[reference]` `[static-site]`
-`[browser]` `[performance]` `[scene]` `[vignette]`
+`[browser]` `[performance]` `[scene]` `[vignette]` `[depth]`
 `[animation-controls]` `[art-direction]` `[motion]` `[rendering]`
 `[authoring]` `[video-export]`
 
 ## Postcard elements and behaviours
 
-`[bird]` `[cloud]` `[leg]` `[liquid]` `[particles]` `[people]` `[sign]` `[sim]`
-`[sky]` `[spiral]` `[walking]` `[wind]`
+`[bird]` `[car]` `[cloud]` `[hill]` `[house]` `[leg]` `[liquid]` `[particles]`
+`[people]` `[road]` `[sign]` `[sim]` `[sky]` `[spiral]` `[walking]` `[wind]`
 
 ## Process — how work gets done here
 
