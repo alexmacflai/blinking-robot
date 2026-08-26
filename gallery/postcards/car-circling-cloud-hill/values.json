@@ -35,7 +35,7 @@
     "meshInset": 1
   },
   "road": {
-    "summitRho": 0.06,
+    "summitRho": 0,
     "summitRound": 0.22,
     "frontBearing": -0.26,
     "width": 14,
@@ -75,7 +75,7 @@
   "car": {
     "slots": 1,
     "gap": 0.9,
-    "speed": 0.13,
+    "speed": 1,
     "size": 11,
     "widthRatio": 0.55,
     "heightRatio": 0.42,
