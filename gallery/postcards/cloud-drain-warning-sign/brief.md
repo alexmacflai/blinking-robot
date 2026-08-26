@@ -23,13 +23,16 @@ References: [`references/README.md`](references/README.md).
 
 ## Indexed colour treatment
 
-The postcard is authored as one continuous value field, monochrome only for
-this first version (ticket direction; accent-slot decisions are deferred).
+The postcard is authored as one continuous value field. In 1-bit it remains
+monochrome; in 2-bit, explicit object assignments and selective gradient
+quantization decide where the extra palette colour appears.
 In 1-bit the field becomes ink/paper through ordered dithering. The sign
 face's pictogram is drawn as geometry with its own value, not as a bitmap or
 a screen-space mask, per [`rendering.md`](../../../knowledge/design/rendering.md#palette-and-indexed-colour).
 In 2-bit, palette slot 2 is reserved for the sign's outer outline and printed
-hand pictogram; the face, pole, cloud, and sky remain tone-quantized.
+hand pictogram. Cloud gradients use slots 0, 1, and 3 only, so the accent does
+not spread through the cloud shader; the face, pole, and sky remain normally
+tone-quantized.
 
 ## Design position (rule 13)
 
