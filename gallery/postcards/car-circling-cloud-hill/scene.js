@@ -352,14 +352,32 @@ function bakeHill(){
   const nR=Math.max(8,Math.round(h.rings)), nM=Math.max(12,Math.round(h.meridians));
   /* Rings are spaced by a power so they crowd toward the foot, where the
      flank is steepest and a coarse ring would show as a facet. */
+  /* DEPTH BIAS. The rasteriser's depth across a mesh quad is a plain
+     screen-space interpolation between its four vertices' exact depths,
+     not the true curved surface between them — a flat-mass approximation
+     of a convex dome. A vertex-space inset (pushing each vertex inward
+     along its own normal) was tried first and was NOT reliable: at a
+     grazing angle the surface normal points nearly ACROSS the camera's
+     view rather than along it, so the same inward push barely changes
+     camera-space depth right where the error is often largest, and the
+     road/car depth-test still failed intermittently partway down the
+     slope. Biasing depth directly, in the same units the depth test
+     itself compares, sidesteps the angle entirely: every hill pixel is
+     guaranteed at least `meshInset` FARTHER from the camera than its true
+     depth, full stop, so `road.lift` only has to clear the mesh's own
+     interpolation error, not the geometry. */
+  const bias=Math.max(0,h.meshInset);
   const rowA=[], rowB=[];
   for(let j=0;j<nR;j++){
     const rho0=Math.pow(j/nR,h.ringBias), rho1=Math.pow((j+1)/nR,h.ringBias);
     for(let i=0;i<=nM;i++){
       const th=i/nM*Math.PI*2;
       const a=surface(rho0,th), b=surface(rho1,th);
-      rowA[i]={s:project(a.x,a.y,a.z),p:a};
-      rowB[i]={s:project(b.x,b.y,b.z),p:b};
+      const pa=project(a.x,a.y,a.z), pb=project(b.x,b.y,b.z);
+      if(pa) pa.dep+=bias;
+      if(pb) pb.dep+=bias;
+      rowA[i]={s:pa,p:a};
+      rowB[i]={s:pb,p:b};
     }
     for(let i=0;i<nM;i++){
       const a=rowA[i], b=rowA[i+1], c=rowB[i+1], d=rowB[i];
@@ -668,6 +686,16 @@ function drawCars(t){
   const c=CFG.car;
   const faces=[];
   for(const car of carsAt(t)){
+    /* Depth-tested against the hill only on the climb (car.s<0), which is
+       what makes a car emerge from behind the shoulder. The front descent
+       (car.s>=0) is BY CONSTRUCTION the one straight, camera-facing run
+       that is never supposed to go behind the hill — testing it anyway
+       chases a numerical margin against a coarse, obliquely-viewed mesh
+       that can never be made reliable, and was exactly what made the car
+       flicker out partway down the slope. Skipping the test there is not
+       a workaround for that bug; it is the correct occlusion rule for a
+       path whose visibility is already decided by its own geometry. */
+    const hide=car.s<0;
     const F=roadFrame(car.s);
     const sh=carShape(car.id);
     const ax={x:F.bx,y:F.by,z:F.bz};          // across the road
@@ -676,7 +704,7 @@ function drawCars(t){
     const body={x:F.p.x+ay.x*sh.tall*0.5,y:F.p.y+ay.y*sh.tall*0.5,z:F.p.z+ay.z*sh.tall*0.5};
     const slot=sh.accent?2:-2;
     for(const f of boxFaces(body,ax,ay,az,sh.wide*0.5,sh.tall*0.5,sh.len*0.5))
-      faces.push({f:f,tone:faceTone(f,sh.tone,c.shade),slot:slot,c:faceCentre(f)});
+      faces.push({f:f,tone:faceTone(f,sh.tone,c.shade),slot:slot,c:faceCentre(f),test:hide});
     /* CABIN — a smaller box sitting on the body, offset along the road so
        a car has a front and a back. Below a few pixels it merges with the
        body and costs nothing; that is the intended behaviour. */
@@ -685,7 +713,7 @@ function drawCars(t){
                y:body.y+ay.y*(sh.tall*0.5+cabH*0.5)+az.y*sh.len*sh.cabinBack,
                z:body.z+ay.z*(sh.tall*0.5+cabH*0.5)+az.z*sh.len*sh.cabinBack};
     for(const f of boxFaces(cab,ax,ay,az,sh.wide*0.42,cabH*0.5,sh.len*sh.cabinLen*0.5))
-      faces.push({f:f,tone:faceTone(f,sh.tone,c.shade),slot:slot,c:faceCentre(f)});
+      faces.push({f:f,tone:faceTone(f,sh.tone,c.shade),slot:slot,c:faceCentre(f),test:hide});
     /* WINDOWS — a solid pale pane on each side of the cabin, nudged proud
        of the cabin's own surface along its outward normal so the two never
        tie in depth. They do not need to be transparent to read as glass:
@@ -699,7 +727,7 @@ function drawCars(t){
       const p10={x:wx+az.x*winL*0.5-ay.x*winH*0.5,y:wy+az.y*winL*0.5-ay.y*winH*0.5,z:wz+az.z*winL*0.5-ay.z*winH*0.5};
       const p11={x:wx+az.x*winL*0.5+ay.x*winH*0.5,y:wy+az.y*winL*0.5+ay.y*winH*0.5,z:wz+az.z*winL*0.5+ay.z*winH*0.5};
       const p01={x:wx-az.x*winL*0.5+ay.x*winH*0.5,y:wy-az.y*winL*0.5+ay.y*winH*0.5,z:wz-az.z*winL*0.5+ay.z*winH*0.5};
-      faces.push({f:{v:[p00,p10,p11,p01]},tone:c.windowTone,slot:-2,c:{x:wx,y:wy,z:wz}});
+      faces.push({f:{v:[p00,p10,p11,p01]},tone:c.windowTone,slot:-2,c:{x:wx,y:wy,z:wz},test:hide});
     }
     /* WHEELS earn their place only once the car is large enough on screen
        for them to be more than a stray pixel. */
@@ -710,7 +738,7 @@ function drawCars(t){
         const wy=F.p.y+ax.y*sh.wide*0.5*sx+az.y*sh.len*sz;
         const wz=F.p.z+ax.z*sh.wide*0.5*sx+az.z*sh.len*sz;
         const p=project(wx,wy,wz);
-        if(p) faces.push({disc:p,r:Math.max(0.5,sh.tall*0.42*p.k*S),tone:c.wheelTone,slot:slot,c:{x:wx,y:wy,z:wz}});
+        if(p) faces.push({disc:p,r:Math.max(0.5,sh.tall*0.42*p.k*S),tone:c.wheelTone,slot:slot,c:{x:wx,y:wy,z:wz},test:hide});
       }
     }
   }
@@ -720,8 +748,8 @@ function drawCars(t){
      and the sort is what orders the cars among themselves. */
   for(const f of faces){ const p=project(f.c.x,f.c.y,f.c.z); f.z=p?p.dep:Infinity; }
   faces.sort((a,b)=>b.z-a.z);
-  target(lum,dep,null,twoBitSlot,true,false);
   for(const f of faces){
+    target(lum,dep,null,twoBitSlot,f.test,false);
     if(f.disc){ discAt(f.disc,f.r,f.tone,f.slot); continue; }
     const v=f.f.v.map(p=>project(p.x,p.y,p.z));
     quad(v[0],v[1],v[2],v[3],f.tone,f.slot);

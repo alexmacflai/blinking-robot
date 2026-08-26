@@ -66,6 +66,8 @@ rb(hill, 'mesh rings', 'hill.rings', 12, 120, 2, v => v);
 rb(hill, 'mesh meridians', 'hill.meridians', 16, 160, 4, v => v);
 rb(hill, 'ring crowding', 'hill.ringBias', 0.3, 1.6, 0.05, v => v.toFixed(2));
 hill.note('Below 1 the rings crowd toward the foot, where the flank is steepest. Raise the counts only if the silhouette shows facets.');
+rb(hill, 'mesh safety margin', 'hill.meshInset', 0, 4, 0.05, v => v.toFixed(2));
+hill.note('Pulls the hill mesh slightly inward so the road and cars reliably clear it in depth. Raise this if a car flickers or vanishes mid-slope; lower it only if the hill visibly shrinks off the road\'s edge.');
 
 const road = controls.section('THE ROAD', 'One continuous path: out of the hidden rear, over the summit, down the front. It is a strip offset along the hill’s own surface normal, so the hill hides the far half of it for free.');
 rb(road, 'front bearing', 'road.frontBearing', -1.6, 1.6, 0.01, v => `${(v * 180 / Math.PI).toFixed(0)}°`);
