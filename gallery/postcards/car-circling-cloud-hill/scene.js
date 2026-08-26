@@ -199,7 +199,20 @@ function roadRho(s){
 }
 function roadTheta(s){
   const rd=CFG.road;
-  const t=clamp((1-s)*0.5,0,1);                    // 0 at the front end
+  /* Azimuth sweeps smoothly and MONOTONICALLY across the whole path, rear
+     to front — never flat, never reversing. A flat stretch through the
+     crest was tried and rejected: it makes the climb and the descent sit
+     on the very same meridian of the hill, so the car visibly drives up
+     one line and straight back down it — a literal U-turn, not a wrap.
+     Keeping azimuth in motion the whole way means the descent lands on a
+     different meridian than the climb, which is what makes it a wrap
+     instead of a there-and-back.
+
+     `curve` pushes most of that motion into the rear half (still hidden
+     behind the hill), so the visible run — crest to front foot — covers
+     only the tail of the sweep and reads as one smooth pass rather than
+     the wide swing a linear sweep would put on screen. */
+  const t=clamp((1-s)*0.5,0,1);                        // 1 at rear foot, 0 at front foot
   const sweep=Math.pow(t,Math.max(0.2,rd.sweepCurve));
   const wind=Math.sin(t*Math.PI*rd.windings)*rd.wander;
   return rd.frontBearing+(rd.rearBearing-rd.frontBearing)*sweep+wind;
@@ -395,9 +408,24 @@ function bakeHouse(){
   const ho=CFG.house;
   if(ho.size<=0) return;
   /* Placed by the road, not by eye: its foot is the road frame at `atS`,
-     stepped sideways by `beside` in that frame's own side direction, so
-     moving the road carries the house with it. */
-  const base=surface(clamp(roadRho(ho.atS)+ho.besideRho,0,1),roadTheta(ho.atS)+ho.besideTheta);
+     stepped `beside` world units along that frame's own SIDE vector (and
+     `along` along its tangent), so it always sits clear of the carriageway
+     rather than straddling it, and moving the road carries the house with
+     it. The side vector lies in the hill's own tangent plane, so the
+     offset point stays on the surface without a second surface lookup. */
+  const F=roadFrame(ho.atS);
+  /* The tangent-plane offset gives the right DIRECTION but drifts off the
+     true dome near the crown, where curvature is highest — a flat plane
+     laid across a fast-curving surface floats above it. So the offset is
+     used only to pick a direction and distance, then snapped back onto
+     the analytic surface by converting to (rho,theta) and re-evaluating
+     it exactly, which is what keeps the house seated at every atS. */
+  const off={ x:F.p.x+F.bx*ho.beside+F.tx*ho.along,
+              y:F.p.y+F.by*ho.beside+F.ty*ho.along,
+              z:F.p.z+F.bz*ho.beside+F.tz*ho.along };
+  const R=CFG.hill.radius;
+  const offRho=Math.hypot(off.x,off.z)/R, offTheta=Math.atan2(off.x,-off.z);
+  const base=surface(offRho,offTheta);
   const up={x:0,y:1,z:0};
   const yaw=ho.yaw;
   const ax={x:Math.cos(yaw),y:0,z:Math.sin(yaw)};
@@ -646,6 +674,21 @@ function drawCars(t){
                z:body.z+ay.z*(sh.tall*0.5+cabH*0.5)+az.z*sh.len*sh.cabinBack};
     for(const f of boxFaces(cab,ax,ay,az,sh.wide*0.42,cabH*0.5,sh.len*sh.cabinLen*0.5))
       faces.push({f:f,tone:faceTone(f,sh.tone,c.shade),slot:slot,c:faceCentre(f)});
+    /* WINDOWS — a solid pale pane on each side of the cabin, nudged proud
+       of the cabin's own surface along its outward normal so the two never
+       tie in depth. They do not need to be transparent to read as glass:
+       flat and light against the body's dark tone is enough, and it never
+       takes the accent slot even when the car itself does — the ticket's
+       "white would contrast well" is a fixed material, not a highlight. */
+    const winH=cabH*0.6, winL=sh.len*sh.cabinLen*0.7, nudge=Math.max(0.02,sh.wide*0.04);
+    for(const side of [-1,1]){
+      const wx=cab.x+ax.x*(sh.wide*0.42+nudge)*side, wy=cab.y+ax.y*(sh.wide*0.42+nudge)*side, wz=cab.z+ax.z*(sh.wide*0.42+nudge)*side;
+      const p00={x:wx-az.x*winL*0.5-ay.x*winH*0.5,y:wy-az.y*winL*0.5-ay.y*winH*0.5,z:wz-az.z*winL*0.5-ay.z*winH*0.5};
+      const p10={x:wx+az.x*winL*0.5-ay.x*winH*0.5,y:wy+az.y*winL*0.5-ay.y*winH*0.5,z:wz+az.z*winL*0.5-ay.z*winH*0.5};
+      const p11={x:wx+az.x*winL*0.5+ay.x*winH*0.5,y:wy+az.y*winL*0.5+ay.y*winH*0.5,z:wz+az.z*winL*0.5+ay.z*winH*0.5};
+      const p01={x:wx-az.x*winL*0.5+ay.x*winH*0.5,y:wy-az.y*winL*0.5+ay.y*winH*0.5,z:wz-az.z*winL*0.5+ay.z*winH*0.5};
+      faces.push({f:{v:[p00,p10,p11,p01]},tone:c.windowTone,slot:-2,c:{x:wx,y:wy,z:wz}});
+    }
     /* WHEELS earn their place only once the car is large enough on screen
        for them to be more than a stray pixel. */
     const probe=project(body.x,body.y,body.z);

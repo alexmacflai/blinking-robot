@@ -4,7 +4,7 @@
   "ink": "#0f0f13",
   "paper": "#eeebe1",
   "bg": {
-    "topTone": 1.0,
+    "topTone": 1,
     "bottomTone": 0.94,
     "endY": 416,
     "grain": 0
@@ -28,7 +28,7 @@
     "crown": 0.72,
     "tone": 0.74,
     "rimDark": 0.4,
-    "rimCurve": 4.0,
+    "rimCurve": 4,
     "rings": 56,
     "meridians": 80,
     "ringBias": 0.55
@@ -36,25 +36,23 @@
   "road": {
     "summitRho": 0.06,
     "summitRound": 0.22,
-    "frontBearing": -0.22,
-    "rearBearing": 3.4,
-    "sweepCurve": 1.25,
+    "frontBearing": 0,
+    "rearBearing": 3.14159,
     "windings": 1,
-    "wander": 0.16,
+    "wander": 0.06,
     "width": 14,
-    "lift": 0.5,
+    "lift": 3,
     "samples": 220,
-    "tone": 1.0,
+    "tone": 1,
     "dashTone": 0.25,
     "dashPeriod": 0.045,
     "dashLength": 0.3,
     "dashWidth": 1.2,
-    "dashLift": 0.25
+    "dashLift": 0.25,
+    "sweepCurve": 2.6
   },
   "house": {
-    "atS": -0.02,
-    "besideRho": 0.3,
-    "besideTheta": -0.85,
+    "atS": 0.18,
     "size": 16,
     "width": 0.62,
     "depth": 0.5,
@@ -63,7 +61,7 @@
     "sink": 0.02,
     "yaw": -0.35,
     "tone": 0.1,
-    "roofTone": 0.0,
+    "roofTone": 0,
     "shade": 0.06,
     "chimney": 0.14,
     "chimneyAt": 0.3,
@@ -73,44 +71,27 @@
     "smokeDrift": 0.45,
     "smokeR0": 0.05,
     "smokeR1": 0.22,
-    "smokeTone": 0.86
+    "smokeTone": 0.86,
+    "beside": -24,
+    "along": 0
   },
   "car": {
     "slots": 1,
     "gap": 0.9,
     "speed": 0.13,
-    "size": 8,
+    "size": 11,
     "widthRatio": 0.55,
     "heightRatio": 0.42,
     "sizeVary": 0.22,
     "tone": 0.04,
     "toneVary": 0.05,
     "shade": 0.18,
-    "wheelTone": 0.0,
-    "wheelAt": 5,
-    "accentEvery": 0
+    "wheelTone": 0,
+    "wheelAt": 0,
+    "accentEvery": 0,
+    "windowTone": 0.98
   },
   "banks": [
-    {
-      "id": "summit",
-      "kind": "puff",
-      "front": false,
-      "y": 196,
-      "tile": 210,
-      "tone": 0.8,
-      "seed": 20260826,
-      "clusters": 2,
-      "per": 4,
-      "rx": [
-        10,
-        18
-      ],
-      "ry": [
-        10,
-        20
-      ],
-      "drift": 0
-    },
     {
       "id": "mid",
       "kind": "sea",
@@ -138,7 +119,7 @@
       "front": true,
       "y": 336,
       "tile": 230,
-      "tone": 1.0,
+      "tone": 1,
       "seed": 40311,
       "lobes": 4,
       "soft": 1.5,

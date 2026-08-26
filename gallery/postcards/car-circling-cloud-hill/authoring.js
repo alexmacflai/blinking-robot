@@ -117,8 +117,8 @@ car.diagnostic(() => {
 
 const house = controls.section('THE HOUSE', 'Small, still, beside the road. It is placed from the road’s own frame, so moving the road carries it along.');
 rb(house, 'where on the road', 'house.atS', -1, 1, 0.01, v => v.toFixed(2));
-rb(house, 'out from the road', 'house.besideRho', -0.6, 0.6, 0.01, v => v.toFixed(2));
-rb(house, 'around the hill', 'house.besideTheta', -2, 2, 0.01, v => `${(v * 180 / Math.PI).toFixed(0)}°`);
+rb(house, 'sideways from the road', 'house.beside', -60, 60, 1, v => v);
+rb(house, 'along the road', 'house.along', -30, 30, 1, v => v);
 house.note('Against the sky at the summit a light-walled house disappears and only its roof reads. Step it down the shoulder, or keep it dark.');
 rb(house, 'size', 'house.size', 0, 60, 0.5, v => v <= 0 ? 'none' : v.toFixed(1));
 rb(house, 'wall height', 'house.wall', 0.15, 1, 0.01, v => v.toFixed(2));
