@@ -36,13 +36,16 @@ darkening is how the hill stays separate from a cloud of its own value behind
 it; shading the dome is not.
 
 Keep the centre dashes clearly lighter than a car. They are a road marking, and
-when they are as dark as a car the postcard loses the only moving thing in it.
+when they are as dark as a car it becomes hard to tell moving from static.
 
-The still world — hill, road, dashes, house, smoke — is **baked once** into a
-luminance/depth/coverage layer at build time. Anything that changes their
-geometry, tone, or the camera must re-bake, which is why those controls use
-`rebuild` rather than `render`. Only the cars and optional cloud drift are
-evaluated per frame.
+The still world — hill, road, dashes, and the house body — is **baked once**
+into a luminance/depth/coverage layer at build time. Anything that changes
+their geometry, tone, or the camera must re-bake, which is why those controls
+use `rebuild` rather than `render`. Cars, the chimney's smoke, and optional
+cloud drift are evaluated per frame; none of them are part of the bake. The
+smoke plume is a continuous rising stream, not a one-off animation — each
+puff's position is a wrapped phase, the same mechanism the traffic uses, so
+nothing pops in or out and nothing accumulates however long the scene runs.
 
 The clouds are two-dimensional lobed banks in the windmill’s manner, not
 objects in the depth buffer. A bank is either in front of the cars or behind

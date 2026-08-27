@@ -44,10 +44,11 @@ lever rather than a default.
   screen for them to be more than a stray pixel. Impossible things stay
   ordinary — nothing in the scene remarks on the hill being in the sky.
 - **Motion** ([`motion.md`](../../../knowledge/design/motion.md)): motion
-  exposes one relationship and stillness is an active choice. Only the cars
-  move. The hill, road, house, and cloud layers are still; cloud drift is
-  exposed as a control but defaults to zero, because a drifting cloud would
-  make the occluding layers read as weather rather than as the edges of the
+  exposes one relationship and stillness is an active choice. Cars and the
+  chimney's smoke move; the hill, road, and house body stay still, and cloud
+  drift is exposed as a control but defaults to zero, because a drifting
+  cloud would make the occluding layers read as weather rather than as the
+  edges of the
   world.
 - **Rendering** ([`rendering.md`](../../../knowledge/design/rendering.md)):
   shades establish depth, and a same-value neighbour needs a stroke to stay
@@ -85,14 +86,15 @@ lever rather than a default.
   rather than by ordering sprites. The road is offset outward along the hill's
   own surface normal, so the stretch of it on the far side is hidden by the
   hill for the same reason the cars there are.
-- **Discarded from the sketch**: the sketch's chimney smoke plume is kept but
-  held **still**, as a graphic mark rather than an animation. A second moving
-  thing would compete with the single relationship the postcard exists to
-  show; a still plume keeps the house's mundane detail and the sketch's quiet
-  joke of a chimney feeding the cloud above it. `house.smokeHeight` at 0
-  removes it. The sketch's third panel crops much closer to the descending
-  car; the established framing is the first panel's, and the ticket's
-  composition notes follow it.
+- **Discarded from the sketch**: the sketch's third panel crops much closer
+  to the descending car; the established framing is the first panel's, and
+  the ticket's composition notes follow it.
+- **Reversed by direct instruction**: the smoke plume was originally kept
+  static — a second moving thing would compete with the car, the postcard's
+  one relationship to watch. That was overridden explicitly: the plume is now
+  a continuous rising stream (a wrapped phase per puff, the same mechanism
+  the traffic uses, so nothing pops in or out and nothing accumulates).
+  `house.smokeHeight` at 0 still removes it entirely.
 
 ## Gallery writing
 

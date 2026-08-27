@@ -127,16 +127,17 @@ rb(house, 'wall tone', 'house.tone', 0, 1, 0.005, v => v.toFixed(3));
 rb(house, 'roof tone', 'house.roofTone', 0, 1, 0.005, v => v.toFixed(3));
 rb(house, 'form shading', 'house.shade', 0, 0.5, 0.01, v => v.toFixed(2));
 
-const smoke = controls.section('CHIMNEY AND SMOKE', 'The plume is STILL. The postcard has one moving thing; a second would compete with it. The sketch’s smoke is kept as a graphic mark.');
+const smoke = controls.section('CHIMNEY AND SMOKE', 'The plume is a continuous rising stream, not a one-off animation: each puff\'s progress from the chimney mouth to full dispersal is a wrapped phase, the same trick the traffic uses, so nothing pops in or out and nothing accumulates. It is the scene\'s second moving thing — a deliberate reversal of this postcard\'s original brief, which kept it static so it would not compete with the car.');
 rb(smoke, 'chimney width', 'house.chimney', 0, 0.5, 0.01, v => v.toFixed(2));
 rb(smoke, 'chimney height', 'house.chimneyAt', 0, 0.8, 0.01, v => v.toFixed(2));
-rb(smoke, 'plume height', 'house.smokeHeight', 0, 6, 0.05, v => v <= 0 ? 'none' : v.toFixed(2));
-rb(smoke, 'plume lean', 'house.smokeDrift', -1.5, 1.5, 0.02, v => v.toFixed(2));
-rb(smoke, 'plume coils', 'house.smokeCoils', 0, 4, 0.05, v => v.toFixed(2));
-rb(smoke, 'puffs', 'house.smokePuffs', 3, 40, 1, v => v);
-rb(smoke, 'puff size at chimney', 'house.smokeR0', 0.01, 0.5, 0.005, v => v.toFixed(3));
-rb(smoke, 'puff size at top', 'house.smokeR1', 0.01, 0.8, 0.005, v => v.toFixed(3));
-rb(smoke, 'tone', 'house.smokeTone', 0, 1, 0.005, v => v.toFixed(3));
+r(smoke, 'plume height', 'house.smokeHeight', 0, 6, 0.05, v => v <= 0 ? 'none' : v.toFixed(2));
+r(smoke, 'rise speed', 'house.smokeSpeed', 0, 1.5, 0.01, v => v <= 0 ? 'still' : `${v.toFixed(2)} · ${(1/Math.max(0.001,v)).toFixed(1)}s/lap`);
+r(smoke, 'plume lean', 'house.smokeDrift', -1.5, 1.5, 0.02, v => v.toFixed(2));
+r(smoke, 'plume coils', 'house.smokeCoils', 0, 4, 0.05, v => v.toFixed(2));
+r(smoke, 'puffs', 'house.smokePuffs', 3, 40, 1, v => v);
+r(smoke, 'puff size at chimney', 'house.smokeR0', 0.01, 0.5, 0.005, v => v.toFixed(3));
+r(smoke, 'puff size at top', 'house.smokeR1', 0.01, 0.8, 0.005, v => v.toFixed(3));
+r(smoke, 'tone', 'house.smokeTone', 0, 1, 0.005, v => v.toFixed(3));
 
 const light = controls.section('LIGHT', 'A direction, not a lighting model. It decides which flat tone a face of the house or a car takes.');
 rb(light, 'from the side', 'light.x', -1, 1, 0.02, v => v.toFixed(2));

@@ -100,6 +100,7 @@ let HL,HD,HC,HS;          // baked static layer: lum, depth, coverage, slot
 let bankA;                // scratch coverage for a puff bank
 let BANKS=[];
 let CAM_X,CAM_Y,CAM_Z;    // camera position in world, for facing ratios
+let CHIMNEY_TOP=null;     // world-space chimney mouth, set by bakeHouse, read by drawSmoke
 
 const cv=document.getElementById('c');
 const ctx=cv.getContext('2d',{alpha:false});
@@ -488,27 +489,47 @@ function bakeHouse(){
   const gableB={v:[c01,c11,ridgeB,ridgeB],nx: az.x,ny:0,nz: az.z};
   drawFaces([gableA,gableB,slopeA,slopeB],ho.roofTone,ho.shade,-2);
 
-  /* CHIMNEY + a STILL plume. The sketch has smoke feeding the cloud above
-     the hill; keeping it still holds that detail without giving the
-     postcard a second moving thing to watch. */
+  /* CHIMNEY. The plume itself is drawn per-frame (see drawSmoke) — it is
+     the scene's second moving thing, so it is not part of the baked
+     still world. The chimney's mouth is saved in world space so the
+     smoke has somewhere to originate from without repeating this
+     placement math. */
   const chW=ho.size*ho.chimney*0.5;
   const chH=ho.size*ho.chimneyAt;
   const ch={x:lerp(ridgeA.x,ridgeB.x,0.28),y:topY+rise*0.55,z:lerp(ridgeA.z,ridgeB.z,0.28)};
   const chc={x:ch.x,y:ch.y+chH*0.5,z:ch.z};
   drawFaces(boxFaces(chc,ax,up,az,chW,chH*0.5,chW),ho.tone,ho.shade,-2);
+  CHIMNEY_TOP={x:chc.x,y:chc.y+chH*0.5,z:chc.z};
+}
 
-  if(ho.smokeHeight>0){
-    const top={x:chc.x,y:chc.y+chH*0.5,z:chc.z};
-    const steps=Math.max(4,Math.round(ho.smokePuffs));
-    for(let i=0;i<=steps;i++){
-      const t=i/steps;
-      const y=top.y+ho.smokeHeight*ho.size*t;
-      const x=top.x+Math.sin(t*Math.PI*ho.smokeCoils)*ho.smokeDrift*ho.size*t;
-      const p=project(x,y,top.z);
-      if(!p) continue;
-      const r=Math.max(0.5,(ho.smokeR0+(ho.smokeR1-ho.smokeR0)*t)*ho.size*p.k*S);
-      discAt(p,r,ho.smokeTone,-2);
-    }
+/* ======================================================================
+   SMOKE — a continuous rising stream, the scene's second moving thing
+
+   Puffs are identified by a phase offset spread evenly along the stream,
+   the same wrapped-phase trick the traffic uses: each puff's position is
+   (identity + flow*t) mod 1, so it cycles from the chimney mouth to full
+   dispersal and back to the mouth forever, with nothing accumulating and
+   no puff ever seen to pop in or out of existence — size and tone both
+   ramp from the same wrapped progress, so a puff is born at zero radius
+   at the chimney and fades as it reaches the top of the stream, exactly
+   where the next lap already hides the seam.
+   ==================================================================== */
+function drawSmoke(t){
+  const ho=CFG.house;
+  if(ho.size<=0||ho.smokeHeight<=0||!CHIMNEY_TOP) return;
+  const top=CHIMNEY_TOP;
+  const steps=Math.max(4,Math.round(ho.smokePuffs));
+  const flow=Math.max(0,ho.smokeSpeed);
+  for(let i=0;i<=steps;i++){
+    const id=i/steps;
+    const u=((id+t*flow)%1+1)%1;
+    const y=top.y+ho.smokeHeight*ho.size*u;
+    const x=top.x+Math.sin(u*Math.PI*ho.smokeCoils)*ho.smokeDrift*ho.size*u;
+    const p=project(x,y,top.z);
+    if(!p) continue;
+    const r=Math.max(0.5,(ho.smokeR0+(ho.smokeR1-ho.smokeR0)*u)*ho.size*p.k*S);
+    target(lum,dep,null,twoBitSlot,true,false);
+    discAt(p,r,ho.smokeTone,-2);
   }
 }
 
@@ -797,6 +818,7 @@ function renderFrame(t){
     else dep[i]=Infinity;
   }
   drawCars(time);
+  drawSmoke(time);
   drawBanks(time,true);
   dither();
 }
