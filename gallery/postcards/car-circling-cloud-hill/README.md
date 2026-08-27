@@ -54,7 +54,10 @@ the upper edge to `1` at its hard group boundary and below, so the hill and
 traffic remain visible through the cloud group without blur, feathering, or
 per-lobe holes. The mask size is independently adjustable per front bank as
 an authored vertical length, including enough range for a top-to-bottom
-gradient through the rectangular cloud body.
+gradient through the rectangular cloud body. All four cloud groups follow one
+broad shallow arc, with the centre lower than the sides; the upright lobes,
+continuous wall/floor, and each front bank’s separate mask follow that moving
+profile.
 Their motion is depth-aware: the rear uses
 the minimum wind, the front the maximum, and the middle banks interpolate
 between them.

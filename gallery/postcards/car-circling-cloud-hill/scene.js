@@ -578,7 +578,9 @@ function drawFaces(faces,base,spread,slot){
    A bank marked `front` is drawn after the cars and is what they vanish
    into; the rest are drawn before the hill. Each front bank owns a separate
    group-level mask with values from 0.7 to 1. Neither mask is a per-lobe
-   hole or a shared foreground mask.
+   hole or a shared foreground mask. The field follows one broad shallow
+   arc; the individual lobes stay upright and hard-edged while the group
+   envelope, wall, floor, and front masks follow the same profile.
    ==================================================================== */
 function buildBanks(){
   const gl=v=>v*S, gy=v=>v*S;
@@ -590,6 +592,7 @@ function buildBanks(){
     const common={ id:b.id, front:!!b.front, depth, val:b.tone, Wp:gl(b.tile),
                    frontIndex:b.front?frontIndex++:-1,
                    speed:gl(lerp(motion.windMin||0,motion.windMax||0,depth)),
+                   arc:gl(motion.arc||0),
                    maskMin:clamp(b.maskMin==null?0.7:b.maskMin,0,1),
                    maskMax:clamp(b.maskMax==null?1:b.maskMax,0,1),
                    maskSize:b.maskSize==null?null:Math.max(0,b.maskSize) };
@@ -611,8 +614,9 @@ function buildBanks(){
       const groupBaseline=gy(b.y);
       const maskSpan=common.maskSize==null?groupBaseline-maskTop:common.maskSize*S;
       const maskBottom=maskTop+Math.max(1,maskSpan);
+      const arcPad=Math.abs(common.arc);
       return Object.assign(common,{kind:'puff',lobes,
-        yA:Math.max(0,Math.floor(mnY)-1), yB:Math.min(H,Math.ceil(mxY)+2),
+        yA:Math.max(0,Math.floor(mnY-arcPad)-1), yB:Math.min(H,Math.ceil(mxY+arcPad)+2),
         maskTop, maskBottom});
     }
     const lobes=[];
@@ -630,9 +634,22 @@ function buildBanks(){
   });
 }
 
-function groupMaskValue(L,y){
+/* The broad curve belongs to the moving bank. `off` is subtracted before
+   sampling it, so a lobe and the mask attached to it keep the same vertical
+   relationship while wind carries the bank across the frame. The profile is
+   deliberately broad and parabolic: this is the group envelope, not a new
+   shape carved into every individual lobe. */
+function cloudArcOffset(L,x,off){
+  if(!L.arc) return 0;
+  const span=W||1;
+  const local=((x-off)%span+span)%span;
+  const u=local/Math.max(1,span-1)*2-1;
+  return L.arc*Math.max(0,1-u*u);
+}
+function groupMaskValue(L,y,x,off){
   const span=Math.max(1,L.maskBottom-L.maskTop);
-  return lerp(L.maskMin,L.maskMax,clamp((y-L.maskTop)/span,0,1));
+  const curve=cloudArcOffset(L,x,off);
+  return lerp(L.maskMin,L.maskMax,clamp((y-curve-L.maskTop)/span,0,1));
 }
 
 function drawPuff(L,t){
@@ -641,14 +658,15 @@ function drawPuff(L,t){
   if(yB<=yA) return;
   bankA.fill(0,yA*W,yB*W);
   for(const lo of L.lobes){
+    const cy=lo.cy+cloudArcOffset(L,lo.cx+off,off);
     for(let k=-1;k<=1;k++){
       const cx=lo.cx+off+k*L.Wp;
       if(cx+lo.rx<0||cx-lo.rx>=W) continue;
       const x0=Math.max(0,Math.floor(cx-lo.rx)), x1=Math.min(W-1,Math.ceil(cx+lo.rx));
-      const y0=Math.max(yA,Math.floor(lo.cy-lo.ry)), y1=Math.min(yB-1,Math.ceil(lo.cy+lo.ry));
+      const y0=Math.max(yA,Math.floor(cy-lo.ry)), y1=Math.min(yB-1,Math.ceil(cy+lo.ry));
       const irx=1/lo.rx, iry=1/lo.ry;
       for(let y=y0;y<=y1;y++){
-        const dy=(y-lo.cy)*iry, dy2=dy*dy, row=y*W;
+        const dy=(y-cy)*iry, dy2=dy*dy, row=y*W;
         if(dy2>=1) continue;
         for(let x=x0;x<=x1;x++){
           const dx=(x-cx)*irx, q=dx*dx+dy2;
@@ -662,14 +680,13 @@ function drawPuff(L,t){
     }
   }
   for(let y=yA;y<yB;y++){
-    const groupMask=L.front ? groupMaskValue(L,y) : 1;
     for(let x=0;x<W;x++){
       const i=y*W+x, a=bankA[i];
       if(a<=0) continue;
       if(L.front){
         const layer=frontCloudLayers[L.frontIndex];
         layer.pixels[i]=L.val;
-        layer.mask[i]=Math.max(layer.mask[i],groupMask);
+        layer.mask[i]=Math.max(layer.mask[i],groupMaskValue(L,y,x,off));
       }else{
         lum[i]=lum[i]*(1-a)+L.val*a;
         twoBitSlot[i]=-2;
@@ -688,12 +705,13 @@ function drawSea(L,t){
         const dx=wx-(lo.cx+k*L.Wp);
         if(dx>-lo.rx&&dx<lo.rx){
           const q=dx/lo.rx;
-          const yc=L.y0+lo.dy-lo.ry*Math.sqrt(1-q*q);
+          const yc=L.y0+lo.dy+cloudArcOffset(L,lo.cx+off,off)-lo.ry*Math.sqrt(1-q*q);
           if(yc<m)m=yc;
         }
       }
     }
-    top[x]=L.floor&&m>L.floor?L.floor:m;
+    const floor=L.floor?L.floor+cloudArcOffset(L,x,off):0;
+    top[x]=L.floor&&m>floor?floor:m;
   }
   const val=L.val;
   const layer=L.front?frontCloudLayers[L.frontIndex]:null;
@@ -703,7 +721,7 @@ function drawSea(L,t){
       /* Each front bank owns this mask. Its ramp uses the bank's own group
          envelope, never an individual lobe boundary. The authored endpoints
          are 0.7 at the upper edge and 1 at the group boundary and below. */
-      const alpha=L.front ? groupMaskValue(L,y) : 1;
+      const alpha=L.front ? groupMaskValue(L,y,x,off) : 1;
       const i=y*W+x;
       if(L.front){
         layer.pixels[i]=val;

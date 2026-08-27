@@ -63,6 +63,11 @@ lever rather than a default.
   holes. Each front group exposes its own authored mask size so the ramp can
   be made shorter or longer—even across the full rectangular cloud body—without
   combining the masks.
+  All four cloud groups follow one broad shallow arc: the group centre sits
+  lower than its sides, while the individual lobes remain upright and sharp.
+  The arc also applies to each group’s continuous wall/floor and follows the
+  moving bank, so it does not shear against the wind. Each front mask samples
+  the same moving arc profile as its own cloud group.
   Cloud movement follows depth: the rear uses the minimum wind, the front the
   maximum, and the middle groups interpolate between them.
 - **Visual-language catalogue** ([`visual-language.md`](../../../knowledge/design/visual-language.md)):

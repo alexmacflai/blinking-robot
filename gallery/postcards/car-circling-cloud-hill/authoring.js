@@ -153,10 +153,11 @@ r(sky, 'end tone', 'bg.bottomTone', 0, 1, 0.005, v => v.toFixed(3));
 r(sky, 'gradient ends at', 'bg.endY', 20, 416, 2, v => `${v} of 416`);
 r(sky, 'grain', 'bg.grain', 0, 0.12, 0.002, v => v.toFixed(3));
 
-const cloudMotion = controls.section('CLOUD MOTION', 'Four cloud groups move at different speeds. The rear uses the minimum wind, the front uses the maximum, and the two middle groups interpolate between them.');
+const cloudMotion = controls.section('CLOUD MOTION', 'Four cloud groups move at different speeds and follow one broad shallow arc. The rear uses the minimum wind, the front uses the maximum, and the two middle groups interpolate between them.');
 rb(cloudMotion, 'minimum wind', 'cloudMotion.windMin', -12, 12, 0.1, v => Math.abs(v) < 0.05 ? 'still' : v.toFixed(1));
 rb(cloudMotion, 'maximum wind', 'cloudMotion.windMax', -12, 12, 0.1, v => Math.abs(v) < 0.05 ? 'still' : v.toFixed(1));
-cloudMotion.note('Wind is measured in authored pixels per second. The bank depth values determine the interpolation; the two rear banks are depth 0 and 0.33, and the two front banks are depth 0.67 and 1.');
+rb(cloudMotion, 'cloud arc', 'cloudMotion.arc', -120, 120, 1, v => v === 0 ? 'flat' : `${v > 0 ? '+' : ''}${v}px`);
+cloudMotion.note('Wind is measured in authored pixels per second. The bank depth values determine the interpolation; the two rear banks are depth 0 and 0.33, and the two front banks are depth 0.67 and 1. Positive arc lowers the group centre and leaves the sides higher. The curve moves with the bank; the lobes remain upright and sharp.');
 
 /* One section per bank, built from the values file so the four cloud groups
    keep their scene-specific shape controls in the authoring surface. */

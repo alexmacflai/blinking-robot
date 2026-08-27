@@ -93,7 +93,8 @@
   },
   "cloudMotion": {
     "windMin": -6,
-    "windMax": -12
+    "windMax": -12,
+    "arc": 28
   },
   "banks": [
     {
