@@ -52,7 +52,10 @@ objects in the depth buffer: exactly two behind the hill and exactly two in
 front. Each front bank has its own group-level mask that ramps from `0.7` at
 the upper edge to `1` at its hard group boundary and below, so the hill and
 traffic remain visible through the cloud group without blur, feathering, or
-per-lobe holes. Their motion is depth-aware: the rear uses
+per-lobe holes. The mask size is independently adjustable per front bank as
+an authored vertical length, including enough range for a top-to-bottom
+gradient through the rectangular cloud body.
+Their motion is depth-aware: the rear uses
 the minimum wind, the front the maximum, and the middle banks interpolate
 between them.
 

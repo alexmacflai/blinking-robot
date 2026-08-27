@@ -60,7 +60,9 @@ lever rather than a default.
   mask that ramps from `0.7` at the upper edge to `1` at that group’s hard
   boundary and below, so the hill and traffic remain legible through the cloud
   group. The cloud silhouettes stay sharp: no blur, feathering, or per-lobe
-  holes.
+  holes. Each front group exposes its own authored mask size so the ramp can
+  be made shorter or longer—even across the full rectangular cloud body—without
+  combining the masks.
   Cloud movement follows depth: the rear uses the minimum wind, the front the
   maximum, and the middle groups interpolate between them.
 - **Visual-language catalogue** ([`visual-language.md`](../../../knowledge/design/visual-language.md)):

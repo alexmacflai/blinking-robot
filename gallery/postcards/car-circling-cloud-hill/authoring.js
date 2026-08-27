@@ -176,9 +176,12 @@ cfg.banks.forEach((bank, index) => {
     rb(section, 'lobes', p('lobes'), 2, 16, 1, v => v);
     rb(section, 'floor above the line', p('floorUp'), 0, 40, 1, v => v === 0 ? 'no floor' : v);
     section.note('A floor keeps the mass continuous while its lobes billow above it. Without one you have to pack the lobes tight, and tightly packed lobes make the surface a ruled line.');
-    rb(section, 'mask minimum', p('maskMin'), 0.7, 1, 0.01, v => v.toFixed(2));
-    rb(section, 'mask maximum', p('maskMax'), 0.7, 1, 0.01, v => v.toFixed(2));
-    section.note('This cloud’s independent group-level mask ranges from 0.7 to 1. The underlying scene remains visible through the upper mask region. No shared mask and no per-lobe holes.');
+  }
+  if (bank.front) {
+    rb(section, 'mask minimum', p('maskMin'), 0, 1, 0.01, v => v.toFixed(2));
+    rb(section, 'mask maximum', p('maskMax'), 0, 1, 0.01, v => v.toFixed(2));
+    rb(section, 'mask size', p('maskSize'), 0, 416, 1, v => v <= 0 ? 'none' : `${v}px`);
+    section.note('This cloud has its own group-level mask. The ramp starts at the top of the whole cloud group and runs for this many authored pixels before reaching the mask maximum. Use the full distance to the bottom of the postcard for a top-to-bottom gradient. No shared mask and no per-lobe holes.');
   }
   rb(section, 'lobe width (min)', p('rx.0'), 4, 80, 1, v => v);
   rb(section, 'lobe width (max)', p('rx.1'), 4, 90, 1, v => v);

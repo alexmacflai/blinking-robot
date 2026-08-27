@@ -98,15 +98,14 @@
   "banks": [
     {
       "id": "rear-far",
-      "kind": "puff",
+      "kind": "sea",
       "front": false,
       "depth": 0,
-      "y": 302,
-      "tile": 190,
+      "y": 220,
+      "tile": 234,
       "tone": 0.18,
       "seed": 7712,
-      "clusters": 3,
-      "per": 4,
+      "lobes": 4,
       "rx": [
         14,
         34
@@ -114,7 +113,8 @@
       "ry": [
         6,
         15
-      ]
+      ],
+      "floorUp": 0
     },
     {
       "id": "rear-near",
@@ -148,6 +148,7 @@
       "lobes": 5,
       "maskMin": 0.7,
       "maskMax": 1,
+      "maskSize": 38,
       "rx": [
         34,
         74
@@ -163,13 +164,14 @@
       "kind": "sea",
       "front": true,
       "depth": 1,
-      "y": 340,
+      "y": 300,
       "tile": 468,
       "tone": 0.52,
       "seed": 40311,
       "lobes": 4,
       "maskMin": 0.7,
       "maskMax": 1,
+      "maskSize": 56,
       "rx": [
         58,
         108

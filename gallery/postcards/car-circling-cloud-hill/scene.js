@@ -591,7 +591,8 @@ function buildBanks(){
                    frontIndex:b.front?frontIndex++:-1,
                    speed:gl(lerp(motion.windMin||0,motion.windMax||0,depth)),
                    maskMin:clamp(b.maskMin==null?0.7:b.maskMin,0,1),
-                   maskMax:clamp(b.maskMax==null?1:b.maskMax,0,1) };
+                   maskMax:clamp(b.maskMax==null?1:b.maskMax,0,1),
+                   maskSize:b.maskSize==null?null:Math.max(0,b.maskSize) };
     if(b.kind==='puff'){
       const lobes=[]; let mnY=1e9,mxY=-1e9;
       for(let k=0;k<b.clusters;k++){
@@ -606,9 +607,13 @@ function buildBanks(){
           if(cy-ry<mnY)mnY=cy-ry; if(cy+ry>mxY)mxY=cy+ry;
         }
       }
+      const maskTop=mnY;
+      const groupBaseline=gy(b.y);
+      const maskSpan=common.maskSize==null?groupBaseline-maskTop:common.maskSize*S;
+      const maskBottom=maskTop+Math.max(1,maskSpan);
       return Object.assign(common,{kind:'puff',lobes,
         yA:Math.max(0,Math.floor(mnY)-1), yB:Math.min(H,Math.ceil(mxY)+2),
-        maskTop:mnY, maskBottom:gy(b.y)});
+        maskTop, maskBottom});
     }
     const lobes=[];
     for(let i=0;i<b.lobes;i++) lobes.push({
@@ -618,9 +623,10 @@ function buildBanks(){
       dy:(rnd()-0.5)*7*S});
     const y0=gy(b.y);
     const maskTop=y0-Math.max(1,Math.max(...lobes.map(lo=>lo.ry)));
+    const maskBottom=maskTop+Math.max(1,(common.maskSize==null?Math.max(...lobes.map(lo=>lo.ry)):common.maskSize*S));
     return Object.assign(common,{kind:'sea',y0,
       lobes,floor:b.floorUp!=null?gy(b.y-b.floorUp):0,top:new Float32Array(W),
-      maskTop,maskBottom:y0});
+      maskTop,maskBottom});
   });
 }
 
