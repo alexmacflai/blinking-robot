@@ -523,11 +523,23 @@ function drawSmoke(t){
   for(let i=0;i<=steps;i++){
     const id=i/steps;
     const u=((id+t*flow)%1+1)%1;
+    /* Each SLOT (i, not the wrapping identity) gets its own fixed random
+       offset and size, hashed the same way a car's shape is — so a given
+       puff keeps its own character every time it cycles through, rather
+       than every puff being a perfect clone stamped along one curve.
+       Deviation is scaled by u itself: zero at the chimney mouth, full
+       size by full dispersal, so smoke still reads as coming from one
+       point and only loses its shape as it rises, the way real smoke
+       does — jitter present from u=0 would just look like a wobbly pipe. */
+    const jx=(hash1(i,401)-0.5)*2*ho.smokeJitter*ho.size*u;
+    const jz=(hash1(i,613)-0.5)*2*ho.smokeJitter*ho.size*u;
+    const jSize=1+(hash1(i,821)-0.5)*2*ho.smokeSizeVary;
     const y=top.y+ho.smokeHeight*ho.size*u;
-    const x=top.x+Math.sin(u*Math.PI*ho.smokeCoils)*ho.smokeDrift*ho.size*u;
-    const p=project(x,y,top.z);
+    const x=top.x+Math.sin(u*Math.PI*ho.smokeCoils)*ho.smokeDrift*ho.size*u+jx;
+    const z=top.z+jz;
+    const p=project(x,y,z);
     if(!p) continue;
-    const r=Math.max(0.5,(ho.smokeR0+(ho.smokeR1-ho.smokeR0)*u)*ho.size*p.k*S);
+    const r=Math.max(0.5,(ho.smokeR0+(ho.smokeR1-ho.smokeR0)*u)*ho.size*p.k*S*jSize);
     target(lum,dep,null,twoBitSlot,true,false);
     discAt(p,r,ho.smokeTone,-2);
   }

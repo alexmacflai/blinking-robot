@@ -134,6 +134,9 @@ r(smoke, 'plume height', 'house.smokeHeight', 0, 6, 0.05, v => v <= 0 ? 'none' :
 r(smoke, 'rise speed', 'house.smokeSpeed', 0, 1.5, 0.01, v => v <= 0 ? 'still' : `${v.toFixed(2)} · ${(1/Math.max(0.001,v)).toFixed(1)}s/lap`);
 r(smoke, 'plume lean', 'house.smokeDrift', -1.5, 1.5, 0.02, v => v.toFixed(2));
 r(smoke, 'plume coils', 'house.smokeCoils', 0, 4, 0.05, v => v.toFixed(2));
+r(smoke, 'puff wander', 'house.smokeJitter', 0, 1.5, 0.02, v => v.toFixed(2));
+smoke.note('Each puff keeps its own random sideways drift every lap, instead of every puff tracing the identical curve. It fades in from zero at the chimney mouth to full size by full dispersal, so the plume still reads as coming from one point.');
+r(smoke, 'puff size variation', 'house.smokeSizeVary', 0, 0.9, 0.02, v => v.toFixed(2));
 r(smoke, 'puffs', 'house.smokePuffs', 3, 40, 1, v => v);
 r(smoke, 'puff size at chimney', 'house.smokeR0', 0.01, 0.5, 0.005, v => v.toFixed(3));
 r(smoke, 'puff size at top', 'house.smokeR1', 0.01, 0.8, 0.005, v => v.toFixed(3));
