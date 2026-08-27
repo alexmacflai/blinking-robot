@@ -49,8 +49,10 @@ nothing pops in or out and nothing accumulates however long the scene runs.
 
 The clouds are four two-dimensional lobed banks in the windmill’s manner, not
 objects in the depth buffer: exactly two behind the hill and exactly two in
-front. Each front bank has a hard shared opening across its upper portion so
-the hill and traffic remain visible through the cloud group. Their motion is depth-aware: the rear uses
+front. Each front bank has its own group-level mask that ramps from `0.7` at
+the upper edge to `1` at its hard group boundary and below, so the hill and
+traffic remain visible through the cloud group without blur, feathering, or
+per-lobe holes. Their motion is depth-aware: the rear uses
 the minimum wind, the front the maximum, and the middle banks interpolate
 between them.
 

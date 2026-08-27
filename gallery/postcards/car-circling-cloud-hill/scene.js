@@ -30,9 +30,9 @@ import { createPlaybackState } from '../../shared/playback.js';
 
    THE CLOUDS ARE FIELDS, not objects — four two-dimensional lobed banks in
    the windmill's manner: exactly two behind the hill and exactly two in
-   front. Each front bank has a hard, shared transparency mask across the
-   upper part of the cloud group, so the hill and cars remain visible through
-   it. Back banks are drawn
+   front. Each front bank has its own hard group-level transparency mask across
+   the upper part of the cloud group, so the hill and cars remain visible
+   through it. Back banks are drawn
    before the hill; front banks are drawn after the cars. Their drift is
    interpolated from the global minimum wind at the rear to the maximum wind
    at the front.
@@ -99,7 +99,7 @@ function packColor(hex){
    ==================================================================== */
 let W,H,S;
 let lum,dep,twoBitSlot,img,buf32,CINK,CMID,CPAP,CACC;
-let frontCloudLum,frontCloudMask;
+let frontCloudLayers=[];
 let HL,HD,HC,HS;          // baked static layer: lum, depth, coverage, slot
 let bankA;                // scratch coverage for a puff bank
 let BANKS=[];
@@ -118,8 +118,9 @@ function build(){
   lum=new Float32Array(W*H);
   dep=new Float32Array(W*H);
   twoBitSlot=new Int8Array(W*H);
-  frontCloudLum=new Float32Array(W*H);
-  frontCloudMask=new Float32Array(W*H);
+  frontCloudLayers=CFG.banks.filter(b=>b.front).map(()=>({
+    pixels:new Float32Array(W*H), mask:new Float32Array(W*H)
+  }));
   HL=new Float32Array(W*H);
   HD=new Float32Array(W*H);
   HC=new Uint8Array(W*H);
@@ -575,20 +576,22 @@ function drawFaces(faces,base,spread,slot){
          billow above it — without it you have to pack the lobes tight,
          and tightly packed lobes make the surface a ruled line.
    A bank marked `front` is drawn after the cars and is what they vanish
-   into; the rest are drawn before the hill. The `open` value controls the
-   depth of that hard group-level mask, while `openAlpha` controls its one
-   constant transparency value. Neither is a fade or a per-lobe hole.
+   into; the rest are drawn before the hill. Each front bank owns a separate
+   group-level mask with values from 0.7 to 1. Neither mask is a per-lobe
+   hole or a shared foreground mask.
    ==================================================================== */
 function buildBanks(){
   const gl=v=>v*S, gy=v=>v*S;
   const motion=CFG.cloudMotion||{windMin:0,windMax:0};
+  let frontIndex=0;
   BANKS=CFG.banks.map((b,index)=>{
     const rnd=mulberry32(b.seed);
     const depth=clamp(b.depth!=null?b.depth:index/Math.max(1,CFG.banks.length-1),0,1);
     const common={ id:b.id, front:!!b.front, depth, val:b.tone, Wp:gl(b.tile),
+                   frontIndex:b.front?frontIndex++:-1,
                    speed:gl(lerp(motion.windMin||0,motion.windMax||0,depth)),
-                   open:gl(Math.max(0,b.open||0)),
-                   openAlpha:clamp(b.openAlpha==null?0.35:b.openAlpha,0,1) };
+                   maskMin:clamp(b.maskMin==null?0.7:b.maskMin,0,1),
+                   maskMax:clamp(b.maskMax==null?1:b.maskMax,0,1) };
     if(b.kind==='puff'){
       const lobes=[]; let mnY=1e9,mxY=-1e9;
       for(let k=0;k<b.clusters;k++){
@@ -604,7 +607,8 @@ function buildBanks(){
         }
       }
       return Object.assign(common,{kind:'puff',lobes,
-        yA:Math.max(0,Math.floor(mnY)-1), yB:Math.min(H,Math.ceil(mxY)+2)});
+        yA:Math.max(0,Math.floor(mnY)-1), yB:Math.min(H,Math.ceil(mxY)+2),
+        maskTop:mnY, maskBottom:gy(b.y)});
     }
     const lobes=[];
     for(let i=0;i<b.lobes;i++) lobes.push({
@@ -612,12 +616,19 @@ function buildBanks(){
       rx:gl(b.rx[0]+rnd()*(b.rx[1]-b.rx[0])),
       ry:gl(b.ry[0]+rnd()*(b.ry[1]-b.ry[0])),
       dy:(rnd()-0.5)*7*S});
-    return Object.assign(common,{kind:'sea',y0:gy(b.y),
-      lobes,floor:b.floorUp!=null?gy(b.y-b.floorUp):0,top:new Float32Array(W)});
+    const y0=gy(b.y);
+    const maskTop=y0-Math.max(1,Math.max(...lobes.map(lo=>lo.ry)));
+    return Object.assign(common,{kind:'sea',y0,
+      lobes,floor:b.floorUp!=null?gy(b.y-b.floorUp):0,top:new Float32Array(W),
+      maskTop,maskBottom:y0});
   });
 }
 
-const PUFF_EDGE=0.34;
+function groupMaskValue(L,y){
+  const span=Math.max(1,L.maskBottom-L.maskTop);
+  return lerp(L.maskMin,L.maskMax,clamp((y-L.maskTop)/span,0,1));
+}
+
 function drawPuff(L,t){
   const off=(L.speed*t)%(L.Wp||1);
   const yA=L.yA, yB=L.yB;
@@ -636,22 +647,27 @@ function drawPuff(L,t){
         for(let x=x0;x<=x1;x++){
           const dx=(x-cx)*irx, q=dx*dx+dy2;
           if(q>=1) continue;
-          let v=(1-q)/PUFF_EDGE; if(v>1)v=1;
+          /* The silhouette is binary. No ellipse falloff, blur, or feathering. */
+          const v=1;
           const i=row+x;
           if(v>bankA[i]) bankA[i]=v;
         }
       }
     }
   }
-  for(let i=yA*W,n=yB*W;i<n;i++){
-    const a=bankA[i];
-    if(a<=0) continue;
-    if(L.front){
-      frontCloudLum[i]=frontCloudLum[i]*(1-a)+L.val*a;
-      frontCloudMask[i]=frontCloudMask[i]+(1-frontCloudMask[i])*a;
-    }else{
-      lum[i]=lum[i]*(1-a)+L.val*a;
-      twoBitSlot[i]=-2;
+  for(let y=yA;y<yB;y++){
+    const groupMask=L.front ? groupMaskValue(L,y) : 1;
+    for(let x=0;x<W;x++){
+      const i=y*W+x, a=bankA[i];
+      if(a<=0) continue;
+      if(L.front){
+        const layer=frontCloudLayers[L.frontIndex];
+        layer.pixels[i]=L.val;
+        layer.mask[i]=Math.max(layer.mask[i],groupMask);
+      }else{
+        lum[i]=lum[i]*(1-a)+L.val*a;
+        twoBitSlot[i]=-2;
+      }
     }
   }
 }
@@ -673,20 +689,19 @@ function drawSea(L,t){
     }
     top[x]=L.floor&&m>L.floor?L.floor:m;
   }
-  const val=L.val, open=L.front?L.open:0, openAlpha=L.openAlpha;
+  const val=L.val;
+  const layer=L.front?frontCloudLayers[L.frontIndex]:null;
   for(let x=0;x<W;x++){
     const tp=top[x];
     for(let y=tp<0?0:Math.floor(tp);y<H;y++){
-      const edge=y-tp;
-      /* Actual hard transparency mask: the upper group region uses one
-         constant alpha, then the cloud is fully opaque below it. The
-         underlying hill, car, or cloud remains visible through that region.
-         There is no feathering, blur, opacity ramp, or per-lobe mask. */
-      const alpha=open>0 && edge<open ? openAlpha : 1;
+      /* Each front bank owns this mask. Its ramp uses the bank's own group
+         envelope, never an individual lobe boundary. The authored endpoints
+         are 0.7 at the upper edge and 1 at the group boundary and below. */
+      const alpha=L.front ? groupMaskValue(L,y) : 1;
       const i=y*W+x;
       if(L.front){
-        frontCloudLum[i]=frontCloudLum[i]*(1-alpha)+val*alpha;
-        frontCloudMask[i]=frontCloudMask[i]+(1-frontCloudMask[i])*alpha;
+        layer.pixels[i]=val;
+        layer.mask[i]=Math.max(layer.mask[i],alpha);
       }else{
         lum[i]=val;
         twoBitSlot[i]=-2;
@@ -695,19 +710,23 @@ function drawSea(L,t){
   }
 }
 function drawBanks(t,front){
-  if(front){ frontCloudLum.fill(0); frontCloudMask.fill(0); }
+  if(front){
+    for(const layer of frontCloudLayers){ layer.pixels.fill(0); layer.mask.fill(0); }
+  }
   for(const L of BANKS){
     if(!!L.front!==front) continue;
     if(L.kind==='puff') drawPuff(L,t); else drawSea(L,t);
   }
   if(front){
-    for(let i=0;i<lum.length;i++){
-      const a=frontCloudMask[i];
-      if(a<=0) continue;
-      /* frontCloudLum is premultiplied by the mask while the front groups
-         are accumulated, so apply the mask exactly once here. */
-      lum[i]=lum[i]*(1-a)+frontCloudLum[i];
-      if(a>=0.999) twoBitSlot[i]=-2;
+    for(const L of BANKS){
+      if(!L.front) continue;
+      const layer=frontCloudLayers[L.frontIndex];
+      for(let i=0;i<lum.length;i++){
+        const a=layer.mask[i];
+        if(a<=0) continue;
+        lum[i]=lum[i]*(1-a)+layer.pixels[i]*a;
+        if(a>=0.999) twoBitSlot[i]=-2;
+      }
     }
   }
 }

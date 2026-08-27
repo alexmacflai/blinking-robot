@@ -45,11 +45,10 @@ lever rather than a default.
   ordinary — nothing in the scene remarks on the hill being in the sky.
 - **Motion** ([`motion.md`](../../../knowledge/design/motion.md)): motion
   exposes one relationship and stillness is an active choice. Cars and the
-  chimney's smoke move; the hill, road, and house body stay still, and cloud
-  drift is exposed as a control but defaults to zero, because a drifting
-  cloud would make the occluding layers read as weather rather than as the
-  edges of the
-  world.
+  chimney's smoke move; the hill, road, and house body stay still. Cloud drift
+  is exposed as minimum and maximum wind controls because the direct cloud
+  movement instruction requires the four depth layers to move at interpolated
+  speeds.
 - **Rendering** ([`rendering.md`](../../../knowledge/design/rendering.md)):
   shades establish depth, and a same-value neighbour needs a stroke to stay
   separate. The hill is deliberately a near-flat mass with its fall-off pushed
@@ -57,9 +56,11 @@ lever rather than a default.
   confused with shading. The cloud layers are tone-separated from the hill and
   from each other so the hill reads as being between them.
   The cloud distribution is four explicit groups — two behind and two in
-  front — with distinct night values. Each front group has a hard shared
-  opening across its upper portion, so the hill and traffic remain legible
-  through the cloud group.
+  front — with distinct night values. Each front group has its own group-level
+  mask that ramps from `0.7` at the upper edge to `1` at that group’s hard
+  boundary and below, so the hill and traffic remain legible through the cloud
+  group. The cloud silhouettes stay sharp: no blur, feathering, or per-lobe
+  holes.
   Cloud movement follows depth: the rear uses the minimum wind, the front the
   maximum, and the middle groups interpolate between them.
 - **Visual-language catalogue** ([`visual-language.md`](../../../knowledge/design/visual-language.md)):

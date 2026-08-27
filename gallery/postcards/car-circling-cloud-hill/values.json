@@ -98,24 +98,23 @@
   "banks": [
     {
       "id": "rear-far",
-      "kind": "sea",
+      "kind": "puff",
       "front": false,
       "depth": 0,
       "y": 302,
       "tile": 190,
-      "tone": 0.34,
+      "tone": 0.18,
       "seed": 7712,
-      "lobes": 4,
-      "open": 22,
+      "clusters": 3,
+      "per": 4,
       "rx": [
-        30,
-        55
+        14,
+        34
       ],
       "ry": [
-        20,
-        38
-      ],
-      "floorUp": 0
+        6,
+        15
+      ]
     },
     {
       "id": "rear-near",
@@ -123,64 +122,63 @@
       "front": false,
       "depth": 0.33,
       "y": 326,
-      "tile": 210,
-      "tone": 0.43,
+      "tile": 351,
+      "tone": 0.28,
       "seed": 18421,
-      "lobes": 4,
-      "open": 26,
+      "lobes": 5,
       "rx": [
-        28,
-        54
+        34,
+        74
       ],
       "ry": [
-        20,
+        16,
         38
       ],
-      "floorUp": 0
+      "floorUp": 4
     },
     {
       "id": "front-far",
       "kind": "sea",
       "front": true,
       "depth": 0.67,
-      "y": 313,
-      "tile": 200,
-      "tone": 0.56,
+      "y": 270,
+      "tile": 351,
+      "tone": 0.40,
       "seed": 29107,
-      "lobes": 4,
-      "open": 30,
-      "openAlpha": 0.35,
+      "lobes": 5,
+      "maskMin": 0.7,
+      "maskMax": 1,
       "rx": [
-        30,
-        56
+        34,
+        74
       ],
       "ry": [
-        20,
-        40
+        16,
+        38
       ],
-      "floorUp": 0
+      "floorUp": 4
     },
     {
       "id": "front-near",
       "kind": "sea",
       "front": true,
       "depth": 1,
-      "y": 344,
-      "tile": 230,
-      "tone": 0.7,
+      "y": 340,
+      "tile": 468,
+      "tone": 0.52,
       "seed": 40311,
       "lobes": 4,
-      "open": 36,
-      "openAlpha": 0.35,
+      "maskMin": 0.7,
+      "maskMax": 1,
       "rx": [
-        32,
-        58
+        58,
+        108
       ],
       "ry": [
-        20,
-        40
+        28,
+        56
       ],
-      "floorUp": 0
+      "floorUp": 6
     }
   ],
   "render": {
