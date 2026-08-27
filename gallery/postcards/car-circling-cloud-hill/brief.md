@@ -22,6 +22,23 @@ References: [`references/README.md`](references/README.md).
   landform — the hill and the cloud layers do the occluding, so the depth of
   the scene is stated by what disappears rather than by shading.
 
+## Car construction
+
+The car construction follows the supplied [car reference](references/br-car.png).
+It is one 3D object made from separate body and cabin pieces. The body is
+tapered, with the narrow end defining the front. The cabin is trapezoidal and
+rear-biased on the body, with inset window panes on both side faces and the
+front face.
+
+Every car has four wheels, two per side. Each wheel is an extruded cylinder
+whose axis runs across the car. The wheels are partly embedded in the lower
+body, and far-side wheels obey natural 3D occlusion.
+
+The car has two small circular lamps on the front face. This construction
+section is limited to the confirmed body, cabin, windows, wheels, and lamps;
+headlight behaviour, variable sizing, and vertical bobbing are documented
+separately.
+
 ## Indexed colour treatment
 
 The scene is authored as one continuous value field and quantized once at the
