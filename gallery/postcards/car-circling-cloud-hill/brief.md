@@ -85,6 +85,25 @@ construction and follows the car's position and orientation. This section
 documents headlight behaviour only; car construction, variable sizing, and
 vertical bobbing remain separate requirements.
 
+## Bobbing movement
+
+The vertical bobbing requirement follows the supplied [car reference](references/br-car.png).
+Every car has a short, quick, repeating vertical bob while travelling. The
+movement is continuous rather than a one-time jolt, and each car uses an
+independent stable deterministic phase so the cars do not bob in sync. The
+vertical bob has separate exposed amplitude and speed controls.
+
+Every car also has a slow lateral sway across the road. The sway has a loose,
+boat-like pendulum character and is separate from the car's forward travel
+along the road. It has separate exposed amplitude and speed controls, and each
+car uses the same independent stable timing principle as its vertical bob.
+
+Bobbing applies to the car construction as a whole while preserving the
+relationships among the body, cabin, windows, wheels, and lamps. It does not
+add body roll or combined tilting: the sideways movement is lateral translation
+only. This section documents movement behaviour only; car construction,
+variable sizing, and headlight projection remain separate requirements.
+
 ## Indexed colour treatment
 
 The scene is authored as one continuous value field and quantized once at the
