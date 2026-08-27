@@ -39,6 +39,52 @@ section is limited to the confirmed body, cabin, windows, wheels, and lamps;
 headlight behaviour, variable sizing, and vertical bobbing are documented
 separately.
 
+## Variable size
+
+The variable-size requirements follow the supplied [car reference](references/br-car.png).
+Body and cabin dimensions vary per car rather than being applied as one
+uniform car-size operation. Body length and height may vary independently, and
+cabin length and height may vary independently, so the body and cabin may use
+different length and height values on the same car. Body and cabin widths vary
+together and remain linked.
+
+Each car receives stable, deterministic body and cabin dimensions within the
+exposed authored ranges. When body height changes, the cabin moves vertically
+by the exact body-height difference so its attachment remains intact. Wheels
+and lamps reposition with the resized construction but do not resize as part
+of body and cabin variable sizing. Windows reposition and resize to remain
+attached to the resized cabin.
+
+The separate full-car scale property is for composition and road fit. It
+scales the entire constructed car — body, cabin, wheels, windows, and lamps —
+while preserving their proportions and attachment relationships.
+
+The starting authored limits, in the existing scene/world-unit system, are:
+
+- Base car size: `2`–`24`
+- Body width ratio: `0.25`–`1.00`
+- Body height ratio: `0.20`–`1.00`
+- Per-car deterministic size variation: `0`–`0.60`
+
+These are authoring limits rather than immutable visual constants and may be
+tuned through the controls page. Headlight projection and vertical bobbing
+remain separate requirements.
+
+## Headlights
+
+The headlight requirements follow the supplied [headlight reference](references/br-carLights.png).
+Both headlights remain on continuously. Each lamp emits a widening cone that
+originates at the lamp and points along the car's forward axis. The beam is
+projected into the 3D scene and lands on whichever surface is first in front
+of it: the road or the hill. It stops at that first surface rather than
+passing through scene geometry.
+
+The projected light reads as a graphic tonal cone compatible with the
+postcard's indexed and dithered rendering. It is part of the car's 3D
+construction and follows the car's position and orientation. This section
+documents headlight behaviour only; car construction, variable sizing, and
+vertical bobbing remain separate requirements.
+
 ## Indexed colour treatment
 
 The scene is authored as one continuous value field and quantized once at the
