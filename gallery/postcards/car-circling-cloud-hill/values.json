@@ -62,7 +62,7 @@
     "shade": 0.08,
     "chimney": 0.14,
     "chimneyAt": 0.26,
-    "smokeHeight": 1.45,
+    "smokeHeight": 2,
     "smokePuffs": 19,
     "smokeCoils": 2.35,
     "smokeDrift": 0.52,
