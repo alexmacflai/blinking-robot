@@ -57,9 +57,9 @@ lever rather than a default.
   confused with shading. The cloud layers are tone-separated from the hill and
   from each other so the hill reads as being between them.
   The cloud distribution is four explicit groups — two behind and two in
-  front — with distinct night values. Each group has a hard open upper cut,
-  so the hill and traffic remain legible above its upper edge instead of the
-  cloud becoming a solid foreground cutout.
+  front — with distinct night values. Each front group has a hard shared
+  opening across its upper portion, so the hill and traffic remain legible
+  through the cloud group.
   Cloud movement follows depth: the rear uses the minimum wind, the front the
   maximum, and the middle groups interpolate between them.
 - **Visual-language catalogue** ([`visual-language.md`](../../../knowledge/design/visual-language.md)):

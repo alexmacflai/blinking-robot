@@ -149,6 +149,7 @@
       "seed": 29107,
       "lobes": 4,
       "open": 30,
+      "openAlpha": 0.35,
       "rx": [
         30,
         56
@@ -170,6 +171,7 @@
       "seed": 40311,
       "lobes": 4,
       "open": 36,
+      "openAlpha": 0.35,
       "rx": [
         32,
         58

@@ -177,7 +177,8 @@ cfg.banks.forEach((bank, index) => {
     rb(section, 'floor above the line', p('floorUp'), 0, 40, 1, v => v === 0 ? 'no floor' : v);
     section.note('A floor keeps the mass continuous while its lobes billow above it. Without one you have to pack the lobes tight, and tightly packed lobes make the surface a ruled line.');
     rb(section, 'open upper mask', p('open'), 0, 80, 1, v => v <= 0 ? 'closed' : `${v}px`);
-    section.note('Hard cut: the upper part of the whole group is absent by this distance, then the cloud is fully present. No blur or opacity fade.');
+    rb(section, 'mask transparency', p('openAlpha'), 0, 1, 0.05, v => `${Math.round(v * 100)}% opaque`);
+    section.note('Hard shared transparency mask across the upper part of the whole group; the underlying scene remains visible there, while the cloud below stays solid. No blur, feathering, gradient, or per-lobe holes.');
   }
   rb(section, 'lobe width (min)', p('rx.0'), 4, 80, 1, v => v);
   rb(section, 'lobe width (max)', p('rx.1'), 4, 90, 1, v => v);
