@@ -28,15 +28,17 @@ import { createPlaybackState } from '../../shared/playback.js';
    postcard's "flat mass so a mark can only mean one thing", reused under
    its own conditions.
 
-   THE CLOUDS ARE FIELDS, not objects — two-dimensional lobed banks in the
-   windmill's manner, because that is what the sketch draws: scalloped
-   masses with a continuous floor. Banks behind the hill are drawn before it
-   and banks in front of it after the cars, which is the whole of their
-   depth behaviour. They are still by default.
+   THE CLOUDS ARE FIELDS, not objects — four two-dimensional lobed banks in
+   the windmill's manner: exactly two behind the hill and exactly two in
+   front. Each bank has a hard open upper mask, so the hill and cars can
+   remain visible above the top of the cloud group. Back banks are drawn
+   before the hill; front banks are drawn after the cars. Their drift is
+   interpolated from the global minimum wind at the rear to the maximum wind
+   at the front.
 
    NOTHING ACCUMULATES. The hill, road, house and smoke are static and are
    baked once at build time into a luminance/depth/coverage layer. Only the
-   cars and the (optional) cloud drift are evaluated per frame, and the
+   cars and cloud drift are evaluated per frame, and the
    cars' position is a phase wrapped into a fixed span, so the scene at an
    hour is the scene at ten seconds.
 
@@ -562,21 +564,25 @@ function drawFaces(faces,base,spread,slot){
 /* ======================================================================
    CLOUD BANKS — two-dimensional lobed fields, in the windmill's manner
 
-   PUFF: clusters of soft ellipses max-composited into a cumulus
+         PUFF: clusters of hard-edged ellipses max-composited into a cumulus
          silhouette, rounded on every side, for open sky.
    SEA:  a lobed upper surface filling to the bottom of the frame. The
          floor keeps the mass continuous at a height while its lobes
          billow above it — without it you have to pack the lobes tight,
          and tightly packed lobes make the surface a ruled line.
    A bank marked `front` is drawn after the cars and is what they vanish
-   into; the rest are drawn before the hill.
+   into; the rest are drawn before the hill. The `open` value cuts away the
+   upper part of the whole bank; it is a hard geometric mask, not a fade.
    ==================================================================== */
 function buildBanks(){
   const gl=v=>v*S, gy=v=>v*S;
-  BANKS=CFG.banks.map(b=>{
+  const motion=CFG.cloudMotion||{windMin:0,windMax:0};
+  BANKS=CFG.banks.map((b,index)=>{
     const rnd=mulberry32(b.seed);
-    const common={ id:b.id, front:!!b.front, val:b.tone, Wp:gl(b.tile),
-                   speed:gl(b.drift||0) };
+    const depth=clamp(b.depth!=null?b.depth:index/Math.max(1,CFG.banks.length-1),0,1);
+    const common={ id:b.id, front:!!b.front, depth, val:b.tone, Wp:gl(b.tile),
+                   speed:gl(lerp(motion.windMin||0,motion.windMax||0,depth)),
+                   open:gl(Math.max(0,b.open||0)) };
     if(b.kind==='puff'){
       const lobes=[]; let mnY=1e9,mxY=-1e9;
       for(let k=0;k<b.clusters;k++){
@@ -600,7 +606,7 @@ function buildBanks(){
       rx:gl(b.rx[0]+rnd()*(b.rx[1]-b.rx[0])),
       ry:gl(b.ry[0]+rnd()*(b.ry[1]-b.ry[0])),
       dy:(rnd()-0.5)*7*S});
-    return Object.assign(common,{kind:'sea',y0:gy(b.y),soft:Math.max(0.4,gl(b.soft)),
+    return Object.assign(common,{kind:'sea',y0:gy(b.y),
       lobes,floor:b.floorUp!=null?gy(b.y-b.floorUp):0,top:new Float32Array(W)});
   });
 }
@@ -656,13 +662,16 @@ function drawSea(L,t){
     }
     top[x]=L.floor&&m>L.floor?L.floor:m;
   }
-  const soft=L.soft, val=L.val;
+  const val=L.val, open=L.open;
   for(let x=0;x<W;x++){
     const tp=top[x];
     for(let y=tp<0?0:Math.floor(tp);y<H;y++){
-      let a=(y-tp)/soft; if(a<=0)continue; if(a>1)a=1;
+      const edge=y-tp;
+      /* Hard group-level mask: the upper part is absent, then the cloud is
+         fully present. There is no feathering, blur, or opacity ramp. */
+      if(edge<open)continue;
       const i=y*W+x;
-      lum[i]=lum[i]*(1-a)+val*a;
+      lum[i]=val;
       twoBitSlot[i]=-2;
     }
   }

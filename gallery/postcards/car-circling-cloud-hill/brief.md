@@ -56,6 +56,12 @@ lever rather than a default.
   to the silhouette, so the road stripe is the only mark on it and cannot be
   confused with shading. The cloud layers are tone-separated from the hill and
   from each other so the hill reads as being between them.
+  The cloud distribution is four explicit groups — two behind and two in
+  front — with distinct night values. Each group has a hard open upper cut,
+  so the hill and traffic remain legible above its upper edge instead of the
+  cloud becoming a solid foreground cutout.
+  Cloud movement follows depth: the rear uses the minimum wind, the front the
+  maximum, and the middle groups interpolate between them.
 - **Visual-language catalogue** ([`visual-language.md`](../../../knowledge/design/visual-language.md)):
   - *Flat mass so a mark can only mean one thing* (Coffee) is reused directly
     and is the reason the hill is not shaded as a dome. The condition holds:

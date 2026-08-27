@@ -153,12 +153,18 @@ r(sky, 'end tone', 'bg.bottomTone', 0, 1, 0.005, v => v.toFixed(3));
 r(sky, 'gradient ends at', 'bg.endY', 20, 416, 2, v => `${v} of 416`);
 r(sky, 'grain', 'bg.grain', 0, 0.12, 0.002, v => v.toFixed(3));
 
-/* One section per bank, built from the values file so adding a bank to
-   values.json gives it controls without editing this page. */
+const cloudMotion = controls.section('CLOUD MOTION', 'Four cloud groups move at different speeds. The rear uses the minimum wind, the front uses the maximum, and the two middle groups interpolate between them.');
+rb(cloudMotion, 'minimum wind', 'cloudMotion.windMin', -12, 12, 0.1, v => Math.abs(v) < 0.05 ? 'still' : v.toFixed(1));
+rb(cloudMotion, 'maximum wind', 'cloudMotion.windMax', -12, 12, 0.1, v => Math.abs(v) < 0.05 ? 'still' : v.toFixed(1));
+cloudMotion.note('Wind is measured in authored pixels per second. The bank depth values determine the interpolation; the two rear banks are depth 0 and 0.33, and the two front banks are depth 0.67 and 1.');
+
+/* One section per bank, built from the values file so the four cloud groups
+   keep their scene-specific shape controls in the authoring surface. */
 cfg.banks.forEach((bank, index) => {
   const behind = bank.front ? 'In front of the hill, and drawn after the cars: this is what a car disappears into.' : 'Behind the hill, and drawn before it.';
-  const section = controls.section(`CLOUD — ${String(bank.id).toUpperCase()}`, `${bank.kind === 'puff' ? 'Clusters of soft lobes in open sky.' : 'A lobed upper surface filling to the bottom of the frame.'} ${behind}`);
+  const section = controls.section(`CLOUD — ${String(bank.id).toUpperCase()}`, `${bank.kind === 'puff' ? 'Clusters of hard-edged lobes in open sky.' : 'A hard-edged lobed upper surface filling to the bottom of the frame.'} ${behind}`);
   const p = key => `banks.${index}.${key}`;
+  section.note(`Depth ${bank.depth.toFixed(2)}. This group’s wind is interpolated between the global minimum and maximum.`);
   rb(section, 'height', p('y'), 0, 460, 1, v => `${v} of 416`);
   rb(section, 'tone', p('tone'), 0, 1, 0.005, v => v.toFixed(3));
   rb(section, 'tile width', p('tile'), 60, 500, 5, v => v);
@@ -168,20 +174,19 @@ cfg.banks.forEach((bank, index) => {
     rb(section, 'lobes per cluster', p('per'), 1, 10, 1, v => v);
   } else {
     rb(section, 'lobes', p('lobes'), 2, 16, 1, v => v);
-    rb(section, 'edge softness', p('soft'), 0.2, 8, 0.1, v => v.toFixed(1));
     rb(section, 'floor above the line', p('floorUp'), 0, 40, 1, v => v === 0 ? 'no floor' : v);
     section.note('A floor keeps the mass continuous while its lobes billow above it. Without one you have to pack the lobes tight, and tightly packed lobes make the surface a ruled line.');
+    rb(section, 'open upper mask', p('open'), 0, 80, 1, v => v <= 0 ? 'closed' : `${v}px`);
+    section.note('Hard cut: the upper part of the whole group is absent by this distance, then the cloud is fully present. No blur or opacity fade.');
   }
   rb(section, 'lobe width (min)', p('rx.0'), 4, 80, 1, v => v);
   rb(section, 'lobe width (max)', p('rx.1'), 4, 90, 1, v => v);
   rb(section, 'lobe height (min)', p('ry.0'), 2, 60, 1, v => v);
   rb(section, 'lobe height (max)', p('ry.1'), 2, 70, 1, v => v);
   rb(section, 'seed', p('seed'), 1, 99999, 1, v => v);
-  r(section, 'drift', p('drift'), -12, 12, 0.5, v => Math.abs(v) < 0.25 ? 'still' : v.toFixed(1));
-  section.note('Still by default. Drifting cloud makes the occluding layers read as weather rather than as the edges of the world — the postcard has one moving thing.');
 });
 
-const time = controls.section('TIME', 'The still world is baked and the cars ride a wrapped phase, so nothing here can drift or decay. These are to check that.');
+const time = controls.section('TIME', 'The still world is baked and the cars and cloud groups ride wrapped phases, so nothing here can drift or decay. These are to check that.');
 time.action('+1 MINUTE', () => engine.run(60), 'render');
 time.action('+1 HOUR', () => engine.run(3600), 'render');
 time.diagnostic(() => {

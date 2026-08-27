@@ -47,9 +47,12 @@ smoke plume is a continuous rising stream, not a one-off animation — each
 puff's position is a wrapped phase, the same mechanism the traffic uses, so
 nothing pops in or out and nothing accumulates however long the scene runs.
 
-The clouds are two-dimensional lobed banks in the windmill’s manner, not
-objects in the depth buffer. A bank is either in front of the cars or behind
-the hill, and that flag is the whole of its depth behaviour.
+The clouds are four two-dimensional lobed banks in the windmill’s manner, not
+objects in the depth buffer: exactly two behind the hill and exactly two in
+front. Each bank has a hard upper cut so the hill and traffic can remain
+visible above the cloud group. Their motion is depth-aware: the rear uses
+the minimum wind, the front the maximum, and the middle banks interpolate
+between them.
 
 Nothing accumulates. Cars are slots on a phase wrapped into a fixed span longer
 than the road itself; the extra length is empty, so nothing is seen to appear
