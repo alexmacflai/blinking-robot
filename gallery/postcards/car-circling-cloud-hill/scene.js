@@ -388,71 +388,56 @@ function cabinGeometry(c,ax,ay,az,w,h,front,rear,topRatio,frontSlope){
         bbl=V(-1,-1,rear),  bbr=V(1,-1,rear),
         tfl=V(-1,1,topFront), tfr=V(1,1,topFront),
         trl=V(-1,1,topRear),  trr=V(1,1,topRear);
-  return {
-    faces:[
+  const faces=[
       faceFromVertices([bfl,bfr,tfr,tfl]),
       faceFromVertices([bbr,bbl,trl,trr]),
       faceFromVertices([bfr,bbr,trr,tfr]),
       faceFromVertices([bbl,bfl,tfl,trl]),
       faceFromVertices([tfl,tfr,trr,trl]),
       faceFromVertices([bbl,bbr,bfr,bfl])
-    ],
-    structuralFaces:[
-      faceFromVertices([bbr,bbl,trl,trr]),
-      faceFromVertices([tfl,tfr,trr,trl]),
-      faceFromVertices([bbl,bbr,bfr,bfl])
-    ],
+    ];
+  return {
+    faces:faces,
+    structuralFaces:faces,
     point:(side,y,z)=>V(side,y,z),
     edge:(y,which)=>lerp(which==='front'?front:rear,which==='front'?topFront:topRear,(y+1)*0.5),
     widthAt:y=>w*lerp(1,topRatio,(y+1)*0.5)
   };
 }
 
-/* Window openings are framed by the cabin surface. The pale panes sit just
-   inside those openings; they are not screen-space stickers or surfaces
-   nudged proud of the cabin. */
+/* Window openings are defined by the cabin taper. The panes sit just proud of
+   the cabin surface so their material is the only value written inside each
+   opening; they are not screen-space stickers. */
 function cabinWindowFaces(cabin,ax,ay,az,inset){
   const out=[];
   const sideWindow=(side,y,z)=>{
     const p=cabin.point(side,y,z);
-    p.x-=ax.x*inset*side; p.y-=ax.y*inset*side; p.z-=ax.z*inset*side;
+    p.x+=ax.x*inset*side; p.y+=ax.y*inset*side; p.z+=ax.z*inset*side;
     return p;
   };
   const sidePane=(side)=>{
-    const y0=-0.24, y1=0.48;
+    /* The lower edge is the cabin/body seam. There is no lower frame band. */
+    const y0=-1, y1=0.48;
     const mid=y=> (cabin.edge(y,'front')+cabin.edge(y,'rear'))*0.5;
     const fr0=y=>lerp(mid(y),cabin.edge(y,'front'),0.86);
     const re0=y=>lerp(cabin.edge(y,'rear'),mid(y),0.14);
     const re1=y=>lerp(cabin.edge(y,'rear'),mid(y),0.14);
     const p00=sideWindow(side,y0,re0(y0)), p10=sideWindow(side,y0,fr0(y0));
     const p11=sideWindow(side,y1,fr0(y1)), p01=sideWindow(side,y1,re1(y1));
-    const s00=cabin.point(side,y0,cabin.edge(y0,'rear'));
-    const s10=cabin.point(side,y0,cabin.edge(y0,'front'));
-    const s11=cabin.point(side,y1,cabin.edge(y1,'front'));
-    const s01=cabin.point(side,y1,cabin.edge(y1,'rear'));
-    out.push(faceFromVertices([s00,s10,p10,p00]));
-    out.push(faceFromVertices([p01,p11,s11,s01]));
-    out.push(faceFromVertices([s10,s11,p11,p10]));
-    out.push(faceFromVertices([s01,p01,p00,s00]));
     out.push({pane:faceFromVertices([p00,p10,p11,p01])});
   };
   sidePane(-1); sidePane(1);
 
-  const frontPoint=(side,y,inside=false)=>{
+  const frontPoint=(side,y,proud=false)=>{
     const p=cabin.point(side,y,cabin.edge(y,'front'));
-    if(inside){ p.x-=az.x*inset; p.y-=az.y*inset; p.z-=az.z*inset; }
+    if(proud){ p.x+=az.x*inset; p.y+=az.y*inset; p.z+=az.z*inset; }
     return p;
   };
-  const fy0=-0.22, fy1=0.44;
+  /* The front pane also runs all the way down to the cabin/body seam. */
+  const fy0=-1, fy1=0.44;
   const a=frontPoint(-0.72,fy0,true), b=frontPoint(0.72,fy0,true),
         c=frontPoint(0.62,fy1,true), d=frontPoint(-0.62,fy1,true);
-  const a0=frontPoint(-1,-1), b0=frontPoint(1,-1),
-        a1=frontPoint(-1,1), b1=frontPoint(1,1);
-  out.push(faceFromVertices([a0,b0,b,a]));
-  out.push(faceFromVertices([d,c,b1,a1]));
-  out.push(faceFromVertices([b0,b1,c,b]));
-  out.push(faceFromVertices([a0,a1,d,a]));
-  out.push(faceFromVertices([a,d,c,b]));
+  out.push({pane:faceFromVertices([a,d,c,b])});
   return out;
 }
 
@@ -1084,8 +1069,8 @@ function drawCars(t){
     for(const f of cabin.structuralFaces)
       faces.push({f:f,tone:faceTone(f,sh.tone,c.shade),slot:slot,c:faceCentre(f),test:hide});
     for(const wf of cabinWindowFaces(cabin,ax,ay,az,Math.max(0.02,sh.wide*0.018))){
-      const f=wf.pane||wf;
-      faces.push({f:f,tone:wf.pane?c.windowTone:faceTone(f,sh.tone,c.shade),slot:wf.pane?-2:slot,c:faceCentre(f),test:hide});
+      const f=wf.pane;
+      faces.push({f:f,tone:1,slot:-2,c:faceCentre(f),test:hide});
     }
     /* LAMPS — small circular caps on the front face. Projected headlight
        cones are a separate requirement and are intentionally not added here. */
