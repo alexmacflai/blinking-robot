@@ -337,6 +337,148 @@ function boxFaces(c,ax,ay,az,hx,hy,hz){
     {i:[3,2,6,7],n:ay,sign: 1},{i:[0,1,5,4],n:ay,sign:-1}
   ].map(f=>({ v:f.i.map(n=>v[n]), nx:f.n.x*f.sign, ny:f.n.y*f.sign, nz:f.n.z*f.sign }));
 }
+function faceFromVertices(v){
+  const a=v[1], b=v[0], c=v[2];
+  let nx=(a.y-b.y)*(c.z-b.z)-(a.z-b.z)*(c.y-b.y);
+  let ny=(a.z-b.z)*(c.x-b.x)-(a.x-b.x)*(c.z-b.z);
+  let nz=(a.x-b.x)*(c.y-b.y)-(a.y-b.y)*(c.x-b.x);
+  const n=Math.hypot(nx,ny,nz)||1;
+  return { v:v, nx:nx/n, ny:ny/n, nz:nz/n };
+}
+
+function offsetPoint(c,ax,a,ay,b,az,d){
+  return {x:c.x+ax.x*a+ay.x*b+az.x*d,
+          y:c.y+ax.y*a+ay.y*b+az.y*d,
+          z:c.z+ax.z*a+ay.z*b+az.z*d};
+}
+
+/* A tapered prism with a narrower front and slightly inset roof. The front
+   is +az, which is the direction in which a car travels on each road half. */
+function taperedBodyFaces(c,ax,ay,az,hx,hy,hz,frontRatio,topRatio){
+  const V=(side,y,z,ratio)=>({
+    x:c.x+ax.x*hx*side*ratio+ay.x*hy*y+az.x*hz*z,
+    y:c.y+ax.y*hx*side*ratio+ay.y*hy*y+az.y*hz*z,
+    z:c.z+ax.z*hx*side*ratio+ay.z*hy*y+az.z*hz*z
+  });
+  const bl=V(-1,-1,-1,1), br=V(1,-1,-1,1),
+        fl=V(-1,-1,1,frontRatio), fr=V(1,-1,1,frontRatio),
+        tl=V(-1,1,1,frontRatio*topRatio), tr=V(1,1,1,frontRatio*topRatio),
+        rl=V(-1,1,-1,topRatio), rr=V(1,1,-1,topRatio);
+  return [
+    faceFromVertices([fl,fr,tr,tl]),
+    faceFromVertices([br,bl,rl,rr]),
+    faceFromVertices([fr,br,rr,tr]),
+    faceFromVertices([bl,fl,tl,rl]),
+    faceFromVertices([tl,tr,rr,rl]),
+    faceFromVertices([bl,br,fr,fl])
+  ];
+}
+
+/* The cabin is a shallow trapezoid: its roof is narrower and its windscreen
+   leans back. Keeping the vertices explicit lets the window panes share the
+   same sloped surfaces instead of becoming screen-space stickers. */
+function cabinGeometry(c,ax,ay,az,w,h,front,rear,topRatio,frontSlope){
+  const topFront=front*frontSlope, topRear=rear*0.92;
+  const V=(side,y,z)=>({
+    x:c.x+ax.x*w*side*lerp(1,topRatio,(y+1)*0.5)+ay.x*h*y+az.x*z,
+    y:c.y+ax.y*w*side*lerp(1,topRatio,(y+1)*0.5)+ay.y*h*y+az.y*z,
+    z:c.z+ax.z*w*side*lerp(1,topRatio,(y+1)*0.5)+ay.z*h*y+az.z*z
+  });
+  const bfl=V(-1,-1,front), bfr=V(1,-1,front),
+        bbl=V(-1,-1,rear),  bbr=V(1,-1,rear),
+        tfl=V(-1,1,topFront), tfr=V(1,1,topFront),
+        trl=V(-1,1,topRear),  trr=V(1,1,topRear);
+  return {
+    faces:[
+      faceFromVertices([bfl,bfr,tfr,tfl]),
+      faceFromVertices([bbr,bbl,trl,trr]),
+      faceFromVertices([bfr,bbr,trr,tfr]),
+      faceFromVertices([bbl,bfl,tfl,trl]),
+      faceFromVertices([tfl,tfr,trr,trl]),
+      faceFromVertices([bbl,bbr,bfr,bfl])
+    ],
+    structuralFaces:[
+      faceFromVertices([bbr,bbl,trl,trr]),
+      faceFromVertices([tfl,tfr,trr,trl]),
+      faceFromVertices([bbl,bbr,bfr,bfl])
+    ],
+    point:(side,y,z)=>V(side,y,z),
+    edge:(y,which)=>lerp(which==='front'?front:rear,which==='front'?topFront:topRear,(y+1)*0.5),
+    widthAt:y=>w*lerp(1,topRatio,(y+1)*0.5)
+  };
+}
+
+/* Window openings are framed by the cabin surface. The pale panes sit just
+   inside those openings; they are not screen-space stickers or surfaces
+   nudged proud of the cabin. */
+function cabinWindowFaces(cabin,ax,ay,az,inset){
+  const out=[];
+  const sideWindow=(side,y,z)=>{
+    const p=cabin.point(side,y,z);
+    p.x-=ax.x*inset*side; p.y-=ax.y*inset*side; p.z-=ax.z*inset*side;
+    return p;
+  };
+  const sidePane=(side)=>{
+    const y0=-0.24, y1=0.48;
+    const mid=y=> (cabin.edge(y,'front')+cabin.edge(y,'rear'))*0.5;
+    const fr0=y=>lerp(mid(y),cabin.edge(y,'front'),0.86);
+    const re0=y=>lerp(cabin.edge(y,'rear'),mid(y),0.14);
+    const re1=y=>lerp(cabin.edge(y,'rear'),mid(y),0.14);
+    const p00=sideWindow(side,y0,re0(y0)), p10=sideWindow(side,y0,fr0(y0));
+    const p11=sideWindow(side,y1,fr0(y1)), p01=sideWindow(side,y1,re1(y1));
+    const s00=cabin.point(side,y0,cabin.edge(y0,'rear'));
+    const s10=cabin.point(side,y0,cabin.edge(y0,'front'));
+    const s11=cabin.point(side,y1,cabin.edge(y1,'front'));
+    const s01=cabin.point(side,y1,cabin.edge(y1,'rear'));
+    out.push(faceFromVertices([s00,s10,p10,p00]));
+    out.push(faceFromVertices([p01,p11,s11,s01]));
+    out.push(faceFromVertices([s10,s11,p11,p10]));
+    out.push(faceFromVertices([s01,p01,p00,s00]));
+    out.push({pane:faceFromVertices([p00,p10,p11,p01])});
+  };
+  sidePane(-1); sidePane(1);
+
+  const frontPoint=(side,y,inside=false)=>{
+    const p=cabin.point(side,y,cabin.edge(y,'front'));
+    if(inside){ p.x-=az.x*inset; p.y-=az.y*inset; p.z-=az.z*inset; }
+    return p;
+  };
+  const fy0=-0.22, fy1=0.44;
+  const a=frontPoint(-0.72,fy0,true), b=frontPoint(0.72,fy0,true),
+        c=frontPoint(0.62,fy1,true), d=frontPoint(-0.62,fy1,true);
+  const a0=frontPoint(-1,-1), b0=frontPoint(1,-1),
+        a1=frontPoint(-1,1), b1=frontPoint(1,1);
+  out.push(faceFromVertices([a0,b0,b,a]));
+  out.push(faceFromVertices([d,c,b1,a1]));
+  out.push(faceFromVertices([b0,b1,c,b]));
+  out.push(faceFromVertices([a0,a1,d,a]));
+  out.push(faceFromVertices([a,d,c,b]));
+  return out;
+}
+
+/* An extruded cylinder whose axis runs across the car. The cap sectors are
+   deliberately retained: at large screen sizes the wheel reads as a solid
+   object, while the depth test still hides the far side naturally. */
+function cylinderFaces(c,axis,radialA,radialB,radius,halfDepth,segments=8){
+  const ring=(end,i)=>{
+    const a=i/segments*Math.PI*2;
+    return {x:c.x+axis.x*end*halfDepth+radialA.x*Math.cos(a)*radius+radialB.x*Math.sin(a)*radius,
+            y:c.y+axis.y*end*halfDepth+radialA.y*Math.cos(a)*radius+radialB.y*Math.sin(a)*radius,
+            z:c.z+axis.z*end*halfDepth+radialA.z*Math.cos(a)*radius+radialB.z*Math.sin(a)*radius};
+  };
+  const out=[];
+  for(let i=0;i<segments;i++){
+    const j=(i+1)%segments;
+    const a=i/segments*Math.PI*2, nx=radialA.x*Math.cos(a)+radialB.x*Math.sin(a),
+          ny=radialA.y*Math.cos(a)+radialB.y*Math.sin(a), nz=radialA.z*Math.cos(a)+radialB.z*Math.sin(a);
+    out.push({v:[ring(-1,i),ring(-1,j),ring(1,j),ring(1,i)],nx,ny,nz});
+    const lo={x:c.x-axis.x*halfDepth,y:c.y-axis.y*halfDepth,z:c.z-axis.z*halfDepth};
+    const hi={x:c.x+axis.x*halfDepth,y:c.y+axis.y*halfDepth,z:c.z+axis.z*halfDepth};
+    out.push({v:[lo,ring(-1,j),ring(-1,i),lo],nx:-axis.x,ny:-axis.y,nz:-axis.z});
+    out.push({v:[hi,ring(1,i),ring(1,j),hi],nx:axis.x,ny:axis.y,nz:axis.z});
+  }
+  return out;
+}
 /* Graphic light, not a lighting model: how much a face turns away from a
    fixed direction decides which of three flat tones it takes. */
 function faceTone(f,base,spread){
@@ -792,17 +934,107 @@ function carsAt(t){
 function carShape(id){
   const c=CFG.car;
   const r=k=>hash1(id,k);
-  const size=c.size*lerp(1-c.sizeVary,1+c.sizeVary,r(3));
+  const scale=Math.max(0.1,c.scale==null?1:c.scale);
+  const base=c.size*scale;
+  const size=base*lerp(1-c.sizeVary,1+c.sizeVary,r(3));
+  const bodyLengthMin=Math.max(0.1,Math.min(c.bodyLengthMin==null?0.9:c.bodyLengthMin,c.bodyLengthMax==null?1.1:c.bodyLengthMax));
+  const bodyLengthMax=Math.max(bodyLengthMin,c.bodyLengthMax==null?1.1:c.bodyLengthMax);
+  const bodyHeightMin=Math.max(0.1,Math.min(c.bodyHeightMin==null?0.9:c.bodyHeightMin,c.bodyHeightMax==null?1.1:c.bodyHeightMax));
+  const bodyHeightMax=Math.max(bodyHeightMin,c.bodyHeightMax==null?1.1:c.bodyHeightMax);
+  const bodyLen=size*lerp(bodyLengthMin,bodyLengthMax,r(11));
+  const bodyHeight=size*c.heightRatio*lerp(bodyHeightMin,bodyHeightMax,r(23));
+  const bodyWidth=size*c.widthRatio*lerp(0.9,1.1,r(17));
+  const cabinLengthMin=clamp(c.cabinLengthMin==null?0.30:c.cabinLengthMin,0.1,0.79);
+  const cabinLengthMax=Math.min(0.79,Math.max(cabinLengthMin,c.cabinLengthMax==null?0.46:c.cabinLengthMax));
+  const cabinHeightMin=Math.max(0.1,Math.min(c.cabinHeightMin==null?0.55:c.cabinHeightMin,c.cabinHeightMax==null?0.82:c.cabinHeightMax));
+  const cabinHeightMax=Math.max(cabinHeightMin,c.cabinHeightMax==null?0.82:c.cabinHeightMax);
+  /* Body and cabin length/height are independent draws from the same base
+     size.  Attachment is handled by the placement below, not by making the
+     cabin dimensions a hidden multiple of the body dimensions. */
+  const cabinLen=Math.min(size*lerp(cabinLengthMin,cabinLengthMax,r(29)),bodyLen*0.72);
+  const cabinHeight=size*c.heightRatio*lerp(cabinHeightMin,cabinHeightMax,r(37));
   return {
-    len:size*lerp(0.8,1.25,r(11)),
-    wide:size*c.widthRatio*lerp(0.85,1.15,r(17)),
-    tall:size*c.heightRatio*lerp(0.8,1.3,r(23)),
-    cabinLen:lerp(0.34,0.56,r(29)),
-    cabinBack:lerp(-0.16,0.16,r(31)),
-    cabinTall:lerp(0.5,0.95,r(37)),
+    scale:scale,
+    len:bodyLen,
+    wide:bodyWidth,
+    tall:bodyHeight,
+    cabinLen:cabinLen/bodyLen,
+    cabinLength:cabinLen,
+    /* This is a ratio along the body.  It must not be stored in world units:
+       drawCars multiplies it by exactly one body length when attaching the
+       cabin. */
+    cabinBack:lerp(-0.24,-0.10,r(31)),
+    cabinTall:cabinHeight/bodyHeight,
+    cabinHeight:cabinHeight,
+    wheelRadius:size*(c.wheelRadius==null?0.14:c.wheelRadius),
+    lampRadius:size*(c.lampRadius==null?0.06:c.lampRadius),
     tone:clamp(c.tone+(r(41)-0.5)*2*c.toneVary,0,1),
     accent:c.accentEvery>0&&(((id%c.accentEvery)+c.accentEvery)%c.accentEvery)===0
   };
+}
+
+/* The headlight field is projected from the same front-lamp pose used by the
+   car mesh. It is kept in a separate pass so the light can brighten the
+   baked road/hill before the car itself is drawn over it. */
+function lightTriangle(A,B,C,strength,tone,maxDepth){
+  if(!A||!B||!C) return;
+  const d=(B.sy-C.sy)*(A.sx-C.sx)+(C.sx-B.sx)*(A.sy-C.sy);
+  if(Math.abs(d)<1e-7) return;
+  const inv=1/d;
+  const minX=Math.max(0,Math.floor(Math.min(A.sx,B.sx,C.sx)));
+  const maxX=Math.min(W-1,Math.ceil(Math.max(A.sx,B.sx,C.sx)));
+  const minY=Math.max(0,Math.floor(Math.min(A.sy,B.sy,C.sy)));
+  const maxY=Math.min(H-1,Math.ceil(Math.max(A.sy,B.sy,C.sy)));
+  for(let y=minY;y<=maxY;y++){
+    const py=y+0.5, o=y*W;
+    for(let x=minX;x<=maxX;x++){
+      const px=x+0.5;
+      const l0=((B.sy-C.sy)*(px-C.sx)+(C.sx-B.sx)*(py-C.sy))*inv;
+      if(l0<-0.0001) continue;
+      const l1=((C.sy-A.sy)*(px-C.sx)+(A.sx-C.sx)*(py-C.sy))*inv;
+      if(l1<-0.0001) continue;
+      const l2=1-l0-l1;
+      if(l2<-0.0001) continue;
+      const i=o+x;
+      /* Only the first baked solid surface receives projected light. The
+         open sky and clouds cannot be brightened by a car beam. */
+      if(!HC[i]||HD[i]>maxDepth+0.001) continue;
+      const edgeDistance=clamp(Math.min(l1,l2)*2,0,1);
+      const amount=strength*(0.35+0.65*edgeDistance);
+      lum[i]=lerp(lum[i],tone,amount);
+    }
+  }
+}
+
+function drawHeadlights(t){
+  const c=CFG.car;
+  if((c.headlightStrength==null?0:c.headlightStrength)<=0) return;
+  for(const car of carsAt(t)){
+    const sh=carShape(car.id), F=roadFrame(car.s);
+    const ax={x:F.bx,y:F.by,z:F.bz}, ay={x:F.nx,y:F.ny,z:F.nz}, az={x:F.tx,y:F.ty,z:F.tz};
+    const phase=hash1(car.id,97)*Math.PI*2;
+    const bob=Math.sin(t*(c.bobSpeed==null?0:c.bobSpeed)*Math.PI*2+phase)*(c.bobAmplitude==null?0:c.bobAmplitude)*sh.scale;
+    const sway=Math.sin(t*(c.swaySpeed==null?0:c.swaySpeed)*Math.PI*2+phase)*(c.swayAmplitude==null?0:c.swayAmplitude)*sh.scale;
+    const base={x:F.p.x+ay.x*bob+ax.x*sway,y:F.p.y+ay.y*bob+ax.y*sway,z:F.p.z+ay.z*bob+ax.z*sway};
+    const body={x:base.x+ay.x*sh.tall*0.5,y:base.y+ay.y*sh.tall*0.5,z:base.z+ay.z*sh.tall*0.5};
+    const lampHalfX=Math.min(sh.wide*0.25,sh.wide*0.5*(c.bodyFrontRatio==null?0.72:c.bodyFrontRatio)*0.62);
+    const reach=Math.max(0.05,c.headlightReach==null?0.35:c.headlightReach);
+    const endS=Math.min(1,car.s+reach);
+    const T=roadPoint(endS), TF=roadFrame(endS), targetDepth=project(T.x,T.y,T.z);
+    const halfWidth=Math.max(0.1,CFG.road.width*0.45);
+    const tone=c.headlightTone==null?0.72:c.headlightTone;
+    const strength=clamp(c.headlightStrength,0,1);
+    for(const sx of [-1,1]){
+      const origin=offsetPoint(body,ax,lampHalfX*sx,ay,sh.tall*(-0.30),az,
+        sh.len*0.5+Math.max(0.02,sh.len*0.01));
+      const left=offsetPoint(T,TF.bx,-halfWidth,TF.nx,0,TF.tx,0);
+      const right=offsetPoint(T,TF.bx,halfWidth,TF.nx,0,TF.tx,0);
+      const beamOrigin=offsetPoint(origin,ax,0,ay,0,az,0.03);
+      const o=project(beamOrigin.x,beamOrigin.y,beamOrigin.z);
+      const l=project(left.x,left.y,left.z), r=project(right.x,right.y,right.z);
+      lightTriangle(o,l,r,strength,tone,targetDepth?targetDepth.dep:Infinity);
+    }
+  }
 }
 function drawCars(t){
   const c=CFG.car;
@@ -828,56 +1060,67 @@ function drawCars(t){
     const ax={x:F.bx,y:F.by,z:F.bz};          // across the road
     const ay={x:F.nx,y:F.ny,z:F.nz};          // up off the road surface
     const az={x:F.tx,y:F.ty,z:F.tz};          // along the road
-    const body={x:F.p.x+ay.x*sh.tall*0.5,y:F.p.y+ay.y*sh.tall*0.5,z:F.p.z+ay.z*sh.tall*0.5};
+    const phase=hash1(car.id,97)*Math.PI*2;
+    const bob=Math.sin(t*(c.bobSpeed==null?0:c.bobSpeed)*Math.PI*2+phase)*(c.bobAmplitude==null?0:c.bobAmplitude)*sh.scale;
+    const sway=Math.sin(t*(c.swaySpeed==null?0:c.swaySpeed)*Math.PI*2+phase)*(c.swayAmplitude==null?0:c.swayAmplitude)*sh.scale;
+    const base={x:F.p.x+ay.x*bob+ax.x*sway,y:F.p.y+ay.y*bob+ax.y*sway,z:F.p.z+ay.z*bob+ax.z*sway};
+    const body={x:base.x+ay.x*sh.tall*0.5,y:base.y+ay.y*sh.tall*0.5,z:base.z+ay.z*sh.tall*0.5};
     const slot=sh.accent?2:-2;
-    for(const f of boxFaces(body,ax,ay,az,sh.wide*0.5,sh.tall*0.5,sh.len*0.5))
-      faces.push({f:f,tone:faceTone(f,sh.tone,c.shade),slot:slot,c:faceCentre(f),test:hide});
-    /* CABIN — a smaller box sitting on the body, offset along the road so
-       a car has a front and a back. Below a few pixels it merges with the
-       body and costs nothing; that is the intended behaviour. */
+    const bodyFaces=taperedBodyFaces(body,ax,ay,az,sh.wide*0.5,sh.tall*0.5,sh.len*0.5,
+      c.bodyFrontRatio==null?0.72:c.bodyFrontRatio,
+      c.bodyTopRatio==null?0.86:c.bodyTopRatio);
+    for(const f of bodyFaces)
+      faces.push({f:f,tone:sh.tone,slot:slot,c:faceCentre(f),test:hide});
+    /* CABIN — a smaller trapezoid sitting on the body, offset toward the
+       rear so the sloped front remains visible. */
     const cabH=sh.tall*sh.cabinTall;
     const cab={x:body.x+ay.x*(sh.tall*0.5+cabH*0.5)+az.x*sh.len*sh.cabinBack,
                y:body.y+ay.y*(sh.tall*0.5+cabH*0.5)+az.y*sh.len*sh.cabinBack,
                z:body.z+ay.z*(sh.tall*0.5+cabH*0.5)+az.z*sh.len*sh.cabinBack};
-    for(const f of boxFaces(cab,ax,ay,az,sh.wide*0.42,cabH*0.5,sh.len*sh.cabinLen*0.5))
-      faces.push({f:f,tone:faceTone(f,sh.tone,c.shade),slot:slot,c:faceCentre(f),test:hide});
-    /* WINDOWS — a solid pale pane on each side of the cabin, nudged proud
-       of the cabin's own surface along its outward normal so the two never
-       tie in depth. They do not need to be transparent to read as glass:
-       flat and light against the body's dark tone is enough, and it never
-       takes the accent slot even when the car itself does — the ticket's
-       "white would contrast well" is a fixed material, not a highlight. */
-    const winH=cabH*0.6, winL=sh.len*sh.cabinLen*0.7, nudge=Math.max(0.02,sh.wide*0.04);
-    for(const side of [-1,1]){
-      const wx=cab.x+ax.x*(sh.wide*0.42+nudge)*side, wy=cab.y+ax.y*(sh.wide*0.42+nudge)*side, wz=cab.z+ax.z*(sh.wide*0.42+nudge)*side;
-      const p00={x:wx-az.x*winL*0.5-ay.x*winH*0.5,y:wy-az.y*winL*0.5-ay.y*winH*0.5,z:wz-az.z*winL*0.5-ay.z*winH*0.5};
-      const p10={x:wx+az.x*winL*0.5-ay.x*winH*0.5,y:wy+az.y*winL*0.5-ay.y*winH*0.5,z:wz+az.z*winL*0.5-ay.z*winH*0.5};
-      const p11={x:wx+az.x*winL*0.5+ay.x*winH*0.5,y:wy+az.y*winL*0.5+ay.y*winH*0.5,z:wz+az.z*winL*0.5+ay.z*winH*0.5};
-      const p01={x:wx-az.x*winL*0.5+ay.x*winH*0.5,y:wy-az.y*winL*0.5+ay.y*winH*0.5,z:wz-az.z*winL*0.5+ay.z*winH*0.5};
-      faces.push({f:{v:[p00,p10,p11,p01]},tone:c.windowTone,slot:-2,c:{x:wx,y:wy,z:wz},test:hide});
+    const cabW=sh.wide*0.42, cabFront=sh.len*sh.cabinLen*0.5, cabRear=-cabFront;
+    const cabin=cabinGeometry(cab,ax,ay,az,cabW,cabH*0.5,cabFront,cabRear,
+      c.cabinTopRatio==null?0.76:c.cabinTopRatio,
+      c.cabinFrontSlope==null?0.64:c.cabinFrontSlope);
+    for(const f of cabin.structuralFaces)
+      faces.push({f:f,tone:sh.tone,slot:slot,c:faceCentre(f),test:hide});
+    for(const wf of cabinWindowFaces(cabin,ax,ay,az,Math.max(0.02,sh.wide*0.018))){
+      const f=wf.pane||wf;
+      faces.push({f:f,tone:wf.pane?c.windowTone:faceTone(f,sh.tone,c.shade),slot:wf.pane?-2:slot,c:faceCentre(f),test:hide});
+    }
+    /* LAMPS — small circular caps on the front face. Projected headlight
+       cones are a separate requirement and are intentionally not added here. */
+    const lampRadius=sh.lampRadius;
+    const lampY=-0.30, lampHalfX=Math.min(sh.wide*0.25,sh.wide*0.5*(c.bodyFrontRatio==null?0.72:c.bodyFrontRatio)*0.62);
+    for(const sx of [-1,1]){
+      const lc=offsetPoint(body,ax,lampHalfX*sx,ay,sh.tall*lampY,
+        az,sh.len*0.5+Math.max(0.02,sh.len*0.01));
+      for(const f of cylinderFaces(lc,az,ax,ay,lampRadius,Math.max(0.01,sh.len*0.012),8))
+        faces.push({f:f,tone:c.lampTone==null?1:c.lampTone,slot:-2,c:faceCentre(f),test:hide});
     }
     /* WHEELS earn their place only once the car is large enough on screen
        for them to be more than a stray pixel. */
-    const probe=project(body.x,body.y,body.z);
-    if(probe&&sh.len*probe.k*S>=c.wheelAt){
-      for(const sx of [-1,1]) for(const sz of [-0.62,0.62]){
-        const wx=F.p.x+ax.x*sh.wide*0.5*sx+az.x*sh.len*sz;
-        const wy=F.p.y+ax.y*sh.wide*0.5*sx+az.y*sh.len*sz;
-        const wz=F.p.z+ax.z*sh.wide*0.5*sx+az.z*sh.len*sz;
-        const p=project(wx,wy,wz);
-        if(p) faces.push({disc:p,r:Math.max(0.5,sh.tall*0.42*p.k*S),tone:c.wheelTone,slot:slot,c:{x:wx,y:wy,z:wz},test:hide});
+    const wheelProbe=project(body.x,body.y,body.z);
+    if(wheelProbe&&sh.len*wheelProbe.k*S>=c.wheelAt){
+      const radius=sh.wheelRadius;
+      /* Wheels are side-mounted axles inside the body's footprint. They use
+         the road contact point, not the bobbed body base, so the body can
+         move above them without making the wheels leave the road. */
+      const wheelBase=F.p;
+      const axleOffset=sh.len*0.31;
+      for(const sx of [-1,1]) for(const sz of [-1,1]){
+        const wc=offsetPoint(wheelBase,ax,sh.wide*0.5*sx,ay,radius*0.82,az,axleOffset*sz);
+        for(const f of cylinderFaces(wc,ax,ay,az,radius,Math.max(0.02,sh.wide*0.10),8))
+          faces.push({f:f,tone:c.wheelTone,slot:slot,c:faceCentre(f),test:hide});
       }
     }
   }
-  /* One global back-to-front sort over every face of every car, so cars
-     resolve against each other as well as against themselves. The scene's
-     depth buffer is tested but not written: the hill and the house own it,
-     and the sort is what orders the cars among themselves. */
+  /* One global back-to-front sort over every face of every car. Car faces
+     write the shared depth buffer, so near faces hide far faces and the
+     baked hill/road still win wherever they are genuinely in front. */
   for(const f of faces){ const p=project(f.c.x,f.c.y,f.c.z); f.z=p?p.dep:Infinity; }
   faces.sort((a,b)=>b.z-a.z);
   for(const f of faces){
-    target(lum,dep,null,twoBitSlot,f.test,false);
-    if(f.disc){ discAt(f.disc,f.r,f.tone,f.slot); continue; }
+    target(lum,dep,null,twoBitSlot,f.test,true);
     const v=f.f.v.map(p=>project(p.x,p.y,p.z));
     quad(v[0],v[1],v[2],v[3],f.tone,f.slot);
   }
@@ -910,6 +1153,7 @@ function renderFrame(t){
     if(HC[i]){ lum[i]=HL[i]; twoBitSlot[i]=HS[i]; dep[i]=HD[i]; }
     else dep[i]=Infinity;
   }
+  drawHeadlights(time);
   drawCars(time);
   drawSmoke(time);
   drawBanks(time,true);
