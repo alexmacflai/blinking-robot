@@ -1070,7 +1070,7 @@ function drawCars(t){
       c.bodyFrontRatio==null?0.72:c.bodyFrontRatio,
       c.bodyTopRatio==null?0.86:c.bodyTopRatio);
     for(const f of bodyFaces)
-      faces.push({f:f,tone:sh.tone,slot:slot,c:faceCentre(f),test:hide});
+      faces.push({f:f,tone:faceTone(f,sh.tone,c.shade),slot:slot,c:faceCentre(f),test:hide});
     /* CABIN — a smaller trapezoid sitting on the body, offset toward the
        rear so the sloped front remains visible. */
     const cabH=sh.tall*sh.cabinTall;
@@ -1082,7 +1082,7 @@ function drawCars(t){
       c.cabinTopRatio==null?0.76:c.cabinTopRatio,
       c.cabinFrontSlope==null?0.64:c.cabinFrontSlope);
     for(const f of cabin.structuralFaces)
-      faces.push({f:f,tone:sh.tone,slot:slot,c:faceCentre(f),test:hide});
+      faces.push({f:f,tone:faceTone(f,sh.tone,c.shade),slot:slot,c:faceCentre(f),test:hide});
     for(const wf of cabinWindowFaces(cabin,ax,ay,az,Math.max(0.02,sh.wide*0.018))){
       const f=wf.pane||wf;
       faces.push({f:f,tone:wf.pane?c.windowTone:faceTone(f,sh.tone,c.shade),slot:wf.pane?-2:slot,c:faceCentre(f),test:hide});
@@ -1110,7 +1110,7 @@ function drawCars(t){
       for(const sx of [-1,1]) for(const sz of [-1,1]){
         const wc=offsetPoint(wheelBase,ax,sh.wide*0.5*sx,ay,radius*0.82,az,axleOffset*sz);
         for(const f of cylinderFaces(wc,ax,ay,az,radius,Math.max(0.02,sh.wide*0.10),8))
-          faces.push({f:f,tone:c.wheelTone,slot:slot,c:faceCentre(f),test:hide});
+          faces.push({f:f,tone:faceTone(f,c.wheelTone,c.shade),slot:slot,c:faceCentre(f),test:hide});
       }
     }
   }
