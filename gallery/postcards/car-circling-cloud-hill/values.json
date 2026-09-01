@@ -1,5 +1,5 @@
 {
-  "gridK": 48,
+  "gridK": 20,
   "fit": "fill",
   "ink": "#0f0f13",
   "paper": "#eeebe1",
@@ -107,8 +107,8 @@
     "cabinHeightMax": 1,
     "bobAmplitude": 1,
     "bobSpeed": 3,
-    "swayAmplitude": 0.08,
-    "swaySpeed": 0.12,
+    "rockAmplitude": 0.2,
+    "rockSpeed": 0.8,
     "headlightStrength": 0.7,
     "headlightTone": 0.72,
     "headlightReach": 0.35

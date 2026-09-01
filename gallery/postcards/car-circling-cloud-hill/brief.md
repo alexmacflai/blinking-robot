@@ -93,16 +93,18 @@ movement is continuous rather than a one-time jolt, and each car uses an
 independent stable deterministic phase so the cars do not bob in sync. The
 vertical bob has separate exposed amplitude and speed controls.
 
-Every car also has a slow lateral sway across the road. The sway has a loose,
-boat-like pendulum character and is separate from the car's forward travel
-along the road. It has separate exposed amplitude and speed controls, and each
-car uses the same independent stable timing principle as its vertical bob.
+Every car also rocks left and right like a boat. This is a roll rotation around
+the car's forward axis, anchored at the bottom of the car; it is not lateral
+translation across the road. It has separate exposed amplitude and speed
+controls, and each car uses the same independent stable timing principle as its
+vertical bob.
 
-Bobbing applies to the car construction as a whole while preserving the
-relationships among the body, cabin, windows, wheels, and lamps. It does not
-add body roll or combined tilting: the sideways movement is lateral translation
-only. This section documents movement behaviour only; car construction,
-variable sizing, and headlight projection remain separate requirements.
+Vertical bobbing and rocking apply to the body, cabin, windows, and lamps while
+preserving their relationships. The wheel centres remain planted on the road
+and do not inherit the vertical bob. Rocking changes orientation around the
+bottom anchor; it never translates the car laterally. This section documents
+movement behaviour only; car construction, variable sizing, and headlight
+projection remain separate requirements.
 
 ## Indexed colour treatment
 

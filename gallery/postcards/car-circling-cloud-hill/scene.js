@@ -352,6 +352,17 @@ function offsetPoint(c,ax,a,ay,b,az,d){
           z:c.z+ax.z*a+ay.z*b+az.z*d};
 }
 
+/* Roll the car like a boat around its forward axis. The anchor remains at
+   the bottom of the construction; only the local across/up basis rotates. */
+function rockedFrame(ax,ay,az,angle){
+  const c=Math.cos(angle), s=Math.sin(angle);
+  return {
+    ax:{x:ax.x*c+ay.x*s,y:ax.y*c+ay.y*s,z:ax.z*c+ay.z*s},
+    ay:{x:ay.x*c-ax.x*s,y:ay.y*c-ax.y*s,z:ay.z*c-ax.z*s},
+    az:az
+  };
+}
+
 /* A tapered prism with a narrower front and slightly inset roof. The front
    is +az, which is the direction in which a car travels on each road half. */
 function taperedBodyFaces(c,ax,ay,az,hx,hy,hz,frontRatio,topRatio){
@@ -999,9 +1010,10 @@ function drawHeadlights(t){
     const ax={x:F.bx,y:F.by,z:F.bz}, ay={x:F.nx,y:F.ny,z:F.nz}, az={x:F.tx,y:F.ty,z:F.tz};
     const phase=hash1(car.id,97)*Math.PI*2;
     const bob=Math.sin(t*(c.bobSpeed==null?0:c.bobSpeed)*Math.PI*2+phase)*(c.bobAmplitude==null?0:c.bobAmplitude)*sh.scale;
-    const sway=Math.sin(t*(c.swaySpeed==null?0:c.swaySpeed)*Math.PI*2+phase)*(c.swayAmplitude==null?0:c.swayAmplitude)*sh.scale;
-    const base={x:F.p.x+ay.x*bob+ax.x*sway,y:F.p.y+ay.y*bob+ax.y*sway,z:F.p.z+ay.z*bob+ax.z*sway};
-    const body={x:base.x+ay.x*sh.tall*0.5,y:base.y+ay.y*sh.tall*0.5,z:base.z+ay.z*sh.tall*0.5};
+    const rock=Math.sin(t*(c.rockSpeed==null?0:c.rockSpeed)*Math.PI*2+phase)*(c.rockAmplitude==null?0:c.rockAmplitude);
+    const base={x:F.p.x+ay.x*bob,y:F.p.y+ay.y*bob,z:F.p.z+ay.z*bob};
+    const R=rockedFrame(ax,ay,az,rock);
+    const body=offsetPoint(base,R.ax,0,R.ay,sh.tall*0.5,R.az,0);
     const lampHalfX=Math.min(sh.wide*0.25,sh.wide*0.5*(c.bodyFrontRatio==null?0.72:c.bodyFrontRatio)*0.62);
     const reach=Math.max(0.05,c.headlightReach==null?0.35:c.headlightReach);
     const endS=Math.min(1,car.s+reach);
@@ -1010,11 +1022,11 @@ function drawHeadlights(t){
     const tone=c.headlightTone==null?0.72:c.headlightTone;
     const strength=clamp(c.headlightStrength,0,1);
     for(const sx of [-1,1]){
-      const origin=offsetPoint(body,ax,lampHalfX*sx,ay,sh.tall*(-0.30),az,
+      const origin=offsetPoint(body,R.ax,lampHalfX*sx,R.ay,sh.tall*(-0.30),R.az,
         sh.len*0.5+Math.max(0.02,sh.len*0.01));
       const left=offsetPoint(T,TF.bx,-halfWidth,TF.nx,0,TF.tx,0);
       const right=offsetPoint(T,TF.bx,halfWidth,TF.nx,0,TF.tx,0);
-      const beamOrigin=offsetPoint(origin,ax,0,ay,0,az,0.03);
+      const beamOrigin=offsetPoint(origin,R.ax,0,R.ay,0,R.az,0.03);
       const o=project(beamOrigin.x,beamOrigin.y,beamOrigin.z);
       const l=project(left.x,left.y,left.z), r=project(right.x,right.y,right.z);
       lightTriangle(o,l,r,strength,tone,targetDepth?targetDepth.dep:Infinity);
@@ -1047,11 +1059,12 @@ function drawCars(t){
     const az={x:F.tx,y:F.ty,z:F.tz};          // along the road
     const phase=hash1(car.id,97)*Math.PI*2;
     const bob=Math.sin(t*(c.bobSpeed==null?0:c.bobSpeed)*Math.PI*2+phase)*(c.bobAmplitude==null?0:c.bobAmplitude)*sh.scale;
-    const sway=Math.sin(t*(c.swaySpeed==null?0:c.swaySpeed)*Math.PI*2+phase)*(c.swayAmplitude==null?0:c.swayAmplitude)*sh.scale;
-    const base={x:F.p.x+ay.x*bob+ax.x*sway,y:F.p.y+ay.y*bob+ax.y*sway,z:F.p.z+ay.z*bob+ax.z*sway};
-    const body={x:base.x+ay.x*sh.tall*0.5,y:base.y+ay.y*sh.tall*0.5,z:base.z+ay.z*sh.tall*0.5};
+    const rock=Math.sin(t*(c.rockSpeed==null?0:c.rockSpeed)*Math.PI*2+phase)*(c.rockAmplitude==null?0:c.rockAmplitude);
+    const base={x:F.p.x+ay.x*bob,y:F.p.y+ay.y*bob,z:F.p.z+ay.z*bob};
+    const R=rockedFrame(ax,ay,az,rock);
+    const body=offsetPoint(base,R.ax,0,R.ay,sh.tall*0.5,R.az,0);
     const slot=sh.accent?2:-2;
-    const bodyFaces=taperedBodyFaces(body,ax,ay,az,sh.wide*0.5,sh.tall*0.5,sh.len*0.5,
+    const bodyFaces=taperedBodyFaces(body,R.ax,R.ay,R.az,sh.wide*0.5,sh.tall*0.5,sh.len*0.5,
       c.bodyFrontRatio==null?0.72:c.bodyFrontRatio,
       c.bodyTopRatio==null?0.86:c.bodyTopRatio);
     for(const f of bodyFaces)
@@ -1059,16 +1072,14 @@ function drawCars(t){
     /* CABIN — a smaller trapezoid sitting on the body, offset toward the
        rear so the sloped front remains visible. */
     const cabH=sh.tall*sh.cabinTall;
-    const cab={x:body.x+ay.x*(sh.tall*0.5+cabH*0.5)+az.x*sh.len*sh.cabinBack,
-               y:body.y+ay.y*(sh.tall*0.5+cabH*0.5)+az.y*sh.len*sh.cabinBack,
-               z:body.z+ay.z*(sh.tall*0.5+cabH*0.5)+az.z*sh.len*sh.cabinBack};
+    const cab=offsetPoint(body,R.ax,0,R.ay,sh.tall*0.5+cabH*0.5,R.az,sh.len*sh.cabinBack);
     const cabW=sh.wide*0.42, cabFront=sh.len*sh.cabinLen*0.5, cabRear=-cabFront;
-    const cabin=cabinGeometry(cab,ax,ay,az,cabW,cabH*0.5,cabFront,cabRear,
+    const cabin=cabinGeometry(cab,R.ax,R.ay,R.az,cabW,cabH*0.5,cabFront,cabRear,
       c.cabinTopRatio==null?0.76:c.cabinTopRatio,
       c.cabinFrontSlope==null?0.64:c.cabinFrontSlope);
     for(const f of cabin.structuralFaces)
       faces.push({f:f,tone:faceTone(f,sh.tone,c.shade),slot:slot,c:faceCentre(f),test:hide});
-    for(const wf of cabinWindowFaces(cabin,ax,ay,az,Math.max(0.02,sh.wide*0.018))){
+    for(const wf of cabinWindowFaces(cabin,R.ax,R.ay,R.az,Math.max(0.02,sh.wide*0.018))){
       const f=wf.pane;
       faces.push({f:f,tone:1,slot:-2,c:faceCentre(f),test:hide});
     }
@@ -1077,9 +1088,9 @@ function drawCars(t){
     const lampRadius=sh.lampRadius;
     const lampY=-0.30, lampHalfX=Math.min(sh.wide*0.25,sh.wide*0.5*(c.bodyFrontRatio==null?0.72:c.bodyFrontRatio)*0.62);
     for(const sx of [-1,1]){
-      const lc=offsetPoint(body,ax,lampHalfX*sx,ay,sh.tall*lampY,
-        az,sh.len*0.5+Math.max(0.02,sh.len*0.01));
-      for(const f of cylinderFaces(lc,az,ax,ay,lampRadius,Math.max(0.01,sh.len*0.012),8))
+      const lc=offsetPoint(body,R.ax,lampHalfX*sx,R.ay,sh.tall*lampY,
+        R.az,sh.len*0.5+Math.max(0.02,sh.len*0.01));
+      for(const f of cylinderFaces(lc,R.az,R.ax,R.ay,lampRadius,Math.max(0.01,sh.len*0.012),8))
         faces.push({f:f,tone:c.lampTone==null?1:c.lampTone,slot:-2,c:faceCentre(f),test:hide});
     }
     /* WHEELS earn their place only once the car is large enough on screen
